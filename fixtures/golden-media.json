@@ -1,0 +1,28 @@
+{
+  "version": 2,
+  "entries": [
+    {
+      "id": "asset-ext-video",
+      "name": "External Clip.mp4",
+      "type": "video",
+      "source": { "external": { "absolutePath": "/Users/me/Movies/External Clip.mp4" } },
+      "duration": 12.5,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "sourceFPS": 30,
+      "hasAudio": true
+    },
+    {
+      "id": "asset-proj-audio",
+      "name": "VoiceOver.m4a",
+      "type": "audio",
+      "source": { "project": { "relativePath": "media/VoiceOver.m4a" } },
+      "duration": 48,
+      "hasAudio": false,
+      "folderId": "folder-audio"
+    }
+  ],
+  "folders": [
+    { "id": "folder-audio", "name": "Audio" }
+  ]
+}

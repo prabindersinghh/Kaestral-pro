@@ -1,0 +1,195 @@
+{
+  "fps": 24,
+  "width": 1080,
+  "height": 1920,
+  "settingsConfigured": true,
+  "tracks": [
+    {
+      "id": "track-video-0",
+      "type": "video",
+      "muted": false,
+      "hidden": true,
+      "syncLocked": false,
+      "clips": [
+        {
+          "id": "clip-video-1",
+          "mediaRef": "asset-ext-video",
+          "mediaType": "video",
+          "sourceClipType": "video",
+          "startFrame": 0,
+          "durationFrames": 48,
+          "trimStartFrame": 12,
+          "trimEndFrame": 6,
+          "speed": 1.5,
+          "volume": 0.8,
+          "fadeInFrames": 6,
+          "fadeOutFrames": 4,
+          "fadeInInterpolation": "smooth",
+          "fadeOutInterpolation": "hold",
+          "opacity": 0.9,
+          "transform": {
+            "centerX": 0.4,
+            "centerY": 0.6,
+            "width": 0.5,
+            "height": 0.5,
+            "rotation": 30,
+            "flipHorizontal": true,
+            "flipVertical": false
+          },
+          "crop": { "left": 0.05, "top": 0.1, "right": 0.05, "bottom": 0 },
+          "linkGroupId": "link-1",
+          "opacityTrack": {
+            "keyframes": [
+              { "frame": 0, "value": 0, "interpolationOut": "smooth" },
+              { "frame": 24, "value": 1, "interpolationOut": "linear" }
+            ]
+          },
+          "positionTrack": {
+            "keyframes": [
+              { "frame": 0, "value": { "a": 0, "b": 0 }, "interpolationOut": "smooth" },
+              { "frame": 24, "value": { "a": 0.25, "b": 0.25 }, "interpolationOut": "smooth" }
+            ]
+          },
+          "scaleTrack": {
+            "keyframes": [
+              { "frame": 0, "value": { "a": 1, "b": 1 }, "interpolationOut": "smooth" },
+              { "frame": 24, "value": { "a": 0.5, "b": 0.5 }, "interpolationOut": "smooth" }
+            ]
+          },
+          "rotationTrack": {
+            "keyframes": [
+              { "frame": 0, "value": 0, "interpolationOut": "smooth" },
+              { "frame": 24, "value": 90, "interpolationOut": "linear" }
+            ]
+          },
+          "cropTrack": {
+            "keyframes": [
+              { "frame": 0, "value": { "left": 0, "top": 0, "right": 0, "bottom": 0 }, "interpolationOut": "smooth" }
+            ]
+          },
+          "volumeTrack": {
+            "keyframes": [
+              { "frame": 0, "value": 0, "interpolationOut": "smooth" },
+              { "frame": 24, "value": -6, "interpolationOut": "smooth" }
+            ]
+          },
+          "effects": [
+            {
+              "id": "eff-exposure-1",
+              "type": "color.exposure",
+              "enabled": true,
+              "params": { "ev": { "value": 0.5 } }
+            },
+            {
+              "id": "eff-lut-1",
+              "type": "color.lut",
+              "enabled": true,
+              "params": { "intensity": { "value": 0.8 }, "path": { "string": "/Users/me/LUTs/film.cube" } }
+            }
+          ],
+          "blendMode": "screen"
+        }
+      ]
+    },
+    {
+      "id": "track-audio-1",
+      "type": "audio",
+      "muted": true,
+      "hidden": false,
+      "syncLocked": true,
+      "clips": [
+        {
+          "id": "clip-audio-1",
+          "mediaRef": "asset-proj-audio",
+          "mediaType": "audio",
+          "sourceClipType": "video",
+          "startFrame": 0,
+          "durationFrames": 48,
+          "trimStartFrame": 12,
+          "trimEndFrame": 6,
+          "speed": 1.5,
+          "volume": 1,
+          "fadeInFrames": 0,
+          "fadeOutFrames": 0,
+          "fadeInInterpolation": "linear",
+          "fadeOutInterpolation": "linear",
+          "opacity": 1,
+          "transform": {
+            "centerX": 0.5,
+            "centerY": 0.5,
+            "width": 1,
+            "height": 1,
+            "rotation": 0,
+            "flipHorizontal": false,
+            "flipVertical": false
+          },
+          "crop": { "left": 0, "top": 0, "right": 0, "bottom": 0 },
+          "linkGroupId": "link-1"
+        }
+      ]
+    },
+    {
+      "id": "track-text-2",
+      "type": "text",
+      "muted": false,
+      "hidden": false,
+      "syncLocked": true,
+      "clips": [
+        {
+          "id": "clip-text-1",
+          "mediaRef": "text-1",
+          "mediaType": "text",
+          "sourceClipType": "text",
+          "startFrame": 60,
+          "durationFrames": 36,
+          "trimStartFrame": 0,
+          "trimEndFrame": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeInFrames": 0,
+          "fadeOutFrames": 0,
+          "fadeInInterpolation": "linear",
+          "fadeOutInterpolation": "linear",
+          "opacity": 1,
+          "transform": {
+            "centerX": 0.5,
+            "centerY": 0.8,
+            "width": 0.8,
+            "height": 0.2,
+            "rotation": 0,
+            "flipHorizontal": false,
+            "flipVertical": false
+          },
+          "crop": { "left": 0, "top": 0, "right": 0, "bottom": 0 },
+          "captionGroupId": "caption-grp-1",
+          "textContent": "Hello, Palmier!\nLine two",
+          "textStyle": {
+            "fontName": "Inter",
+            "fontSize": 64,
+            "fontScale": 1,
+            "isBold": true,
+            "isItalic": false,
+            "color": { "r": 1, "g": 1, "b": 1, "a": 1 },
+            "alignment": "center",
+            "shadow": {
+              "enabled": true,
+              "color": { "r": 0, "g": 0, "b": 0, "a": 0.6 },
+              "offsetX": 0,
+              "offsetY": -2,
+              "blur": 6
+            },
+            "background": { "enabled": true, "color": { "r": 0, "g": 0, "b": 0, "a": 0.5 } },
+            "border": { "enabled": true, "color": { "r": 0, "g": 0, "b": 0, "a": 1 } }
+          },
+          "textAnimation": { "preset": "wordReveal", "perWordFrames": 5, "highlight": { "r": 1, "g": 0.85, "b": 0, "a": 1 } },
+          "wordTimings": [
+            { "text": "Hello,", "startFrame": 0, "endFrame": 10 },
+            { "text": "Palmier!", "startFrame": 10, "endFrame": 20 },
+            { "text": "Line", "startFrame": 20, "endFrame": 28 },
+            { "text": "two", "startFrame": 28, "endFrame": 36 }
+          ]
+        }
+      ]
+    }
+  ]
+}
