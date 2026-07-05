@@ -144,7 +144,7 @@ export function Timeline() {
       <div style={{ width: headerWidth, flex: "0 0 auto", background: theme.color.trackHeader, borderRight: `1px solid ${theme.color.border}` }}>
         <div style={{ height: rulerHeight + dropZoneHeight, borderBottom: `1px solid ${theme.color.border}` }} />
         {timeline.tracks.map((t, i) => (
-          <TrackHeader key={t.id} label={store.engine.trackDisplayLabel(i)} type={t.type} muted={t.muted} hidden={t.hidden} />
+          <TrackHeader key={t.id} index={i} label={store.engine.trackDisplayLabel(i)} type={t.type} muted={t.muted} hidden={t.hidden} />
         ))}
       </div>
 
@@ -230,12 +230,19 @@ function Ruler({ width, ppf, fps }: { width: number; ppf: number; fps: number })
   );
 }
 
-function TrackHeader({ label, type, muted, hidden }: { label: string; type: string; muted: boolean; hidden: boolean }) {
+function TrackHeader({ index, label, type, muted, hidden }: { index: number; label: string; type: string; muted: boolean; hidden: boolean }) {
   const off = type === "audio" ? muted : hidden;
   return (
-    <div style={{ height: trackHeight, display: "flex", alignItems: "center", gap: theme.space.sm, padding: `0 ${theme.space.md}px`, borderBottom: `1px solid ${theme.color.border}` }}>
-      <span style={{ width: 8, height: 8, borderRadius: 2, background: clipColor(type as never), opacity: off ? 0.4 : 1 }} />
-      <span style={{ fontSize: 12, color: off ? theme.color.textFaint : theme.color.text, fontWeight: 600 }}>{label}</span>
+    <div style={{ height: trackHeight, display: "flex", alignItems: "center", gap: theme.space.smMd, padding: `0 ${theme.space.mdLg}px`, borderBottom: `1px solid ${theme.color.borderPrimary}`, background: theme.color.base }}>
+      <span style={{ width: 3, height: 22, borderRadius: 2, background: clipColor(type as never), opacity: off ? 0.35 : 1, flex: "0 0 auto" }} />
+      <span style={{ fontSize: theme.fontSize.smMd, color: off ? theme.color.textMuted : theme.color.textPrimary, fontWeight: 600, flex: 1 }}>{label}</span>
+      <button
+        title={type === "audio" ? (muted ? "Unmute" : "Mute") : (hidden ? "Show" : "Hide")}
+        onClick={() => store.toggleTrackFlag(index)}
+        style={{ background: "transparent", border: "none", cursor: "pointer", color: off ? theme.color.textMuted : theme.color.textSecondary, fontSize: theme.fontSize.smMd, padding: 2 }}
+      >
+        {type === "audio" ? (muted ? "🔇" : "🔊") : (hidden ? "◌" : "◉")}
+      </button>
     </div>
   );
 }
@@ -253,6 +260,7 @@ function ClipView(props: {
     ? clip.textContent || "Text"
     : store.media.asset(clip.mediaRef)?.name ?? clip.mediaRef;
   const w = Math.max(2, rect.width);
+  const thumbSrc = (clip.mediaType === "video" || clip.mediaType === "image") ? store.mediaSrcFor(clip.mediaRef) : null;
   return (
     <div
       onPointerDown={props.onPointerDown}
@@ -260,14 +268,25 @@ function ClipView(props: {
       onPointerUp={props.onPointerUp}
       style={{
         position: "absolute", left: rect.x, top: rect.y, width: w, height: rect.height,
-        background: `linear-gradient(180deg, ${color}, ${color}cc)`,
-        border: selected ? `2px solid ${theme.color.selection}` : `1px solid rgba(0,0,0,0.35)`,
+        background: theme.color.raised,
+        border: selected ? `1.5px solid ${theme.color.selection}` : `1px solid rgba(0,0,0,0.4)`,
         borderRadius: theme.timeline.clipRadius, boxSizing: "border-box", overflow: "hidden",
         cursor: "grab", opacity: dim ? 0.6 : 1, boxShadow: "0 1px 2px rgba(0,0,0,0.3)",
       }}
     >
+      {/* color rail along the top edge (track identity) */}
+      <div style={{ position: "absolute", left: 0, top: 0, right: 0, height: 3, background: color }} />
+      {/* filmstrip thumbnail for visual clips */}
+      {thumbSrc && (clip.mediaType === "image"
+        ? <img src={thumbSrc} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.9 }} alt="" />
+        : <video src={thumbSrc} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.9 }} muted preload="metadata" playsInline />)}
+      {!thumbSrc && clip.mediaType !== "audio" && (
+        <div style={{ position: "absolute", inset: 0, background: `linear-gradient(180deg, ${color}, ${color}cc)` }} />
+      )}
       {clip.mediaType === "audio" && <WaveformStrip clip={clip} fps={store.timeline.fps} width={w} height={rect.height} />}
-      <div style={{ position: "relative", fontSize: 11, color: "rgba(255,255,255,0.95)", padding: "3px 6px", whiteSpace: "nowrap", textShadow: "0 1px 2px rgba(0,0,0,0.7)" }}>
+      {/* scrim + label */}
+      <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: "56%", background: "linear-gradient(180deg, transparent, rgba(0,0,0,0.55))", pointerEvents: "none" }} />
+      <div style={{ position: "absolute", left: 0, right: 0, top: 3, fontSize: theme.fontSize.sm, color: "rgba(255,255,255,0.96)", padding: "3px 6px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", textShadow: "0 1px 2px rgba(0,0,0,0.8)" }}>
         {label}
       </div>
     </div>

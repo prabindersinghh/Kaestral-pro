@@ -1,64 +1,90 @@
-// Single source of design tokens — mirrors the macOS app's rule that all styling routes through
-// one theme module (AppTheme). Timeline layout constants come from Utilities/Constants.swift
-// (Layout / Defaults / Snap / Zoom); the accent mirrors AppTheme.Accent.primary (warm off-white).
+// Design tokens — ported verbatim from Palmier's Sources/PalmierPro/UI/AppTheme.swift so Maestro
+// matches the real app. Backgrounds/borders/text/track-colors/radii/spacing/font-sizes are the exact
+// Palmier values; timeline layout constants come from Utilities/Constants.swift.
 
+import type { CSSProperties } from "react";
 import type { ClipType } from "../model/enums";
+
+// AppTheme.Background / Border / Text / Accent / TrackColor
+const bg = { base: "#0a0a0a", surface: "#161616", raised: "#1e1e1e", prominent: "#2c2c2c" };
+const border = { primary: "rgba(255,255,255,0.16)", subtle: "rgba(255,255,255,0.12)", divider: "rgba(255,255,255,0.44)" };
+const text = { primary: "rgba(255,255,255,1)", secondary: "rgba(255,255,255,0.80)", tertiary: "rgba(255,255,255,0.62)", muted: "rgba(255,255,255,0.34)" };
 
 export const theme = {
   color: {
-    bg: "#0b0b0d",
-    surface: "#141417",
-    panel: "#17171b",
-    trackBg: "#1c1c22",
-    trackBgAlt: "#171720",
-    trackHeader: "#101014",
-    ruler: "#0e0e11",
-    rulerTick: "#4a4a52",
-    border: "#2a2a30",
-    borderStrong: "#3a3a42",
-    text: "#e7e7ea",
-    textDim: "#9a9aa2",
-    textFaint: "#63636b",
-    accent: "#f5efe4",
-    playhead: "#ff5d5d",
-    selection: "#ffffff",
+    // Palmier names (preferred going forward)
+    base: bg.base,
+    surface: bg.surface,
+    raised: bg.raised,
+    prominent: bg.prominent,
+    borderPrimary: border.primary,
+    borderSubtle: border.subtle,
+    divider: border.divider,
+    textPrimary: text.primary,
+    textSecondary: text.secondary,
+    textTertiary: text.tertiary,
+    textMuted: text.muted,
+    accent: "#f5efe4", // Accent.primary (warm off-white)
+    timecode: "#f29933", // Accent.timecode rgb(0.95,0.6,0.2)
+    playhead: "#ff4545", // Accent.spotlight rgb(1,0.27,0.27)
+    selection: "#f5efe4",
+    success: "#4fb85f",
+    error: "#e54f4f",
+
+    // Back-compat aliases (older components reference these)
+    bg: bg.base,
+    panel: bg.surface,
+    trackBg: bg.raised,
+    trackBgAlt: bg.surface,
+    trackHeader: bg.base,
+    ruler: bg.base,
+    rulerTick: "rgba(255,255,255,0.28)",
+    border: border.primary,
+    borderStrong: border.divider,
+    text: text.primary,
+    textDim: text.secondary,
+    textFaint: text.muted,
+
     clip: {
-      video: "#3b6fe0",
-      image: "#8a5cf6",
-      audio: "#18b26b",
-      text: "#e0a63b",
-      lottie: "#e05c9e",
+      video: "#0091c2",
+      image: "#b72dd2",
+      audio: "#58a822",
+      text: "#b72dd2",
+      lottie: "#e0a800",
     } satisfies Record<ClipType, string>,
   },
   timeline: {
-    pixelsPerFrame: 4.0, // Defaults.pixelsPerFrame
-    rulerHeight: 24, // Layout.rulerHeight
-    trackHeight: 50, // Layout.trackHeight
-    dropZoneHeight: 60, // Layout.dropZoneHeight
-    headerWidth: 100, // Layout.trackHeaderWidth
-    trimHandleWidth: 4, // Trim.handleWidth
-    clipRadius: 3, // Trim.clipCornerRadius
-    insertThreshold: 10, // Layout.insertThreshold
+    pixelsPerFrame: 4.0,
+    rulerHeight: 26,
+    trackHeight: 52,
+    dropZoneHeight: 56,
+    headerWidth: 108,
+    trimHandleWidth: 6,
+    clipRadius: 4,
+    insertThreshold: 10,
+    toolbarHeight: 40,
+    panelHeaderHeight: 38,
   },
-  snap: {
-    thresholdPixels: 8.0, // Snap.thresholdPixels
-    stickyMultiplier: 1.5, // Snap.stickyMultiplier
-    playheadMultiplier: 1.5, // Snap.playheadMultiplier
-  },
-  zoom: {
-    min: 0.05, // Zoom.min
-    max: 40.0, // Zoom.max
-    floor: 0.0001, // Zoom.floor
-    stepFactor: 1.25, // Zoom.toolbarStepFactor
-  },
-  space: { xxs: 2, xs: 4, sm: 8, md: 12, lg: 16, xl: 24 },
-  radius: { sm: 4, md: 6, lg: 10 },
+  snap: { thresholdPixels: 8.0, stickyMultiplier: 1.5, playheadMultiplier: 1.5 },
+  zoom: { min: 0.05, max: 40.0, floor: 0.0001, stepFactor: 1.25 },
+  // AppTheme.Spacing
+  space: { xxs: 2, xs: 4, sm: 6, smMd: 8, md: 10, mdLg: 12, lg: 14, lgXl: 16, xl: 20, xlXxl: 24, xxl: 28 },
+  // AppTheme.Radius
+  radius: { xs: 3, xsSm: 4, sm: 6, md: 10, mdLg: 12, lg: 14, xl: 20 },
+  // AppTheme.FontSize
+  fontSize: { micro: 8, xxs: 9, xs: 10, sm: 11, smMd: 12, md: 13, mdLg: 14, lg: 15, xl: 18, title1: 22, title2: 28, display: 36 },
   font: {
-    ui: 'system-ui, -apple-system, "Segoe UI", sans-serif',
-    mono: 'ui-monospace, "Cascadia Code", "Geist Mono", monospace',
+    ui: '-apple-system, system-ui, "Segoe UI", "Inter", sans-serif',
+    mono: 'ui-monospace, "SF Mono", "Cascadia Code", "Geist Mono", monospace',
   },
 } as const;
 
 export function clipColor(type: ClipType): string {
   return theme.color.clip[type] ?? theme.color.clip.video;
 }
+
+/** Section header label styling used across the inspector (uppercase, tracked, tertiary). */
+export const sectionLabelStyle: CSSProperties = {
+  fontSize: theme.fontSize.xs, fontWeight: 600, letterSpacing: 0.8,
+  textTransform: "uppercase", color: theme.color.textTertiary,
+};

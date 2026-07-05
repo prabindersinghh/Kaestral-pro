@@ -8,27 +8,45 @@ import { MediaPanel } from "./MediaPanel";
 import { exportVideoFromUI } from "./exportVideo";
 import { previewAudio } from "../audio/previewAudio";
 
-function frameToTimecode(frame: number, fps: number): string {
-  const f = frame % fps;
-  const totalSec = Math.floor(frame / fps);
-  const s = totalSec % 60;
-  const m = Math.floor(totalSec / 60);
+function tc(frame: number, fps: number): string {
+  const f = Math.round(frame) % fps;
+  const totalSec = Math.floor(Math.round(frame) / fps);
   const pad = (n: number) => String(n).padStart(2, "0");
-  return `${pad(m)}:${pad(s)}:${pad(f)}`;
+  return `${pad(Math.floor(totalSec / 60))}:${pad(totalSec % 60)}:${pad(f)}`;
 }
 
-function TB({ label, onClick, title }: { label: string; onClick: () => void; title?: string }) {
+function gcd(a: number, b: number): number { return b ? gcd(b, a % b) : a; }
+function aspectLabel(w: number, h: number): string {
+  const g = gcd(w, h) || 1;
+  return `${w / g}:${h / g}`;
+}
+
+// Icon-only button (transport, tools).
+function IconBtn({ glyph, title, onClick, active, size = 15 }: { glyph: string; title: string; onClick: () => void; active?: boolean; size?: number }) {
+  const [hover, setHover] = useState(false);
   return (
     <button
-      onClick={onClick}
-      title={title}
+      onClick={onClick} title={title}
+      onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
       style={{
-        background: theme.color.surface, color: theme.color.text, border: `1px solid ${theme.color.border}`,
-        borderRadius: theme.radius.sm, padding: "5px 10px", fontSize: 12, cursor: "pointer", fontFamily: theme.font.ui,
+        display: "inline-flex", alignItems: "center", justifyContent: "center",
+        width: 30, height: 28, borderRadius: theme.radius.sm, cursor: "pointer",
+        border: `1px solid ${active ? theme.color.borderPrimary : "transparent"}`,
+        background: active ? theme.color.prominent : hover ? theme.color.raised : "transparent",
+        color: active ? theme.color.textPrimary : theme.color.textSecondary,
+        fontSize: size, lineHeight: 1, fontFamily: theme.font.ui, transition: "background 0.15s",
       }}
     >
-      {label}
+      {glyph}
     </button>
+  );
+}
+
+function Badge({ children }: { children: React.ReactNode }) {
+  return (
+    <span style={{ fontSize: theme.fontSize.xs, color: theme.color.textTertiary, fontFamily: theme.font.mono, padding: "2px 6px", borderRadius: theme.radius.xs, background: theme.color.raised }}>
+      {children}
+    </span>
   );
 }
 
@@ -38,18 +56,18 @@ export function Editor() {
   const { currentFrame, pixelsPerFrame, playing } = store.view;
   const floatFrame = useRef(currentFrame);
   const [exportMsg, setExportMsg] = useState<string | null>(null);
+  const total = store.totalFrames;
 
   const doExport = async () => {
     setExportMsg("Exporting…");
     try {
       const r = await exportVideoFromUI("H.264", "1080p");
-      setExportMsg(`Exported ${r.frames}f → ${r.outputPath}`);
+      setExportMsg(`Exported → ${r.outputPath}`);
     } catch (e) {
       setExportMsg(e instanceof Error ? e.message : String(e));
     }
   };
 
-  // Playback loop — advances currentFrame at fps while playing, and drives preview audio.
   useEffect(() => {
     if (!playing) return;
     floatFrame.current = store.view.currentFrame;
@@ -60,38 +78,30 @@ export function Editor() {
       const dt = (now - last) / 1000;
       last = now;
       floatFrame.current += dt * timeline.fps;
-      const total = store.totalFrames;
-      if (floatFrame.current >= total) {
-        store.setCurrentFrame(total);
-        store.setPlaying(false);
-        return;
-      }
+      const totalF = store.totalFrames;
+      if (floatFrame.current >= totalF) { store.setCurrentFrame(totalF); store.setPlaying(false); return; }
       store.setCurrentFrame(floatFrame.current);
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
-    return () => {
-      cancelAnimationFrame(raf);
-      previewAudio.stop();
-    };
+    return () => { cancelAnimationFrame(raf); previewAudio.stop(); };
   }, [playing, timeline.fps]);
 
-  // Space toggles play/pause.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.code === "Space" && !(e.target instanceof HTMLInputElement)) {
-        e.preventDefault();
-        store.setPlaying(!store.view.playing);
-      }
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.code === "Space") { e.preventDefault(); store.setPlaying(!store.view.playing); }
+      else if (e.key === "s" || e.key === "S") { store.splitAtPlayhead(); }
+      else if (e.key === "Delete" || e.key === "Backspace") { store.removeSelected(); }
+      else if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) { e.preventDefault(); store.undo(); }
+      else if ((e.ctrlKey || e.metaKey) && (e.key === "y" || (e.key === "z" && e.shiftKey))) { e.preventDefault(); store.redo(); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  // Project bridge (shared state with the MCP server) + drag-drop import.
   useEffect(() => {
     store.startBridge();
-    // Browser file drop (plain webview): File objects.
     const onDragOver = (e: DragEvent) => e.preventDefault();
     const onDrop = (e: DragEvent) => {
       e.preventDefault();
@@ -100,14 +110,11 @@ export function Editor() {
     };
     window.addEventListener("dragover", onDragOver);
     window.addEventListener("drop", onDrop);
-    // Tauri native file drop: real disk paths.
     let unlisten: (() => void) | undefined;
     if ("__TAURI_INTERNALS__" in globalThis) {
       void import("@tauri-apps/api/webview").then(async ({ getCurrentWebview }) => {
         unlisten = await getCurrentWebview().onDragDropEvent((event) => {
-          if (event.payload.type === "drop") {
-            for (const p of event.payload.paths) void store.bridge?.importPath(p);
-          }
+          if (event.payload.type === "drop") for (const p of event.payload.paths) void store.bridge?.importPath(p);
         });
       }).catch(() => undefined);
     }
@@ -118,48 +125,75 @@ export function Editor() {
     };
   }, []);
 
+  const step = (d: number) => { store.setPlaying(false); store.setCurrentFrame(Math.max(0, Math.min(total, Math.round(currentFrame) + d))); };
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: theme.color.bg, color: theme.color.text, fontFamily: theme.font.ui }}>
-      {/* Toolbar */}
-      <div style={{ display: "flex", alignItems: "center", gap: theme.space.sm, padding: `${theme.space.sm}px ${theme.space.md}px`, borderBottom: `1px solid ${theme.color.border}`, background: theme.color.surface }}>
-        <strong style={{ fontSize: 13 }}>Maestro</strong>
+    <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: theme.color.base, color: theme.color.textPrimary, fontFamily: theme.font.ui, overflow: "hidden" }}>
+      {/* Title bar */}
+      <div style={{ display: "flex", alignItems: "center", gap: theme.space.smMd, height: 44, padding: `0 ${theme.space.mdLg}px`, borderBottom: `1px solid ${theme.color.borderPrimary}`, background: theme.color.raised, flex: "0 0 auto" }}>
+        <span style={{ fontSize: theme.fontSize.md, fontWeight: 600, letterSpacing: 0.2 }}>Maestro</span>
         <span
-          title={store.bridge?.connected ? "Project server connected (Claude can edit via MCP)" : "Project server offline — run: npm run mcp"}
-          style={{ width: 8, height: 8, borderRadius: 4, background: store.bridge?.connected ? "#18b26b" : "#e0a63b", display: "inline-block" }}
+          title={store.bridge?.connected ? "Project server connected — Claude can edit via MCP" : "Project server offline — run: npm run mcp"}
+          style={{ width: 7, height: 7, borderRadius: 4, background: store.bridge?.connected ? theme.color.success : "#e0a63b" }}
         />
-        <div style={{ width: 1, height: 18, background: theme.color.border, margin: `0 ${theme.space.xs}px` }} />
-        <TB label={playing ? "❚❚ Pause" : "▶ Play"} title="Space" onClick={() => store.setPlaying(!playing)} />
-        <TB label="Undo" title="Ctrl+Z" onClick={() => store.undo()} />
-        <TB label="Redo" title="Ctrl+Shift+Z" onClick={() => store.redo()} />
-        <TB label="Split" title="S" onClick={() => store.splitAtPlayhead()} />
-        <TB label="Delete" title="Del" onClick={() => store.removeSelected()} />
-        <div style={{ width: 1, height: 18, background: theme.color.border, margin: `0 ${theme.space.xs}px` }} />
-        <TB label="−" title="Zoom out" onClick={() => store.setZoom(pixelsPerFrame / theme.zoom.stepFactor)} />
-        <TB label="+" title="Zoom in" onClick={() => store.setZoom(pixelsPerFrame * theme.zoom.stepFactor)} />
-        <div style={{ width: 1, height: 18, background: theme.color.border, margin: `0 ${theme.space.xs}px` }} />
-        <TB label="⭳ Export MP4" title="Render H.264 via FFmpeg" onClick={doExport} />
-        {exportMsg && <span style={{ fontSize: 11, color: theme.color.textDim, maxWidth: 320, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{exportMsg}</span>}
         <div style={{ flex: 1 }} />
-        <span style={{ fontFamily: theme.font.mono, fontSize: 12, color: theme.color.textDim }}>
-          {frameToTimecode(currentFrame, timeline.fps)} · f{currentFrame}
-        </span>
-        <span style={{ fontFamily: theme.font.mono, fontSize: 11, color: theme.color.textFaint, marginLeft: theme.space.md }}>
-          {timeline.width}×{timeline.height} @ {timeline.fps}fps
-        </span>
+        <span style={{ fontSize: theme.fontSize.smMd, color: theme.color.textTertiary }}>Untitled Project</span>
+        <div style={{ flex: 1 }} />
+        {exportMsg && <span style={{ fontSize: theme.fontSize.xs, color: theme.color.textTertiary, maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{exportMsg}</span>}
+        <button
+          onClick={doExport} title="Render H.264 via FFmpeg"
+          style={{ background: theme.color.accent, color: "#1a1a1a", border: "none", borderRadius: theme.radius.sm, padding: "6px 14px", fontSize: theme.fontSize.smMd, fontWeight: 600, cursor: "pointer", fontFamily: theme.font.ui }}
+        >
+          Export
+        </button>
       </div>
 
-      {/* Middle: media panel | preview | inspector */}
+      {/* Media | Preview | Inspector */}
       <div style={{ flex: "1 1 auto", display: "flex", minHeight: 0 }}>
         <MediaPanel />
-        <div style={{ flex: "1 1 auto", display: "flex", alignItems: "center", justifyContent: "center", background: theme.color.bg, minHeight: 0, padding: theme.space.lg }}>
-          <CanvasPreview />
+        <div style={{ flex: "1 1 auto", display: "flex", flexDirection: "column", background: theme.color.base, minHeight: 0, minWidth: 0 }}>
+          <div style={{ flex: "1 1 auto", display: "flex", alignItems: "center", justifyContent: "center", minHeight: 0, padding: theme.space.lg }}>
+            <CanvasPreview />
+          </div>
+          {/* Transport */}
+          <div style={{ display: "flex", alignItems: "center", gap: theme.space.smMd, height: 46, padding: `0 ${theme.space.lg}px`, borderTop: `1px solid ${theme.color.borderPrimary}`, background: theme.color.surface, flex: "0 0 auto" }}>
+            <span style={{ fontFamily: theme.font.mono, fontSize: theme.fontSize.md, color: theme.color.timecode, minWidth: 82 }}>{tc(currentFrame, timeline.fps)}</span>
+            <div style={{ flex: 1 }} />
+            <IconBtn glyph="⏮" title="Start" onClick={() => step(-total)} />
+            <IconBtn glyph="◀" title="Back 1 frame" onClick={() => step(-1)} />
+            <IconBtn glyph={playing ? "❚❚" : "▶"} title="Play/Pause (Space)" onClick={() => store.setPlaying(!playing)} size={16} />
+            <IconBtn glyph="▶|" title="Forward 1 frame" onClick={() => step(1)} />
+            <IconBtn glyph="⏭" title="End" onClick={() => step(total)} />
+            <div style={{ flex: 1 }} />
+            <Badge>{aspectLabel(timeline.width, timeline.height)}</Badge>
+            <Badge>{timeline.fps} fps</Badge>
+            <Badge>{timeline.height}p</Badge>
+            <span style={{ fontFamily: theme.font.mono, fontSize: theme.fontSize.md, color: theme.color.textMuted, minWidth: 82, textAlign: "right" }}>{tc(total, timeline.fps)}</span>
+          </div>
         </div>
         <Inspector />
       </div>
 
-      {/* Timeline */}
-      <div style={{ height: 320, flex: "0 0 auto", borderTop: `1px solid ${theme.color.border}` }}>
-        <Timeline />
+      {/* Timeline toolbar + tracks */}
+      <div style={{ height: 330, flex: "0 0 auto", borderTop: `1px solid ${theme.color.borderPrimary}`, display: "flex", flexDirection: "column", background: theme.color.base }}>
+        <div style={{ display: "flex", alignItems: "center", gap: theme.space.xs, height: theme.timeline.toolbarHeight, padding: `0 ${theme.space.md}px`, borderBottom: `1px solid ${theme.color.borderPrimary}`, background: theme.color.surface, flex: "0 0 auto" }}>
+          <IconBtn glyph="↶" title="Undo (Ctrl+Z)" onClick={() => store.undo()} />
+          <IconBtn glyph="↷" title="Redo (Ctrl+Shift+Z)" onClick={() => store.redo()} />
+          <div style={{ width: 1, height: 18, background: theme.color.borderSubtle, margin: `0 ${theme.space.xs}px` }} />
+          <IconBtn glyph="▚" title="Split at playhead (S)" onClick={() => store.splitAtPlayhead()} />
+          <IconBtn glyph="🗑" title="Delete selected (Del)" onClick={() => store.removeSelected()} size={13} />
+          <div style={{ flex: 1 }} />
+          <IconBtn glyph="－" title="Zoom out" onClick={() => store.setZoom(pixelsPerFrame / theme.zoom.stepFactor)} />
+          <input
+            type="range" min={theme.zoom.min} max={theme.zoom.max} step={0.01} value={pixelsPerFrame}
+            onChange={(e) => store.setZoom(parseFloat(e.target.value))}
+            style={{ width: 120, accentColor: theme.color.accent }}
+          />
+          <IconBtn glyph="＋" title="Zoom in" onClick={() => store.setZoom(pixelsPerFrame * theme.zoom.stepFactor)} />
+        </div>
+        <div style={{ flex: "1 1 auto", minHeight: 0 }}>
+          <Timeline />
+        </div>
       </div>
     </div>
   );

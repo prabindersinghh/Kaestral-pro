@@ -28,6 +28,8 @@ export interface ClipPatch {
   opacity?: number;
   blendMode?: Clip["blendMode"];
   transform?: Partial<Clip["transform"]>;
+  fadeInFrames?: number;
+  fadeOutFrames?: number;
 }
 
 export interface ViewState {
@@ -139,6 +141,15 @@ export class EditorStore {
     this.emit();
   }
 
+  /** Toggle a track's mute (audio) or hidden (visual) flag. */
+  toggleTrackFlag(trackIndex: number): void {
+    const t = this.timeline.tracks[trackIndex];
+    if (!t) return;
+    if (t.type === "audio") t.muted = !t.muted;
+    else t.hidden = !t.hidden;
+    this.emit();
+  }
+
   // --- selection ---
   select(id: string | null, additive = false): void {
     if (id === null) this.view.selectedClipIds = new Set();
@@ -194,13 +205,16 @@ export class EditorStore {
     const ids = new Set(this.view.selectedClipIds);
     if (ids.size === 0) return;
     if (patch.speed !== undefined) this.engine.setClipSpeed([...ids], patch.speed);
-    const perClip = patch.volume !== undefined || patch.opacity !== undefined || patch.blendMode !== undefined || patch.transform;
+    const perClip = patch.volume !== undefined || patch.opacity !== undefined || patch.blendMode !== undefined
+      || patch.transform || patch.fadeInFrames !== undefined || patch.fadeOutFrames !== undefined;
     if (perClip) {
       this.engine.mutateClips(ids, (c) => {
         if (patch.volume !== undefined) { c.volume = patch.volume; c.volumeTrack = undefined; }
         if (patch.opacity !== undefined) { c.opacity = patch.opacity; c.opacityTrack = undefined; }
         if (patch.blendMode !== undefined) c.blendMode = patch.blendMode === "normal" ? undefined : patch.blendMode;
         if (patch.transform) Object.assign(c.transform, patch.transform);
+        if (patch.fadeInFrames !== undefined) c.fadeInFrames = Math.max(0, Math.round(patch.fadeInFrames));
+        if (patch.fadeOutFrames !== undefined) c.fadeOutFrames = Math.max(0, Math.round(patch.fadeOutFrames));
       }, "Change Clip Property");
     }
     this.emit();
