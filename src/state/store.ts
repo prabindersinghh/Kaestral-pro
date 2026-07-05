@@ -167,6 +167,12 @@ export class EditorStore {
   }
 
   // --- engine ops (each already one undo step) ---
+  /** Trim a clip's left/right edge by a project-frame delta (drag handles); one undo step. */
+  trimClip(clipId: string, edge: "left" | "right", deltaFrames: number): void {
+    if (Math.round(deltaFrames) === 0) return;
+    if (this.engine.commitTrim(clipId, edge, Math.round(deltaFrames), true)) this.emit();
+  }
+
   moveClip(clipId: string, toTrack: number, toFrame: number): void {
     if (this.engine.moveClips([{ clipId, toTrack, toFrame }])) this.emit();
   }

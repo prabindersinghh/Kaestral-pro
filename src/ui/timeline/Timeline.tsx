@@ -186,6 +186,7 @@ export function Timeline() {
                   key={c.id}
                   clip={c}
                   rect={r}
+                  ppf={ppf}
                   selected={store.isSelected(c.id)}
                   dim={isGhostSource}
                   onPointerDown={(e) => onClipPointerDown(e, c, ti)}
@@ -247,14 +248,36 @@ function TrackHeader({ index, label, type, muted, hidden }: { index: number; lab
   );
 }
 
+// Self-contained edge-trim handle: drags horizontally, commits one trim on release.
+function TrimHandle({ clipId, edge, ppf, visible }: { clipId: string; edge: "left" | "right"; ppf: number; visible: boolean }) {
+  const start = useRef<{ x: number } | null>(null);
+  const [drag, setDrag] = useState(false);
+  return (
+    <div
+      onPointerDown={(e) => { e.stopPropagation(); (e.target as HTMLElement).setPointerCapture(e.pointerId); start.current = { x: e.clientX }; setDrag(true); }}
+      onPointerMove={(e) => { if (start.current) e.stopPropagation(); }}
+      onPointerUp={(e) => { e.stopPropagation(); const s = start.current; start.current = null; setDrag(false); if (s) store.trimClip(clipId, edge, (e.clientX - s.x) / ppf); }}
+      style={{
+        position: "absolute", top: 0, bottom: 0, [edge]: 0, width: theme.timeline.trimHandleWidth + 2,
+        cursor: "ew-resize", zIndex: 4,
+        background: drag ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.18)",
+        borderLeft: edge === "left" ? "2px solid rgba(255,255,255,0.6)" : undefined,
+        borderRight: edge === "right" ? "2px solid rgba(255,255,255,0.6)" : undefined,
+        opacity: visible || drag ? 1 : 0, transition: "opacity 0.12s",
+      }}
+    />
+  );
+}
+
 function ClipView(props: {
-  clip: Clip; rect: { x: number; y: number; width: number; height: number };
+  clip: Clip; rect: { x: number; y: number; width: number; height: number }; ppf: number;
   selected: boolean; dim: boolean;
   onPointerDown: (e: React.PointerEvent) => void;
   onPointerMove: (e: React.PointerEvent) => void;
   onPointerUp: (e: React.PointerEvent) => void;
 }) {
-  const { clip, rect, selected, dim } = props;
+  const { clip, rect, selected, dim, ppf } = props;
+  const [hover, setHover] = useState(false);
   const color = clipColor(clip.mediaType);
   const label = clip.mediaType === "text"
     ? clip.textContent || "Text"
@@ -266,6 +289,8 @@ function ClipView(props: {
       onPointerDown={props.onPointerDown}
       onPointerMove={props.onPointerMove}
       onPointerUp={props.onPointerUp}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
       style={{
         position: "absolute", left: rect.x, top: rect.y, width: w, height: rect.height,
         background: theme.color.raised,
@@ -289,6 +314,8 @@ function ClipView(props: {
       <div style={{ position: "absolute", left: 0, right: 0, top: 3, fontSize: theme.fontSize.sm, color: "rgba(255,255,255,0.96)", padding: "3px 6px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", textShadow: "0 1px 2px rgba(0,0,0,0.8)" }}>
         {label}
       </div>
+      {w > 16 && <TrimHandle clipId={clip.id} edge="left" ppf={ppf} visible={selected || hover} />}
+      {w > 16 && <TrimHandle clipId={clip.id} edge="right" ppf={ppf} visible={selected || hover} />}
     </div>
   );
 }

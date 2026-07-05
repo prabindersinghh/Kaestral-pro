@@ -575,4 +575,41 @@ Ported from `Audio/WaveformExtractor.swift`, `Audio/AudioEnvelope.swift`, and
 
 ---
 
+## Entry — 2026-07-05 · ④ UI polish to Palmier level + ⑤ color verified + ⑥ trim handles
+
+User confirmed audio (GO) but flagged the UI as not Palmier-level (with a real Palmier screenshot) and
+⑤/⑥ as weak. Ported Palmier's actual design + added the missing power tool:
+- **theme.ts** — Palmier `UI/AppTheme.swift` tokens verbatim (bg #0a0a0a/#161616/#1e1e1e/#2c2c2c, border
+  white .16/.12, text white 1/.8/.62/.34, track colors video #0091C2 / audio #58A822 / image·text
+  #B72DD2, Radius/Spacing/FontSize scales, accent timecode rgb .95/.6/.2).
+- **Editor** — clean title bar (name + connection dot + accent Export); preview **transport bar**
+  (orange timecode, ⏮◀▶▶⏭, 16:9/fps/res badges, total TC); timeline **toolbar** (undo/redo, split,
+  delete, zoom slider).
+- **Inspector** — ported `InspectorView` structure: sections LEVELS (Volume in **dB** via VolumeScale,
+  Fade In/Out in **s**), PLAYBACK (Speed ×), COMPOSITING (Opacity %, Blend), TRANSFORM, COLOR,
+  KEYFRAMES — `[icon] Label … value` rows. Added fade editing to `editSelected`.
+- **MediaPanel** — 16:9 thumbnail **grid** with real video/image previews.
+- **Timeline** — clips render a **color rail + real media thumbnail/filmstrip**; track headers get
+  mute/hide toggles (`store.toggleTrackFlag`); labels show asset names.
+- **⑥ Trim handles** — `store.trimClip` → engine `commitTrim` (already ported from
+  `EditorViewModel`); draggable left/right edge handles on clips (appear on hover/selection),
+  linked-partner propagation, one undo step.
+
+### Gate — verified in the running app (Playwright + screenshots in docs/screenshots/)
+- `04-ui-overhaul.png`, `05-inspector.png`, `06-trim-and-inspector.png` — the app now visually matches
+  Palmier's layout (media grid, transport, sectioned inspector, thumbnailed clips + waveform).
+- **Trim** live: hero clip right edge 90f → 60f (one undo step), restored via undo.
+- **Color renders** live: exposure +2 on the hero brightened the sampled preview pixel
+  rgb(87,200,192) → rgb(255,255,255) — ⑤ was already compositing through the same `drawFrame`
+  pipeline used by the export.
+- `npm test` 136/136, `tsc` clean, build OK.
+
+Remaining before ⑥ is "great": keyframe lanes in the timeline, razor-tool cursor (Split works via
+button/S), transitions, live trim preview while dragging. ③ smooth playback (WebCodecs) still pending.
+
+> ⏸️ **CHECKPOINT (b): user judges UI/UX.** Stopping for Prabinder to look at the polished app and say
+> whether it now reads as Palmier-level before ③ smooth playback + deeper ⑤/⑥.
+
+---
+
 <!-- Append the next session's entry below this line. Keep newest at the bottom or top consistently. -->
