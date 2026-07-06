@@ -261,11 +261,11 @@ export class EditorStore {
     this.emit();
   }
 
-  /** Stamp a keyframe for `property` at the playhead on the selected clip (mirrors set_keyframes). */
-  stampKeyframe(property: AnimatableProperty): void {
+  /** Stamp a keyframe for `property` at `atFrame` (default playhead) on the selected clip. */
+  stampKeyframe(property: AnimatableProperty, atFrame?: number): void {
     const clip = this.selectedClip;
     if (!clip) return;
-    const f = this.view.currentFrame;
+    const f = Math.round(atFrame ?? this.view.currentFrame);
     if (!(f >= clip.startFrame && f < endFrame(clip))) return;
     const offset = f - clip.startFrame;
     const key = PROP_TO_KEY[property];
@@ -292,6 +292,41 @@ export class EditorStore {
     if (!clip) return;
     this.engine.setKeyframes(clip.id, property, []);
     this.emit();
+  }
+
+  /** Clip-relative keyframes for a property on a clip (for the timeline lanes). */
+  keyframesOf(clip: Clip, property: AnimatableProperty): { frame: number; value: KeyframeValue; interpolationOut: "smooth" }[] {
+    const t = clip[PROP_TO_KEY[property]] as { keyframes: { frame: number; value: KeyframeValue; interpolationOut: "smooth" }[] } | undefined;
+    return t?.keyframes ?? [];
+  }
+
+  private writeKeyframes(clipId: string, property: AnimatableProperty, kfs: { frame: number; value: KeyframeValue; interpolationOut: "smooth" }[]): void {
+    this.engine.setKeyframes(clipId, property, kfs.map((k) => ({ frame: k.frame, value: k.value, interpolationOut: k.interpolationOut })));
+    this.emit();
+  }
+
+  /** Delete one keyframe (clip-relative frame) from a property track. */
+  deleteKeyframe(clipId: string, property: AnimatableProperty, frame: number): void {
+    const clip = this.engine.findClip(clipId);
+    if (!clip) return;
+    const c = this.timeline.tracks[clip.trackIndex].clips[clip.clipIndex];
+    this.writeKeyframes(clipId, property, this.keyframesOf(c, property).filter((k) => k.frame !== frame));
+  }
+
+  /** Move one keyframe from `fromFrame` to `toFrame` (clip-relative), replacing any at the target. */
+  moveKeyframe(clipId: string, property: AnimatableProperty, fromFrame: number, toFrame: number): void {
+    if (fromFrame === toFrame) return;
+    const clip = this.engine.findClip(clipId);
+    if (!clip) return;
+    const c = this.timeline.tracks[clip.trackIndex].clips[clip.clipIndex];
+    const max = Math.max(0, c.durationFrames - 1);
+    const dest = Math.max(0, Math.min(max, Math.round(toFrame)));
+    const moved = this.keyframesOf(c, property).filter((k) => k.frame !== dest);
+    const target = moved.find((k) => k.frame === fromFrame);
+    if (!target) return;
+    target.frame = dest;
+    moved.sort((a, b) => a.frame - b.frame);
+    this.writeKeyframes(clipId, property, moved);
   }
 
   /** Grade the selected clips (mirrors apply_color, merge). */

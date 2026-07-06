@@ -5,6 +5,7 @@ import { TimelineGeometry } from "./geometry";
 import { collectTargets, findSnap, newSnapState, type SnapState } from "./snap";
 import { isCompatible } from "../../model";
 import { WaveformStrip } from "./waveform";
+import { KeyframeLaneLabels, KeyframeLaneContent, laneProps, LANE_HEIGHT } from "./KeyframeLanes";
 import type { Clip } from "../../model/types";
 
 const { rulerHeight, dropZoneHeight, trackHeight, headerWidth } = theme.timeline;
@@ -51,9 +52,12 @@ export function Timeline() {
   const laneBottom = geo.laneBottom();
   const totalFrames = store.totalFrames;
   const contentWidth = Math.max((totalFrames + fps * 4) * ppf, 1200);
+  const selClip = store.selectedClip;
+  const kfBlockHeight = selClip ? (laneProps(selClip).length + 1) * LANE_HEIGHT : 0;
 
   const contentRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const headerColRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<DragOrigin | null>(null);
   const [ghost, setGhost] = useState<{ clipId: string; trackIndex: number; startFrame: number } | null>(null);
 
@@ -140,23 +144,25 @@ export function Timeline() {
 
   return (
     <div style={{ display: "flex", height: "100%", background: theme.color.panel, fontFamily: theme.font.ui, userSelect: "none" }}>
-      {/* Track headers (fixed left column) */}
-      <div style={{ width: headerWidth, flex: "0 0 auto", background: theme.color.trackHeader, borderRight: `1px solid ${theme.color.border}` }}>
+      {/* Track headers (fixed left column) — vertical scroll synced to the content */}
+      <div ref={headerColRef} style={{ width: headerWidth, flex: "0 0 auto", background: theme.color.trackHeader, borderRight: `1px solid ${theme.color.border}`, overflowY: "hidden" }}>
         <div style={{ height: rulerHeight + dropZoneHeight, borderBottom: `1px solid ${theme.color.border}` }} />
         {timeline.tracks.map((t, i) => (
           <TrackHeader key={t.id} index={i} label={store.engine.trackDisplayLabel(i)} type={t.type} muted={t.muted} hidden={t.hidden} />
         ))}
+        {selClip && <KeyframeLaneLabels clip={selClip} />}
       </div>
 
       {/* Scrollable lanes */}
       <div
         ref={scrollRef}
         onWheel={onWheel}
-        style={{ flex: "1 1 auto", overflowX: "auto", overflowY: "hidden", position: "relative" }}
+        onScroll={(e) => { if (headerColRef.current) headerColRef.current.scrollTop = (e.target as HTMLElement).scrollTop; }}
+        style={{ flex: "1 1 auto", overflowX: "auto", overflowY: "auto", position: "relative" }}
       >
         <div
           ref={contentRef}
-          style={{ position: "relative", width: contentWidth, height: laneBottom + 20 }}
+          style={{ position: "relative", width: contentWidth, height: laneBottom + kfBlockHeight + 20 }}
           onPointerDown={(e) => { if (e.button === 0) movePlayheadTo(e.clientX); }}
         >
           {/* Ruler */}
@@ -197,8 +203,11 @@ export function Timeline() {
             }),
           )}
 
+          {/* Keyframe lanes for the selected clip */}
+          {selClip && <KeyframeLaneContent clip={selClip} ppf={ppf} width={contentWidth} top={laneBottom} />}
+
           {/* Playhead */}
-          <Playhead x={currentFrame * ppf} bottom={laneBottom} />
+          <Playhead x={currentFrame * ppf} bottom={laneBottom + kfBlockHeight} />
         </div>
       </div>
     </div>

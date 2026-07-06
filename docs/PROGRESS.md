@@ -642,4 +642,33 @@ Prereqs confirmed on this machine: Python 3.11, uv 0.10, ffmpeg 8.0, node 22, gi
 
 ---
 
+## Entry — 2026-07-06 · The 4 unfinished UI pieces (Settings, Typography, Generation, Keyframe lanes)
+
+Smooth playback confirmed by the user. Built the 4 non-key-dependent UI pieces in the user's ranked
+order, each verified LIVE in the running app (Playwright + screenshots in docs/screenshots/):
+1. **Settings + Connect-AI** (`src/ui/Settings.tsx`) — modal with Connect AI (server status, MCP URL,
+   one-click copy of `claude mcp add …`, 3-step guide), Project (fps/resolution), Export (codec/res)
+   tabs; gear + Connect-AI buttons in the title bar. `07-settings-connect.png`.
+2. **Typography** (`src/ui/Inspector.tsx` TextSection; `store.editText`; `draw.ts` bg+outline) —
+   content, font, size, bold/italic, alignment, color, background, outline, shadow, animation preset +
+   per-word frames. Compositor now renders text background box + outline. Verified: "MAESTRO" with
+   green bg + black outline renders. `08-typography.png`.
+3. **Generation panel** (`src/ui/GenerationPanel.tsx`) — Palmier's generate surface (Video/Image/Audio,
+   LTX-2 model picker, prompt, aspect/duration, Generate) with an honest "backend not connected — see
+   STRATEGY ③" banner; never fakes a result. `09-generation.png`.
+4. **Keyframe lanes** (`src/ui/timeline/KeyframeLanes.tsx`; store `keyframesOf`/`moveKeyframe`/
+   `deleteKeyframe`; `stampKeyframe(prop, atFrame)`) — per-property lanes (Opacity/Position/Scale/
+   Rotation/Crop, or Volume) under the tracks with diamond keyframes at their timeline positions;
+   click-empty adds, drag moves, click deletes. Timeline made vertically scrollable with the header
+   column synced. Verified live: 3 diamonds rendered; add→[8,55], move 8→17, delete verified.
+   `10-keyframe-lanes.png`.
+
+136 tests green, tsc clean, build OK. All committed + pushed.
+
+> ⏸️ **STOP for the ElevenLabs key.** Per the agreed dependency, captions (#5) needs word-level
+> transcription = the key + video-use ①. Next phase = video-use ① + captions #5 together, once the
+> user pastes the key (write to `~/Developer/video-use/.env`).
+
+---
+
 <!-- Append the next session's entry below this line. Keep newest at the bottom or top consistently. -->
