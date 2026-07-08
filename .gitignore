@@ -7,3 +7,5 @@ dist-ssr
 # Rust / Tauri
 src-tauri/target
 generated/
+dist-server/
+src-tauri/resources/

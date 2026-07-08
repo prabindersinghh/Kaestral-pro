@@ -6,6 +6,7 @@
 
 import { createCanvas, type SKRSContext2D } from "@napi-rs/canvas";
 import { spawn } from "node:child_process";
+import { ffmpegBin } from "../mcp/env";
 
 export type TitlePreset = "fadeSlideUp" | "scaleIn" | "typewriter" | "wordReveal" | "lowerThird";
 export type TitleBackground = "black" | "gradient" | "spotlight" | string; // or a hex
@@ -154,7 +155,7 @@ export async function renderTitle(spec: TitleSpec): Promise<TitleResult> {
   const canvas = createCanvas(W, H);
   const ctx = canvas.getContext("2d");
 
-  const ff = spawn(spec.ffmpegPath ?? "ffmpeg", [
+  const ff = spawn(spec.ffmpegPath ?? ffmpegBin(), [
     "-y", "-f", "image2pipe", "-framerate", String(fps), "-s", `${W}x${H}`, "-i", "-",
     "-r", String(fps), "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "18", "-preset", "medium", "-movflags", "+faststart",
     spec.outputPath,

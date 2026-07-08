@@ -2,9 +2,10 @@
 // `export_video` command (app export button) and usable standalone:
 //   echo '{"timeline":{...},"media":{...}}' | npx tsx src/render/renderCli.ts out.mp4 H.264 1080p
 
-import { join, resolve } from "node:path";
+import { resolve } from "node:path";
 import { renderVideo, type VideoCodec, type VideoResolution } from "./renderVideo";
 import { resolveRenderMediaPath } from "./mediaPath";
+import { publicDir } from "../mcp/env";
 import { decodeTimeline } from "../model/codec";
 import { decodeManifest } from "../model/media";
 
@@ -29,11 +30,11 @@ async function main(): Promise<void> {
   const projectDir = typeof parsed.projectDir === "string" ? parsed.projectDir : ".";
   const names = new Map<string, string>();
   const paths = new Map<string, string>();
-  const publicDir = join(process.cwd(), "public");
+  const pubDir = publicDir();
   if (parsed.media) {
     for (const e of decodeManifest(parsed.media).entries) {
       names.set(e.id, e.name);
-      const p = resolveRenderMediaPath(e.source, projectDir, publicDir);
+      const p = resolveRenderMediaPath(e.source, projectDir, pubDir);
       if (p) paths.set(e.id, p);
     }
   }

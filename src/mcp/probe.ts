@@ -2,6 +2,7 @@
 // place with correct lengths and the UI shows true info.
 
 import { execFile } from "node:child_process";
+import { ffprobeBin } from "./env";
 
 export interface MediaProbe {
   duration: number;
@@ -11,7 +12,7 @@ export interface MediaProbe {
   hasAudio: boolean;
 }
 
-export function probeMedia(path: string, ffprobePath = "ffprobe"): Promise<MediaProbe | null> {
+export function probeMedia(path: string, ffprobePath = ffprobeBin()): Promise<MediaProbe | null> {
   return new Promise((resolve) => {
     execFile(
       ffprobePath,

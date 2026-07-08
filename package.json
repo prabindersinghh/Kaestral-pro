@@ -13,7 +13,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "tauri": "tauri",
-    "mcp": "tsx src/mcp/main.ts"
+    "mcp": "tsx src/mcp/main.ts",
+    "bundle:server": "node scripts/bundle-server.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",

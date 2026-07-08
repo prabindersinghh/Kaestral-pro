@@ -9,6 +9,7 @@ import { drawFrame } from "../compositor/draw";
 import { totalFrames } from "../model/helpers";
 import { NodeFrameSource } from "./nodeFrameSource";
 import { buildAudioMix, type AudioMixPlan } from "./audioMix";
+import { ffmpegBin } from "../mcp/env";
 import type { Timeline } from "../model/types";
 
 export type VideoCodec = "H.264" | "H.265" | "ProRes";
@@ -95,14 +96,14 @@ export async function renderVideo(timeline: Timeline, opts: RenderOptions): Prom
     ? buildAudioMix(timeline, (ref) => { const p = audioResolve(ref); return p && existsSync(p) ? p : null; })
     : null;
 
-  const ff = spawn(opts.ffmpegPath ?? "ffmpeg", ffmpegArgs(codec, fps, W, H, opts.outputPath, audio, total / fps), {
+  const ff = spawn(opts.ffmpegPath ?? ffmpegBin(), ffmpegArgs(codec, fps, W, H, opts.outputPath, audio, total / fps), {
     stdio: ["pipe", "ignore", "pipe"],
   });
   let stderr = "";
   ff.stderr.on("data", (d) => { stderr += String(d); if (stderr.length > 20000) stderr = stderr.slice(-20000); });
 
   const closed = new Promise<void>((resolve, reject) => {
-    ff.on("error", (e) => reject(new Error(`Failed to launch ffmpeg (${opts.ffmpegPath ?? "ffmpeg"}): ${e.message}`)));
+    ff.on("error", (e) => reject(new Error(`Failed to launch ffmpeg (${opts.ffmpegPath ?? ffmpegBin()}): ${e.message}`)));
     ff.on("close", (code) => (code === 0 ? resolve() : reject(new Error(`ffmpeg exited ${code}: ${stderr.slice(-800)}`))));
   });
 

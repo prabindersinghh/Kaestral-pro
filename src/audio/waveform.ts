@@ -3,6 +3,7 @@
 // −50 dB noise floor where 0 = loud and 1 = silence. Decode via ffmpeg → float32 PCM.
 
 import { spawn } from "node:child_process";
+import { ffmpegBin } from "../mcp/env";
 
 export const SAMPLES_PER_SECOND = 200;
 export const NOISE_FLOOR_DB = -50;
@@ -22,7 +23,7 @@ function normalized(peak: number): number {
 }
 
 /** Extract the peak envelope of a media file's audio track (empty peaks if none). */
-export function extractWaveform(path: string, durationSeconds: number, ffmpegPath = "ffmpeg"): Promise<WaveformEnvelope> {
+export function extractWaveform(path: string, durationSeconds: number, ffmpegPath = ffmpegBin()): Promise<WaveformEnvelope> {
   const span = Number.isFinite(durationSeconds) && durationSeconds > 0 ? durationSeconds : 60;
   const rate = Math.min(SAMPLES_PER_SECOND, MAX_SAMPLES / span);
   const hopSize = Math.max(1, Math.round(DECODE_RATE / rate));

@@ -21,6 +21,7 @@ import { SkillStore } from "./skills";
 import { extractWaveform, type WaveformEnvelope } from "../audio/waveform";
 import { join } from "node:path";
 import { mkdir } from "node:fs/promises";
+import { publicDir, remotionDir, dataDir } from "./env";
 import type { VideoCodec, VideoResolution } from "../render/renderVideo";
 
 export interface ToolContentText { type: "text"; text: string }
@@ -79,7 +80,7 @@ export class McpExecutor {
     const cached = this.waveforms.get(mediaRef);
     if (cached) return Promise.resolve(cached);
     const asset = this.media.asset(mediaRef);
-    const path = asset ? resolveRenderMediaPath(asset.source, this.projectDir ?? ".", join(process.cwd(), "public")) : null;
+    const path = asset ? resolveRenderMediaPath(asset.source, this.projectDir ?? ".", publicDir()) : null;
     // Asset not resolvable yet (state not seeded) — return empty WITHOUT caching, so it retries later.
     if (!path) return Promise.resolve({ samplesPerSecond: 200, peaks: [] });
     let job = this.waveformJobs.get(mediaRef);
@@ -137,7 +138,7 @@ export class McpExecutor {
   private async generateTitle(a: Args): Promise<ToolResult> {
     const text = requireStr(a, "text");
     const durationSeconds = aNum(a, "durationSeconds") ?? 3;
-    const dir = join(process.cwd(), "generated");
+    const dir = join(dataDir(), "generated");
     await mkdir(dir, { recursive: true });
     const id = cryptoId();
     const outputPath = join(dir, `title-${id}.mp4`);
@@ -184,11 +185,11 @@ export class McpExecutor {
     const bars = aArr(a, "bars");
     if (bars.length) props.bars = bars;
 
-    const dir = join(process.cwd(), "generated");
+    const dir = join(dataDir(), "generated");
     await mkdir(dir, { recursive: true });
     const outputPath = join(dir, `motion-${cryptoId()}.mp4`);
     const { renderRemotion } = await import("../motion/renderRemotion");
-    const res = await renderRemotion(template, props, outputPath, join(process.cwd(), "remotion"));
+    const res = await renderRemotion(template, props, outputPath, remotionDir());
 
     const dur = res.durationInFrames / res.fps;
     const asset = this.media.addAsset({
@@ -855,7 +856,7 @@ export class McpExecutor {
       mediaPath: (r) => {
         const asset = this.media.asset(r);
         if (!asset) return null;
-        return resolveRenderMediaPath(asset.source, this.projectDir ?? ".", join(process.cwd(), "public"));
+        return resolveRenderMediaPath(asset.source, this.projectDir ?? ".", publicDir());
       },
     });
     return okJson({

@@ -12,6 +12,7 @@ import type { Clip, Timeline } from "../model/types";
 import { isVisual } from "../model/enums";
 import { endFrame, sourceFramesConsumed } from "../model/helpers";
 import { type FrameImage, type FrameSource, sourceConsumedIndex } from "../compositor/frameSource";
+import { ffmpegBin } from "../mcp/env";
 
 function run(cmd: string, args: string[]): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -32,7 +33,7 @@ export class NodeFrameSource implements FrameSource {
   constructor(
     private readonly mediaPath: (mediaRef: string) => string | null,
     private readonly fps: number,
-    private readonly ffmpegPath = "ffmpeg",
+    private readonly ffmpegPath = ffmpegBin(),
   ) {}
 
   /** Load still images and extract each video clip's frames. Call once before rendering. */

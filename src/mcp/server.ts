@@ -9,6 +9,7 @@ import { tmpdir } from "node:os";
 import { extname, join } from "node:path";
 import { ALL_TOOL_DEFS } from "./toolDefs";
 import { resolveRenderMediaPath } from "../render/mediaPath";
+import { publicDir } from "./env";
 import type { McpExecutor } from "./executor";
 
 export const MCP_PORT = 19789;
@@ -158,7 +159,7 @@ export class McpServer {
   private async serveMedia(req: IncomingMessage, res: ServerResponse, assetId: string): Promise<void> {
     const asset = this.executor.media.asset(assetId);
     const path = asset
-      ? resolveRenderMediaPath(asset.source, this.executor.projectDir ?? ".", join(process.cwd(), "public"))
+      ? resolveRenderMediaPath(asset.source, this.executor.projectDir ?? ".", publicDir())
       : null;
     if (!path) {
       res.writeHead(404, CORS).end();
