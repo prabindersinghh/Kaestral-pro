@@ -20,7 +20,7 @@ for Palmier work against Maestro unchanged. Full credit and the port→upstream 
   titles), inspector (speed/volume/opacity/blend/transform + keyframe stamping), media panel.
 - **Shared project state:** the app and the MCP server edit the *same* project live — your changes and
   Claude's merge in real time.
-- **MCP server:** `palmier-pro` v1.0.0 on `http://127.0.0.1:19789/mcp` (localhost-only), all 41 tools
+- **MCP server:** `maestro` v1.0.0 on `http://127.0.0.1:19789/mcp` (localhost-only), all 41 tools
   with Palmier's exact names/schemas. Generation tools honestly report signed-out (no cloud).
 - **Export:** H.264 / H.265 / ProRes video via FFmpeg, plus XMEML (Premiere), FCPXML (Resolve/FCP),
   and `.palmier` package.
@@ -52,7 +52,7 @@ scrub the ruler, **Space** to play, **S** split, **Del** delete, **Ctrl+Z** undo
 npm run mcp
 
 # then point Claude Code at it:
-claude mcp add --transport http palmier-pro http://127.0.0.1:19789/mcp
+claude mcp add --transport http maestro http://127.0.0.1:19789/mcp
 claude
 ```
 

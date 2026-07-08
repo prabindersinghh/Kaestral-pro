@@ -24,15 +24,15 @@ async function rpc(method: string, params: unknown, headers: Record<string, stri
   return { status: res.status, json };
 }
 
-describe("Stage-C: MCP HTTP transport (palmier-pro on 127.0.0.1)", () => {
+describe("Stage-C: MCP HTTP transport (maestro on 127.0.0.1)", () => {
   it("frozen transport constants", () => {
     expect(MCP_PORT).toBe(19789);
     expect(MCP_HOST).toBe("127.0.0.1");
   });
 
-  it("initialize returns palmier-pro 1.0.0 with tools capability", async () => {
+  it("initialize returns maestro 1.0.0 with tools capability", async () => {
     const { json } = await rpc("initialize", { protocolVersion: "2025-06-18" });
-    expect(json.result.serverInfo).toEqual({ name: "palmier-pro", version: "1.0.0" });
+    expect(json.result.serverInfo).toEqual({ name: "maestro", version: "1.0.0" });
     expect(json.result.capabilities.tools).toBeDefined();
     expect(json.result.capabilities.resources).toBeDefined();
   });
@@ -61,8 +61,8 @@ describe("Stage-C: MCP HTTP transport (palmier-pro on 127.0.0.1)", () => {
   it("resources/list exposes the two model resources", async () => {
     const { json } = await rpc("resources/list", {});
     expect(json.result.resources.map((r: { uri: string }) => r.uri)).toEqual([
-      "palmier://models/video",
-      "palmier://models/image",
+      "maestro://models/video",
+      "maestro://models/image",
     ]);
   });
 

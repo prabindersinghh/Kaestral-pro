@@ -97,7 +97,7 @@ fn export_video(
 /// One-click Option B: a terminal window that connects Claude Code to Maestro and launches it.
 #[tauri::command]
 fn launch_claude_code() -> Result<String, String> {
-    let connect = "claude mcp add --transport http palmier-pro http://127.0.0.1:19789/mcp & claude";
+    let connect = "claude mcp add --transport http maestro http://127.0.0.1:19789/mcp & claude";
     #[cfg(target_os = "windows")]
     {
         Command::new("cmd")

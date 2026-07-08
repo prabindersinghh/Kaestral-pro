@@ -1,6 +1,6 @@
 // Resolve a media asset's source to a real on-disk path for the FFmpeg render (node-only, pure).
 //  - project package media → <projectDir>/<relativePath>
-//  - bundled/served asset ("/foo.mp4") → <publicDir>/foo.mp4 (dev: palmier-win/public)
+//  - bundled/served asset ("/foo.mp4") → <publicDir>/foo.mp4 (dev: maestro/public)
 //  - remote URL (http[s]) → null (download-first is an UPGRADE)
 //  - real disk path (e.g. C:\clip.mp4) → itself
 

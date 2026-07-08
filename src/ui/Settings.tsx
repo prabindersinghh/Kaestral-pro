@@ -8,7 +8,7 @@ import { theme, sectionLabelStyle } from "./theme";
 import { BRIDGE_URL } from "../state/bridge";
 
 const MCP_URL = `${BRIDGE_URL}/mcp`;
-const CONNECT_CMD = `claude mcp add --transport http palmier-pro ${MCP_URL}`;
+const CONNECT_CMD = `claude mcp add --transport http maestro ${MCP_URL}`;
 
 type Tab = "connect" | "project" | "export";
 
@@ -252,7 +252,7 @@ function ExportTab() {
           {["720p", "1080p", "2K", "4K", "Match Timeline"].map((r) => <option key={r} value={r}>{r}</option>)}
         </select>
       </Field>
-      <div style={{ fontSize: theme.fontSize.xs, color: theme.color.textMuted }}>The Export button uses these. Files land next to the project as palmier-export.mp4.</div>
+      <div style={{ fontSize: theme.fontSize.xs, color: theme.color.textMuted }}>The Export button uses these. Files land next to the project as maestro-export.mp4.</div>
     </div>
   );
 }

@@ -1,6 +1,6 @@
-// CLI: run the Palmier MCP server. Optionally load a .palmier project directory.
+// CLI: run the Maestro MCP server. Optionally load a .palmier project directory.
 //   npm run mcp -- "C:/path/to/My Project.palmier"
-// Then: claude mcp add --transport http palmier-pro http://127.0.0.1:19789/mcp
+// Then: claude mcp add --transport http maestro http://127.0.0.1:19789/mcp
 
 import { McpServer, MCP_PORT } from "./server";
 import { McpExecutor } from "./executor";
@@ -35,7 +35,7 @@ async function main(): Promise<void> {
   await server.start();
   // Log to stderr so stdout stays clean for any pipe consumers.
   console.error(
-    `palmier-pro MCP listening on http://127.0.0.1:${MCP_PORT}/mcp` +
+    `Maestro MCP listening on http://127.0.0.1:${MCP_PORT}/mcp` +
       (dir ? ` (project: ${dir})` : " (empty project)"),
   );
 }
