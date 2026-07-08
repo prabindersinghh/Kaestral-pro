@@ -733,4 +733,40 @@ user's GPU + local-vs-hosted cost first.
 
 ---
 
+## Entry — 2026-07-08 · STRATEGY ② motion graphics — Remotion engine added (React), auto-picked
+
+Per user: full capacity, not just the safe engine. Added **Remotion** (the real React render engine
+from remotion-dev/skills) alongside the canvas engine; Claude auto-picks by request.
+- **Isolated workspace** `palmier-win/remotion/` (own package.json/node_modules — gitignored): Root +
+  4 parameterized compositions using the Remotion skill's frame-driven APIs (useCurrentFrame,
+  interpolate, spring, Sequence, AbsoluteFill, calculateMetadata for prop-driven duration):
+  **AnimatedIntro** (spring scale-in + glow + wipe underline + staggered subtitle), **LogoReveal**
+  (ring-draw + wordmark spring + shine sweep), **DataViz** (animated bar chart from `bars`, values
+  count up), **Transition** (accent wipe stinger). `render.mjs` = bundle(cached) → selectComposition →
+  renderMedia; `ensureBrowser()` fetches Chrome Headless Shell.
+- `src/motion/renderRemotion.ts` bridges the executor → render.mjs (child process).
+- **`generate_motion`** MCP tool (Remotion) added next to **`generate_title`** (canvas). **45 tools**
+  now (41 + read_skill/list_skills + generate_title + generate_motion). Tool descriptions do the
+  **auto-pick**: simple text → generate_title; springs/logo/charts/transitions/"motion design" →
+  generate_motion.
+
+### Windows / Chromium
+`ensureBrowser()` auto-downloaded **Chrome Headless Shell (102 MB, one-time, cached)** — no user
+action needed. First render also bundles (webpack) once → cached in `remotion/.bundle-cache`;
+subsequent renders ~10-12s. `chromiumOptions.gl:"angle"` for no-GPU robustness. **Setup for a fresh
+clone: `cd remotion && npm install` once** (node_modules is gitignored).
+
+### Gate — verified live
+- `generate_motion(AnimatedIntro, "MAESTRO")` over MCP → **11.7s** → 120 frames 1920×1080, engine
+  "remotion", **placed on the timeline**. In-app: preview shows the intro (48,402 white title px +
+  3,697 green accent px). `docs/screenshots/13-remotion-intro.png`.
+- All 4 templates render OK (h264 1920×1080): AnimatedIntro (in-app), LogoReveal, DataViz, Transition.
+  DataViz frame: `docs/screenshots/14-remotion-dataviz.png` (animated Growth bar chart).
+- 136 tests green, tsc clean.
+
+> ✅ Two motion engines, auto-picked: canvas (instant simple titles) + Remotion (complex motion
+> design). "A complex animated intro" → Remotion renders it → it lands on Maestro's timeline.
+
+---
+
 <!-- Append the next session's entry below this line. Keep newest at the bottom or top consistently. -->

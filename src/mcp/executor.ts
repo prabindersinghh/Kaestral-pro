@@ -173,6 +173,39 @@ export class McpExecutor {
     return okJson({ assetId: asset.id, name: asset.name, frames: Math.round(durationSeconds * this.fps), width: this.timeline.width, height: this.timeline.height, placed: place });
   }
 
+  // generate_motion (Remotion): render a complex motion-graphics template to MP4, import, place.
+  private async generateMotion(a: Args): Promise<ToolResult> {
+    const template = requireStr(a, "template");
+    const valid = ["AnimatedIntro", "LogoReveal", "DataViz", "Transition"];
+    if (!valid.includes(template)) throw new ToolFail(`unknown template '${template}'. Valid: ${valid.join(", ")}`);
+    const durationSeconds = aNum(a, "durationSeconds") ?? (template === "Transition" ? 1 : 4);
+    const props: Record<string, unknown> = { durationSeconds };
+    for (const k of ["title", "subtitle", "accent", "label"]) { const v = aStr(a, k); if (v !== undefined) props[k] = v; }
+    const bars = aArr(a, "bars");
+    if (bars.length) props.bars = bars;
+
+    const dir = join(process.cwd(), "generated");
+    await mkdir(dir, { recursive: true });
+    const outputPath = join(dir, `motion-${cryptoId()}.mp4`);
+    const { renderRemotion } = await import("../motion/renderRemotion");
+    const res = await renderRemotion(template, props, outputPath, join(process.cwd(), "remotion"));
+
+    const dur = res.durationInFrames / res.fps;
+    const asset = this.media.addAsset({
+      name: `Motion: ${template}`, type: "video", duration: dur,
+      source: { kind: "external", absolutePath: outputPath },
+      sourceWidth: res.width, sourceHeight: res.height, sourceFPS: res.fps, hasAudio: false,
+    });
+    this.stateVersion++;
+    const place = aBool(a, "place") !== false;
+    if (place) {
+      const trackIndex = this.ensureTrack("video");
+      this.engine.addClips([{ mediaRef: asset.id, trackIndex, startFrame: this.currentFrame, durationFrames: res.durationInFrames, mediaType: "video", sourceClipType: "video" }]);
+      this.track(true, "Generate Motion");
+    }
+    return okJson({ assetId: asset.id, name: asset.name, template, frames: res.durationInFrames, width: res.width, height: res.height, engine: "remotion", placed: place });
+  }
+
   async execute(name: string, args: Args): Promise<ToolResult> {
     const READ_ONLY = new Set([
       "get_timeline", "get_media", "inspect_media", "get_transcript", "inspect_timeline",
@@ -202,6 +235,7 @@ export class McpExecutor {
       }
       // Motion graphics (Maestro extension)
       case "generate_title": return this.generateTitle(a);
+      case "generate_motion": return this.generateMotion(a);
       // Read
       case "get_timeline": return this.getTimeline(a);
       case "get_media": return okJson({ media: this.media.mediaRows() });

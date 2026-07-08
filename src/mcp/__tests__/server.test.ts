@@ -47,7 +47,8 @@ describe("Stage-C: MCP HTTP transport (palmier-pro on 127.0.0.1)", () => {
     expect(names).toContain("read_skill");
     expect(names).toContain("list_skills");
     expect(names).toContain("generate_title");
-    expect(json.result.tools.length).toBe(44);
+    expect(names).toContain("generate_motion");
+    expect(json.result.tools.length).toBe(45);
   });
 
   it("tools/call get_timeline returns canGenerate:false", async () => {

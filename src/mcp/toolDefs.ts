@@ -717,12 +717,13 @@ export const SKILL_TOOL_DEFS: ToolDef[] = [
   },
 ];
 
-// Motion-graphics extension (STRATEGY ②) — NOT part of the frozen 41. Renders an animated title/
-// intro/lower-third to MP4 locally (canvas + FFmpeg, no GPU/key) and imports it onto the timeline.
+// Motion-graphics extension (STRATEGY ②) — NOT part of the frozen 41. Two engines, auto-picked by
+// the request: generate_title = fast canvas+FFmpeg for SIMPLE text cards; generate_motion = Remotion
+// (React, headless Chromium) for COMPLEX motion design. Both render to MP4 and land on the timeline.
 export const MOTION_TOOL_DEFS: ToolDef[] = [
   {
     name: "generate_title",
-    description: "Generate an ANIMATED title / intro / lower-third card as a real MP4 (rendered locally — no GPU, no API key) and add it to the project. Map the user's request to the params: their words → `text` (+ optional `subtitle`), the vibe → `preset` and `background`/`accent`. By default it's placed at the playhead; pass place=false to only add it to the media library. Use this for animated titles, intros, outros, and lower-thirds — the fast path Palmier has no equivalent for.",
+    description: "SIMPLE animated text card — a title, lower-third, or basic intro — rendered instantly (canvas + FFmpeg, no browser). Use this when the request is essentially text with a basic entrance (fade, slide, scale, typewriter, word-by-word). For anything richer — logo reveals, animated charts, springs/particles, transitions, 'motion design' — use generate_motion instead. Placed at the playhead by default (place=false to only import).",
     inputSchema: obj({
       text: str("The title text (required)."),
       subtitle: str("Optional smaller second line."),
@@ -734,6 +735,20 @@ export const MOTION_TOOL_DEFS: ToolDef[] = [
       durationSeconds: num("Length in seconds. Default 3."),
       place: bool("Place at the playhead (default true). false = only import to the media library."),
     }, ["text"]),
+  },
+  {
+    name: "generate_motion",
+    description: "COMPLEX motion graphics via Remotion (React render engine) — animated intros/outros, logo reveals, animated data-viz charts, and transition stingers — rendered to a real MP4 and added to the timeline. Use this (not generate_title) whenever the request is more than simple text: springs, staggered reveals, glow, animated charts, logo builds, transitions, 'make it look like a motion designer did it'. Slower (renders via headless Chromium) but far richer. Templates:\n• AnimatedIntro — title + subtitle with spring scale-in, glow, wipe underline, staggered words.\n• LogoReveal — a ring draws on, the wordmark springs in with a shine sweep.\n• DataViz — an animated bar chart from `bars` (bars grow + values count up).\n• Transition — a full-frame accent wipe 'stinger' to drop between two clips (optional midpoint `label`).\nPlaced at the playhead by default (place=false to only import).",
+    inputSchema: obj({
+      template: enumStr(["AnimatedIntro", "LogoReveal", "DataViz", "Transition"], "Which motion template."),
+      title: str("Main text (AnimatedIntro / LogoReveal / DataViz title)."),
+      subtitle: str("Second line (AnimatedIntro)."),
+      label: str("Optional midpoint label (Transition)."),
+      accent: str("Accent hex, e.g. '#1db26b'."),
+      bars: arr(obj({ label: str(), value: num() }, ["label", "value"]), "DataViz data: [{label, value}, …]."),
+      durationSeconds: num("Length in seconds."),
+      place: bool("Place at the playhead (default true). false = only import."),
+    }, ["template"]),
   },
 ];
 
