@@ -14,15 +14,22 @@ if [[ ! -d /opt/ltx/venv ]]; then sudo python3 -m venv /opt/ltx/venv; fi
 sudo /opt/ltx/venv/bin/pip install -q --upgrade pip
 sudo /opt/ltx/venv/bin/pip install -q fastapi "uvicorn[standard]" pydantic
 
-# --- MANUAL STEP: clone LTX-2 + download the distilled checkpoint onto the PERSISTENT disk ---
-# so it's cached across stop/start. Then wire _run_job() in ltx_server.py to call the pipeline.
+# --- MANUAL STEP: clone LTX-2 (v2.3) + download the FP8 checkpoint onto the PERSISTENT disk ---
+# The server (_run_job) already calls the real LTX-2 CLI — you just need the repo + weights present.
+# NOTE: use github.com/Lightricks/LTX-2 (NOT the old LTX-Video 0.9.x, which can't load a 2.3 checkpoint).
 cat <<'NOTE'
 
-  NEXT (manual, one time):
-    git clone https://github.com/Lightricks/LTX-Video /opt/ltx/LTX-Video
-    /opt/ltx/venv/bin/pip install -e /opt/ltx/LTX-Video
-    # download ltx-2.3-22b-distilled-1.1 into /opt/ltx (see the repo README for the exact command)
-    # then edit /opt/ltx/ltx_server.py:  load_pipeline()  and  _run_job()  to call the real pipeline.
+  NEXT (manual, one time) — repo + weights onto /opt/ltx (cached across stop/start):
+    git clone https://github.com/Lightricks/LTX-2 /opt/ltx/LTX-2
+    /opt/ltx/venv/bin/pip install -e /opt/ltx/LTX-2/packages/ltx-pipelines
+    sudo apt-get install -y ffmpeg           # for the image (1 frame -> PNG) path
+    hf auth login
+    # 24GB L4 REQUIRES the fp8 checkpoint (bf16 22B OOMs):
+    hf download Lightricks/LTX-2.3-fp8 ltx-2.3-22b-distilled-fp8.safetensors --local-dir /opt/ltx/models/ltx-2.3
+    hf download Lightricks/LTX-2.3 ltx-2.3-spatial-upscaler-x2-1.1.safetensors --local-dir /opt/ltx/models/ltx-2.3
+    hf download google/gemma-3-12b-it-qat-q4_0-unquantized --local-dir /opt/ltx/models/gemma-3-12b
+    # (filenames carry version suffixes — re-list huggingface.co/Lightricks/LTX-2.3 if one 404s,
+    #  then set LTX_CKPT_FILE / LTX_UPSCALER in the service file to match.)
 
   Set your shared secret (must match what you paste into Maestro):
     sudo sed -i 's/CHANGE_ME_SHARED_SECRET/<your-random-token>/' /etc/systemd/system/maestro-ltx.service

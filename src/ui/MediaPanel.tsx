@@ -69,13 +69,17 @@ export function MediaPanel() {
       <div style={{ height: theme.timeline.panelHeaderHeight, display: "flex", alignItems: "center", justifyContent: "space-between", padding: `0 ${theme.space.lg}px`, borderBottom: `1px solid ${theme.color.borderPrimary}`, background: theme.color.raised, flex: "0 0 auto" }}>
         <span style={sectionLabelStyle}>Media</span>
         <div style={{ display: "flex", gap: theme.space.xs }}>
-          <button
-            onClick={() => store.openGenerate(true)}
-            title="Generate media with AI (open backend — see Strategy)"
-            style={{ background: theme.color.base, color: theme.color.textSecondary, border: `1px solid ${theme.color.borderSubtle}`, borderRadius: theme.radius.sm, padding: "3px 9px", fontSize: theme.fontSize.sm, cursor: "pointer", fontFamily: theme.font.ui }}
-          >
-            ✨ Generate
-          </button>
+          {/* AI generation is a hidden future paid-tier feature — the button only appears when the
+              dev flag is on (VITE_MAESTRO_GEN=1 or window.store.enableGenDev(true)). Default: hidden. */}
+          {store.settings.genDevMode && (
+            <button
+              onClick={() => store.openGenerate(true)}
+              title="Generate media with AI (dev/testing only)"
+              style={{ background: theme.color.base, color: theme.color.textSecondary, border: `1px solid ${theme.color.borderSubtle}`, borderRadius: theme.radius.sm, padding: "3px 9px", fontSize: theme.fontSize.sm, cursor: "pointer", fontFamily: theme.font.ui }}
+            >
+              ✨ Generate
+            </button>
+          )}
           <button
             onClick={onImportClick}
             title="Import media files (or drag files anywhere into the window)"

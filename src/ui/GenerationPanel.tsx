@@ -22,7 +22,8 @@ export function GenerationPanel() {
   const [busy, setBusy] = useState(false);
   const [keyInput, setKeyInput] = useState(store.settings.genKey);
 
-  if (!store.settings.showGenerate) return null;
+  // Hidden feature: renders ONLY when the generation dev flag is on AND the panel was opened.
+  if (!store.settings.genDevMode || !store.settings.showGenerate) return null;
   const provider = store.settings.genProvider;
   const hasKey = !!store.settings.genKey;
 

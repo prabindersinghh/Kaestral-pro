@@ -19,7 +19,9 @@ export interface GenConfig {
 }
 
 export const DEFAULT_MODELS: Record<GenProvider, { video: string; image: string }> = {
-  fal: { video: "fal-ai/ltx-video", image: "fal-ai/flux/schnell" },
+  // Fal: LTX-2.3 fast is the current, cheapest LTX-2 text-to-video (~$0.04/s @1080p). The old
+  // "fal-ai/ltx-video" slug is legacy; ltx-2.3 takes `duration` (seconds), not `num_frames`.
+  fal: { video: "fal-ai/ltx-2.3/text-to-video/fast", image: "fal-ai/flux/schnell" },
   replicate: { video: "lightricks/ltx-video", image: "black-forest-labs/flux-schnell" },
   "gcp-ltx": { video: "ltx-2.3-distilled", image: "ltx-2.3-distilled" },
 };
@@ -61,13 +63,34 @@ async function runGcpLtx(cfg: GenConfig, kind: GenKind, prompt: string, opts: { 
   throw new Error("gcp-ltx: timed out waiting for the clip (30 min). The GPU may be overloaded or the clip too long.");
 }
 
+// Build the correct Fal input per model family — the schemas differ significantly.
+export function falInput(model: string, kind: GenKind, prompt: string, opts: { durationSeconds?: number; aspectRatio?: string }): Record<string, unknown> {
+  const ar = opts.aspectRatio ?? "16:9";
+  if (kind === "image") {
+    // FLUX takes image_size (an enum), NOT aspect_ratio.
+    const image_size = ar === "9:16" ? "portrait_16_9" : ar === "1:1" ? "square_hd" : ar === "4:5" ? "portrait_4_3" : "landscape_16_9";
+    return { prompt, image_size };
+  }
+  if (/ltx-2/.test(model)) {
+    // LTX-2.3: duration is an enum of SECONDS (6|8|10); resolution + aspect_ratio; NO num_frames.
+    const secs = opts.durationSeconds ?? 6;
+    const duration = secs <= 6 ? 6 : secs <= 8 ? 8 : 10;
+    return { prompt, duration, resolution: "1080p", aspect_ratio: ar };
+  }
+  if (/ltxv-13b/.test(model)) {
+    return { prompt, num_frames: Math.round((opts.durationSeconds ?? 5) * 24), resolution: "720p", aspect_ratio: ar };
+  }
+  // generic fallback (older/other video models)
+  const input: Record<string, unknown> = { prompt, aspect_ratio: ar };
+  if (opts.durationSeconds) input.num_frames = Math.round(opts.durationSeconds * 24);
+  return input;
+}
+
 // ---- Fal.ai (queue API) ----
 async function runFal(cfg: GenConfig, kind: GenKind, prompt: string, opts: { durationSeconds?: number; aspectRatio?: string }): Promise<string> {
   const model = kind === "video" ? cfg.videoModel : cfg.imageModel;
   const headers = { Authorization: `Key ${cfg.apiKey}`, "Content-Type": "application/json" };
-  const input: Record<string, unknown> = { prompt };
-  if (kind === "video" && opts.durationSeconds) input.num_frames = Math.round(opts.durationSeconds * 24);
-  if (opts.aspectRatio) input.aspect_ratio = opts.aspectRatio;
+  const input = falInput(model, kind, prompt, opts);
 
   const sub = await fetch(`https://queue.fal.run/${model}`, { method: "POST", headers, body: JSON.stringify(input) });
   if (!sub.ok) throw new Error(`Fal submit ${sub.status}: ${(await sub.text()).slice(0, 300)}`);
@@ -92,6 +115,10 @@ async function runReplicate(cfg: GenConfig, kind: GenKind, prompt: string, opts:
   const headers = { Authorization: `Bearer ${cfg.apiKey}`, "Content-Type": "application/json" };
   const input: Record<string, unknown> = { prompt };
   if (opts.aspectRatio) input.aspect_ratio = opts.aspectRatio;
+  // Set the clip LENGTH for video (was never set) — ltx-video takes num_frames (8k+1). Cap for cost.
+  if (kind === "video" && opts.durationSeconds) {
+    input.num_frames = Math.min(257, Math.round(((opts.durationSeconds * 24) - 1) / 8) * 8 + 1);
+  }
 
   // model is "owner/name" (uses the latest version) or a bare version hash.
   const endpoint = model.includes("/") ? `https://api.replicate.com/v1/models/${model}/predictions` : "https://api.replicate.com/v1/predictions";

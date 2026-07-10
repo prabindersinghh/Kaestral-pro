@@ -20,6 +20,13 @@ import { demoProject } from "./demoProject";
 const lsGet = (k: string): string | null => { try { return typeof localStorage !== "undefined" ? localStorage.getItem(k) : null; } catch { return null; } };
 const lsSet = (k: string, v: string): void => { try { if (typeof localStorage !== "undefined") localStorage.setItem(k, v); } catch { /* ignore */ } };
 
+// AI generation (LTX / Fal / Replicate) is a HIDDEN, future paid-tier feature. It is OFF by default so
+// the shipping UI has NO Generate button or panel. Enable it only for internal testing via either:
+//   • a build env var:  VITE_MAESTRO_GEN=1   (dev / a private build)
+//   • the console:       window.store.enableGenDev(true)   (persists in localStorage)
+const envGen = (() => { try { return (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_MAESTRO_GEN === "1"; } catch { return false; } })();
+const genDevDefault = envGen || lsGet("maestro.genDev") === "1";
+
 const PROP_TO_KEY: Record<AnimatableProperty, keyof Clip> = {
   opacity: "opacityTrack", position: "positionTrack", scale: "scaleTrack",
   rotation: "rotationTrack", crop: "cropTrack", volume: "volumeTrack",
@@ -50,6 +57,8 @@ export class EditorStore {
   /** App preferences (export defaults, AI connection, UI). Not part of the .palmier project. */
   settings = {
     exportCodec: "H.264", exportResolution: "1080p", showSettings: false, showGenerate: false,
+    /** Hidden dev flag: when false (default) there is NO generation UI anywhere in the app. */
+    genDevMode: genDevDefault,
     apiKey: lsGet("maestro.apiKey") ?? "",
     model: lsGet("maestro.model") ?? "claude-sonnet-5",
     connectMode: (lsGet("maestro.connectMode") as "choose" | "inapp" | "claudecode") ?? "choose",
@@ -177,7 +186,17 @@ export class EditorStore {
   }
 
   openSettings(open: boolean): void { this.settings.showSettings = open; this.emit(); }
-  openGenerate(open: boolean): void { this.settings.showGenerate = open; this.emit(); }
+  /** No-op unless the hidden generation dev flag is on — so nothing can open the Generate panel in the shipping UI. */
+  openGenerate(open: boolean): void { if (!this.settings.genDevMode) return; this.settings.showGenerate = open; this.emit(); }
+  /** Toggle the hidden generation dev flag (console-only: window.store.enableGenDev(true)). Persists locally. */
+  enableGenDev(on: boolean): void {
+    this.settings.genDevMode = on;
+    lsSet("maestro.genDev", on ? "1" : "0");
+    if (!on) this.settings.showGenerate = false;
+    this.emit();
+    // eslint-disable-next-line no-console
+    console.info(`[maestro] generation dev mode ${on ? "ENABLED — Generate button now visible in Media panel" : "disabled — no generation UI"}.`);
+  }
   openChat(open: boolean): void { this.settings.showChat = open; this.emit(); }
   setApiKey(k: string): void { this.settings.apiKey = k; lsSet("maestro.apiKey", k); this.emit(); }
   setModel(m: string): void { this.settings.model = m; lsSet("maestro.model", m); this.emit(); }

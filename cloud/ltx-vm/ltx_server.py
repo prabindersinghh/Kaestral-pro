@@ -12,7 +12,7 @@
 #
 # Run under systemd (see maestro-ltx.service) so it auto-starts on every boot.
 
-import os, threading, time, uuid, subprocess, traceback
+import os, sys, threading, time, uuid, subprocess, traceback
 from pathlib import Path
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import FileResponse
@@ -26,8 +26,19 @@ ACTIVITY_FILE = os.environ.get("LTX_ACTIVITY_FILE", "/var/run/ltx_last_activity"
 OUT_DIR = Path(os.environ.get("LTX_OUT_DIR", "/opt/ltx/out")); OUT_DIR.mkdir(parents=True, exist_ok=True)
 GCS_BUCKET = os.environ.get("LTX_GCS_BUCKET", "")             # optional: gs://bucket — results survive VM stop
 PUBLIC_BASE = os.environ.get("LTX_PUBLIC_BASE", "")           # e.g. http://EXTERNAL_IP:8000 (used when no bucket)
-CHECKPOINT = os.environ.get("LTX_CHECKPOINT", "ltx-2.3-22b-distilled-1.1")
-QUANT = os.environ.get("LTX_QUANT", "fp8-cast")               # passed to the pipeline in load_pipeline()
+CHECKPOINT = os.environ.get("LTX_CHECKPOINT", "ltx-2.3-22b-distilled-fp8")
+QUANT = os.environ.get("LTX_QUANT", "fp8-cast")              # L4 (Ada) fp8; a big GPU can use bf16
+
+# LTX-2 (v2.3) inference is run as a CLI subprocess against the official repo — the robust default
+# (the diffusers pipeline module paths move between releases). The 24GB L4 REQUIRES the fp8 checkpoint;
+# the bf16 22B OOMs. See docs/GCP-LTX-GUIDE.md for the exact `hf download` commands.
+LTX_REPO = os.environ.get("LTX_REPO", "/opt/ltx/LTX-2")
+MODELS_DIR = os.environ.get("LTX_MODELS_DIR", "/opt/ltx/models")
+CKPT_FILE = os.environ.get("LTX_CKPT_FILE", f"{MODELS_DIR}/ltx-2.3/ltx-2.3-22b-distilled-fp8.safetensors")
+UPSCALER = os.environ.get("LTX_UPSCALER", f"{MODELS_DIR}/ltx-2.3/ltx-2.3-spatial-upscaler-x2-1.1.safetensors")
+GEMMA_ROOT = os.environ.get("LTX_GEMMA_ROOT", f"{MODELS_DIR}/gemma-3-12b")
+FPS = float(os.environ.get("LTX_FPS", "24"))
+CPU_OFFLOAD = os.environ.get("LTX_OFFLOAD", "cpu")           # keep on 24GB L4; set "" on a big GPU
 
 app = FastAPI(title="Maestro LTX-2 server")
 _jobs: dict[str, dict] = {}
@@ -43,16 +54,19 @@ def touch_activity():
 
 
 def load_pipeline():
-    """Load LTX-2 into VRAM ONCE at startup. Fill in the real import for the checkpoint you downloaded.
-    Kept isolated so the rest of the server is testable without the GPU."""
+    """Validate the repo + weights so /health only reports ready when a real generation could
+    succeed. CLI mode holds no persistent VRAM (each job is its own subprocess) — robust against a
+    spot preemption and diffusers-version churn."""
     global _pipeline
-    # Example shape (adapt to the LTX-2 repo's pipeline API you cloned):
-    #   from ltx_video.pipelines import LTXPipeline
-    #   _pipeline = LTXPipeline.from_pretrained(CHECKPOINT, quantization=os.environ.get("LTX_QUANT", "fp8-cast"))
-    #   _pipeline.to("cuda")
-    _pipeline = ("LTX", CHECKPOINT)  # placeholder so /health can flip; replace with the real load
+    missing = [p for p in (LTX_REPO, CKPT_FILE, GEMMA_ROOT) if not Path(p).exists()]
+    if missing:
+        raise RuntimeError(
+            "LTX-2 not fully installed — missing: " + ", ".join(missing) +
+            ". Run the model download in docs/GCP-LTX-GUIDE.md (git clone Lightricks/LTX-2 + hf download the fp8 checkpoint, upscaler, and gemma-3-12b)."
+        )
+    _pipeline = ("LTX-2.3-CLI", CHECKPOINT)  # validated sentinel (NOT a placeholder)
     _ready.set()
-    print(f"[ltx] model loaded: {CHECKPOINT}", flush=True)
+    print(f"[ltx] ready (CLI mode): {CKPT_FILE}", flush=True)
 
 
 class GenReq(BaseModel):
@@ -69,18 +83,52 @@ def _auth(authorization: str | None):
         raise HTTPException(status_code=401, detail="bad token")
 
 
+def _dims(aspect: str) -> tuple[int, int]:
+    """LTX-2 wants width/height divisible by 32."""
+    if aspect == "9:16":
+        return 704, 1280
+    if aspect == "1:1":
+        return 768, 768
+    return 1280, 704  # 16:9 ≈ 720p
+
+
+def _snap_frames(seconds: float, fps: float) -> int:
+    """LTX-2 num_frames must be 8*k + 1."""
+    n = max(1, round(seconds * fps))
+    return round((n - 1) / 8) * 8 + 1
+
+
 def _run_job(job_id: str, req: GenReq):
+    """Run one real LTX-2 generation via the repo CLI. Image = a single frame → PNG."""
     try:
-        out = OUT_DIR / f"{job_id}.mp4"
-        # ---- REAL INFERENCE GOES HERE ----
-        # video = _pipeline.generate(prompt=req.prompt, num_frames=int(req.seconds*24), steps=req.steps,
-        #                            aspect_ratio=req.aspect_ratio, seed=req.seed)
-        # video.save(out)
-        # For image kind, save a single frame as .png instead.
-        # Placeholder that FAILS loudly if the real inference isn't wired, so nothing silently "succeeds":
-        if _pipeline == ("LTX", CHECKPOINT):
-            raise RuntimeError("LTX inference not wired yet — edit _run_job() to call your LTX-2 pipeline.")
-        url = _publish(out)
+        is_image = req.kind == "image"
+        w, h = _dims(req.aspect_ratio)
+        num_frames = 1 if is_image else _snap_frames(req.seconds, FPS)
+        mp4 = OUT_DIR / f"{job_id}.mp4"
+        cmd = [
+            sys.executable, "-m", "ltx_pipelines.distilled",
+            "--distilled-checkpoint-path", CKPT_FILE,
+            "--spatial-upsampler-path", UPSCALER,
+            "--gemma-root", GEMMA_ROOT,
+            "--prompt", req.prompt,
+            "--height", str(h), "--width", str(w),
+            "--num-frames", str(num_frames),
+            "--seed", str(req.seed if req.seed is not None else 42),
+            "--quantization", QUANT,
+            "--output-path", str(mp4),
+        ]
+        if CPU_OFFLOAD:
+            cmd += ["--offload", CPU_OFFLOAD]
+        # Flag spellings are young/version-dependent — confirm once with:
+        #   cd $LTX_REPO && python -m ltx_pipelines.distilled --help
+        subprocess.run(cmd, check=True, cwd=LTX_REPO)
+
+        if is_image:
+            png = OUT_DIR / f"{job_id}.png"
+            subprocess.run(["ffmpeg", "-y", "-i", str(mp4), "-frames:v", "1", str(png)], check=True)
+            url = _publish(png)
+        else:
+            url = _publish(mp4)
         _jobs[job_id] = {"status": "done", "url": url}
     except Exception as e:
         _jobs[job_id] = {"status": "error", "error": f"{e}\n{traceback.format_exc()[:500]}"}
@@ -134,7 +182,14 @@ def media(name: str):
     return FileResponse(str(p))
 
 
+def _boot():
+    try:
+        load_pipeline()
+    except Exception as e:                      # keep /health at 503 and log why, don't crash the server
+        print(f"[ltx] load failed: {e}", flush=True)
+
+
 if __name__ == "__main__":
     touch_activity()
-    threading.Thread(target=load_pipeline, daemon=True).start()  # load in the background; /health flips when ready
+    threading.Thread(target=_boot, daemon=True).start()  # validate in the background; /health flips when ready
     uvicorn.run(app, host="0.0.0.0", port=PORT)
