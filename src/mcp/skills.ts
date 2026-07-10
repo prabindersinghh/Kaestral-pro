@@ -12,7 +12,23 @@ export interface SkillEntry {
   path: string;
 }
 
-const BASE = process.env.MAESTRO_SKILLS_BASE ?? process.env.PALMIER_SKILLS_BASE ?? "https://raw.githubusercontent.com/palmier-io/palmier-skills/main";
+import { existsSync } from "node:fs";
+import { pathToFileURL } from "node:url";
+import { join } from "node:path";
+import { skillsDir } from "./env";
+
+// Skill source, in priority order:
+//  1. MAESTRO_SKILLS_BASE / PALMIER_SKILLS_BASE (explicit override — remote URL or file://)
+//  2. the bundled local skill library (Maestro's OWN playbooks — works offline / in the installer)
+//  3. the upstream Palmier skills repo (remote fallback)
+function skillsBase(): string {
+  const override = process.env.MAESTRO_SKILLS_BASE ?? process.env.PALMIER_SKILLS_BASE;
+  if (override) return override;
+  const local = skillsDir();
+  if (existsSync(join(local, "catalog.json"))) return pathToFileURL(local + "/").toString().replace(/\/$/, "");
+  return "https://raw.githubusercontent.com/palmier-io/palmier-skills/main";
+}
+const BASE = skillsBase();
 
 // SkillFrontmatter.parse (Skill.swift): split leading --- frontmatter from the body.
 export function parseFrontmatter(text: string): { fields: Record<string, string>; body: string } {

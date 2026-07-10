@@ -118,7 +118,8 @@ export class McpExecutor {
       fps: this.fps,
       beatFrames: res.beatFrames,
       onsetFrames: res.onsetFrames,
-      note: "Frames are PROJECT frames. Cut on beats with split_clips / ripple_delete_ranges, or keyframe punches with set_keyframes.",
+      silenceRanges: res.silences,
+      note: "Frames are PROJECT frames. Cut on beats with split_clips / ripple_delete_ranges; remove silenceRanges with ripple_delete_ranges for jump-cut-on-pause; keyframe punches with set_keyframes.",
     });
   }
 

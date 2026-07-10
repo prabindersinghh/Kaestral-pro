@@ -1,0 +1,37 @@
+[
+  {
+    "id": "viral-reel",
+    "name": "Viral-style reel",
+    "description": "Turn raw footage into a punchy vertical (9:16) short: hook in the first 3s, tight jump cuts, zoom punches, trending captions, and a beat-aware rhythm. Use when asked to 'make this a viral reel / short / TikTok / Reel'.",
+    "sha": "local",
+    "path": "viral-reel/SKILL.md"
+  },
+  {
+    "id": "beat-sync-cutting",
+    "name": "Beat-synced cutting",
+    "description": "Cut and animate to the music. Use analyze_audio to get beats/onsets, then place cuts and zoom/scale punches on the beat. Use when the edit should feel locked to a track.",
+    "sha": "local",
+    "path": "beat-sync-cutting/SKILL.md"
+  },
+  {
+    "id": "creative-director",
+    "name": "Creative director (palette, grade, type)",
+    "description": "Give a clip or project a cohesive look: extract its palette, build a color grade, and pick on-brand type + captions. Use for 'make it look cinematic / on-brand / designed'.",
+    "sha": "local",
+    "path": "creative-director/SKILL.md"
+  },
+  {
+    "id": "caption-styles",
+    "name": "Trending caption styles",
+    "description": "Apply modern short-form caption looks — word-pop, karaoke highlight, bold-boxed, typewriter — with correct sizing/placement for 9:16. Use when adding or restyling on-screen text/captions.",
+    "sha": "local",
+    "path": "caption-styles/SKILL.md"
+  },
+  {
+    "id": "broll-planner",
+    "name": "B-roll planner",
+    "description": "Plan and place B-roll cutaways over an A-roll talking track — from the media library or generated (BYOK). Use when the edit needs visual variety or to illustrate what's being said.",
+    "sha": "local",
+    "path": "broll-planner/SKILL.md"
+  }
+]

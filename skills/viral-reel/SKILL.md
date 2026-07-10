@@ -1,0 +1,54 @@
+---
+name: Viral-style reel
+description: Turn raw footage into a punchy vertical (9:16) short — hook, jump cuts, zoom punches, trending captions, beat-aware rhythm. Use for "make this a viral reel / short".
+---
+
+# Viral-style reel
+
+Your job: take what's on the timeline and turn it into a short-form vertical video that earns attention in the first 3 seconds and keeps it. Work in passes. Call `get_timeline` and `get_media` first so you know what you're working with. Every step below maps to real Maestro tools — apply them, don't just describe them.
+
+## 1. Set the frame (9:16)
+- `set_project_settings` with `aspectRatio: "9:16"` and `quality: "1080p"`. This is the single most important framing move for reels.
+- If a clip is landscape and now letterboxed, reframe it: `apply_layout` with `full` + `fill` so it covers the vertical frame (center-crop), or use `set_clip_properties` to scale/position the subject into frame. Keep faces/subjects in the upper-middle third.
+
+## 2. Land the hook (first 3 seconds)
+The opening 3s decides retention. Do at least one of:
+- **Cold open on the strongest moment.** Find the most visually or verbally striking beat and move it to frame 0 with `move_clips` (or `split_clips` + `ripple_delete_ranges` to cut the slow lead-in). Never open on dead air or "hey guys."
+- **Hook text.** `add_texts` a short, punchy line (3–6 words, e.g. "watch this till the end") at the top third, style it bold with a background box (see the `caption-styles` skill), animation `popIn` or `wordPop`. Keep it on screen ~1.5–2s.
+- **Punch-in on the hook.** A subtle scale from 1.0→1.08 over the first ~10 frames (`set_keyframes` on `scale`) adds energy.
+
+## 3. Tighten the pace (jump cuts on pauses)
+Short-form lives on tight cuts — remove every pause, filler, and dead beat.
+- **Auto jump-cut-on-pause:** call `analyze_audio` on the talking clip — it returns `silenceRanges` (dead-air, in project frames). Feed those ranges to `ripple_delete_ranges` to delete the pauses and close the gaps in sync. This is the highest-ROI edit for talking-head footage.
+- Aim for a new visual event every ~1.5–3s: a cut, a zoom, a caption change, or a b-roll cutaway. If a clip runs longer than ~3s with no change, add one.
+- NOTE ON WORD-LEVEL CUTS: cutting specific filler WORDS (not just pauses) needs a transcript — Maestro doesn't transcribe speech on-device in this build. Pause-based cutting via `silenceRanges` works now; word-accurate cutting needs a transcript the user provides.
+
+## 4. Add energy (zoom punches + retime + motion)
+- **Zoom punch** on emphasis: `set_keyframes` on `scale` from 1.0 to ~1.12 over 3–5 frames with `interpolationOut: "smooth"` (eases like a pro, not mechanical), then ease back. Punch in on reveals, punchlines, and the hook.
+- **Speed / retime:** `set_clip_properties` with `speed` — <1 for slow-mo on a peak moment (e.g. 0.5), >1 to blast through a slow stretch (e.g. 1.5–2). Both render in the export (video + pitch-corrected audio). Speed-ramp by splitting the clip and setting different speeds per segment.
+- **Ken Burns** on stills/b-roll: keyframe `scale` and `position` (smooth) for a slow drift so nothing sits static.
+- **Beat rhythm:** if there's music, run the `beat-sync-cutting` skill so cuts and punches land on the beat (uses `analyze_audio`).
+
+## 5. Captions (retention driver)
+Most short-form is watched muted — captions are non-negotiable.
+- Follow the `caption-styles` skill. Use `add_texts` with a bold style + background box, animation `wordReveal` or `highlightPop`, placed in the lower-middle (safe above the UI). Keep 2–5 words per screen.
+- If the user gives the spoken text (or a transcript), lay captions in sync. If not, add key call-out phrases at the moments that matter.
+
+## 6. Transitions + polish
+- Between hard cuts of the SAME scene, keep it a straight cut (that's the short-form default — don't over-transition).
+- Between SECTIONS, a quick cross-dissolve or a `generate_motion` "Transition" stinger works. Auto-insert dissolves at cuts via the timeline's transitions action if the whole thing should feel smoother.
+- Grade for punch: `apply_color` a touch of contrast + saturation + a warm or cool push to unify the look (see `creative-director`). Extract the footage palette first with `extract_palette` so captions/graphics match.
+
+## 7. Outro / loop
+- End on a clear payoff or a loop-back to the hook. A short outro card (`generate_title`) with a CTA ("follow for part 2") works. Keep it under ~1.5s.
+
+## Checklist before you finish
+- [ ] 9:16, subject in frame, no letterboxing
+- [ ] A real hook in the first 3s (visual + text)
+- [ ] No dead air; a change at least every ~3s
+- [ ] At least one zoom punch on an emphasis beat
+- [ ] Captions present, styled, readable muted
+- [ ] Cohesive grade; graphics match the palette
+- [ ] Clean payoff/outro
+
+Tell the user which of these you applied and which need input from them (e.g. the spoken transcript for word-accurate caption timing).

@@ -20,6 +20,14 @@ export interface BeatAnalysis {
   onsetSeconds: number[];       // same, in seconds (for non-frame use)
 }
 
+export interface SilenceRange { startFrame: number; endFrame: number } // project frames
+
+export interface SilenceOptions {
+  floorDb?: number;      // gate: below this (relative to the clip's own peak) counts as silence
+  minSilenceSec?: number; // ignore gaps shorter than this
+  padSec?: number;       // keep this much speech on each side of a cut (avoid clipping words)
+}
+
 /** Decode a file's first audio track to mono Float32 PCM at DECODE_RATE. */
 function decodePcm(path: string, ffmpegPath = ffmpegBin()): Promise<Float32Array> {
   return new Promise((resolve, reject) => {
@@ -98,8 +106,37 @@ function estimateTempo(flux: number[], hopSec: number): number {
   return Math.round(60 / (bestLag * hopSec));
 }
 
-/** Analyze a media file: onsets + tempo grid, in project frames. */
-export async function analyzeBeats(path: string, fps: number, ffmpegPath = ffmpegBin()): Promise<BeatAnalysis> {
+/** Detect silence/dead-air ranges from the energy envelope (for jump-cut-on-pause). Project frames. */
+export function silencesFromEnvelope(env: number[], fps: number, opts: SilenceOptions = {}): SilenceRange[] {
+  if (env.length === 0) return [];
+  const floorDb = opts.floorDb ?? -34;
+  const minSilenceSec = opts.minSilenceSec ?? 0.35;
+  const padSec = opts.padSec ?? 0.08;
+  const hopSec = HOP / DECODE_RATE;
+
+  const peak = Math.max(...env, 1e-9);
+  const gate = peak * Math.pow(10, floorDb / 20); // linear threshold relative to the loudest part
+  const minHops = Math.max(1, Math.round(minSilenceSec / hopSec));
+  const padHops = Math.round(padSec / hopSec);
+
+  const ranges: SilenceRange[] = [];
+  let runStart = -1;
+  const flush = (endEx: number) => {
+    if (runStart < 0) return;
+    const s = runStart + padHops, e = endEx - padHops; // pad inward so speech isn't clipped
+    if (e - s >= minHops) ranges.push({ startFrame: Math.round(s * hopSec * fps), endFrame: Math.round(e * hopSec * fps) });
+    runStart = -1;
+  };
+  for (let i = 0; i < env.length; i++) {
+    if (env[i] < gate) { if (runStart < 0) runStart = i; }
+    else flush(i);
+  }
+  flush(env.length);
+  return ranges.filter((r) => r.endFrame > r.startFrame);
+}
+
+/** Analyze a media file: onsets + tempo grid + silence ranges, in project frames. */
+export async function analyzeBeats(path: string, fps: number, silenceOpts: SilenceOptions = {}, ffmpegPath = ffmpegBin()): Promise<BeatAnalysis & { silences: SilenceRange[] }> {
   const pcm = await decodePcm(path, ffmpegPath);
   const durationSec = pcm.length / DECODE_RATE;
   const hopSec = HOP / DECODE_RATE;
@@ -118,5 +155,6 @@ export async function analyzeBeats(path: string, fps: number, ffmpegPath = ffmpe
     const phase = onsetSeconds.length ? onsetSeconds[0] % period : 0;
     for (let t = phase; t <= durationSec; t += period) beatFrames.push(Math.round(t * fps));
   }
-  return { durationSec, tempoBpm, beatFrames, onsetFrames, onsetSeconds };
+  const silences = silencesFromEnvelope(env, fps, silenceOpts);
+  return { durationSec, tempoBpm, beatFrames, onsetFrames, onsetSeconds, silences };
 }

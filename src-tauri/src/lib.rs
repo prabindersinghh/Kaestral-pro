@@ -43,6 +43,7 @@ fn apply_env(cmd: &mut Command, p: &Packaged) {
         .env("MAESTRO_FFPROBE", p.res.join("ffprobe.exe"))
         .env("MAESTRO_PUBLIC_DIR", p.res.join("public"))
         .env("MAESTRO_REMOTION_DIR", p.res.join("remotion"))
+        .env("MAESTRO_SKILLS_DIR", p.res.join("skills"))
         .env("MAESTRO_DATA_DIR", &p.data)
         .env("NODE_PATH", p.res.join("node_modules"));
 }

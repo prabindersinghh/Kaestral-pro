@@ -49,8 +49,11 @@ cpSync(path.join(root, "remotion"), path.join(res, "remotion"), {
   filter: (src) => !/[\\/](node_modules|\.bundle-cache)([\\/]|$)/.test(src),
 });
 
+// 7) Bundled skill library (Maestro's own editing playbooks — served by read_skill offline).
+cpSync(path.join(root, "skills"), path.join(res, "skills"), { recursive: true });
+
 console.log("resources assembled:");
 console.log(`  node.exe     ${mb(path.join(res, "node.exe"))} MB`);
 console.log(`  ffmpeg.exe   ${mb(path.join(res, "ffmpeg.exe"))} MB`);
 console.log(`  ffprobe.exe  ${mb(path.join(res, "ffprobe.exe"))} MB`);
-console.log(`  + dist-server, public, @napi-rs/canvas, remotion(source)`);
+console.log(`  + dist-server, public, @napi-rs/canvas, remotion(source), skills`);

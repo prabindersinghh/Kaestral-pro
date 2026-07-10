@@ -48,7 +48,10 @@ describe("Stage-C: MCP HTTP transport (maestro on 127.0.0.1)", () => {
     expect(names).toContain("list_skills");
     expect(names).toContain("generate_title");
     expect(names).toContain("generate_motion");
-    expect(json.result.tools.length).toBe(45);
+    // Plus the Analysis extensions (reel/creative skills): beat detection + palette.
+    expect(names).toContain("analyze_audio");
+    expect(names).toContain("extract_palette");
+    expect(json.result.tools.length).toBe(47); // 41 frozen + read/list_skills + generate_title/motion + analyze_audio/extract_palette
   });
 
   it("tools/call get_timeline returns canGenerate:false", async () => {

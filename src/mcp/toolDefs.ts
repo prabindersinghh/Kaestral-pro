@@ -758,7 +758,7 @@ export const MOTION_TOOL_DEFS: ToolDef[] = [
 export const ANALYSIS_TOOL_DEFS: ToolDef[] = [
   {
     name: "analyze_audio",
-    description: "Detect beats, onsets (transients), and tempo of a clip's audio, returned in PROJECT FRAMES. Use before beat-synced cutting: cut on beatFrames/onsetFrames with split_clips or ripple_delete_ranges, or place zoom-punch keyframes on the beat with set_keyframes. Give a mediaRef (music/asset) or a clipId (its audio).",
+    description: "Detect beats, onsets (transients), tempo, AND silence/dead-air ranges of a clip's audio, in PROJECT FRAMES. Beat-sync: cut on beatFrames/onsetFrames (split_clips/ripple_delete_ranges) or punch on the beat (set_keyframes). Jump-cut-on-pause: remove silenceRanges with ripple_delete_ranges. Give a mediaRef (music/asset) or a clipId (its audio).",
     inputSchema: obj({
       mediaRef: str("Audio or video asset id (from get_media)."),
       clipId: str("Timeline clip id (from get_timeline) — analyzes that clip's audio instead."),
