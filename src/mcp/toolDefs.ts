@@ -752,7 +752,30 @@ export const MOTION_TOOL_DEFS: ToolDef[] = [
   },
 ];
 
-/** Tools advertised over MCP: the frozen 41 plus the Skills + Motion extensions. */
-export const ALL_TOOL_DEFS: ToolDef[] = [...TOOL_DEFS, ...SKILL_TOOL_DEFS, ...MOTION_TOOL_DEFS];
+// Analysis extension — enables the reel/creative skills. analyze_audio powers beat-synced cutting;
+// extract_palette powers palette-driven creative + brand styling. Both run on the bundled FFmpeg with
+// Maestro's own algorithms (no third-party editor code). NOT part of the frozen 41.
+export const ANALYSIS_TOOL_DEFS: ToolDef[] = [
+  {
+    name: "analyze_audio",
+    description: "Detect beats, onsets (transients), and tempo of a clip's audio, returned in PROJECT FRAMES. Use before beat-synced cutting: cut on beatFrames/onsetFrames with split_clips or ripple_delete_ranges, or place zoom-punch keyframes on the beat with set_keyframes. Give a mediaRef (music/asset) or a clipId (its audio).",
+    inputSchema: obj({
+      mediaRef: str("Audio or video asset id (from get_media)."),
+      clipId: str("Timeline clip id (from get_timeline) — analyzes that clip's audio instead."),
+    }),
+  },
+  {
+    name: "extract_palette",
+    description: "Extract the dominant colors of a clip or asset as hex swatches with prominence weights (sorted). Use for palette-driven creative direction and brand-consistent styling: set text colors (add_texts textStyle) and grading targets (apply_color) from the footage's own palette. Give a mediaRef or a clipId.",
+    inputSchema: obj({
+      mediaRef: str("Media asset id (from get_media)."),
+      clipId: str("Timeline clip id (from get_timeline)."),
+      colors: int("How many swatches to return (2–12, default 6)."),
+    }),
+  },
+];
+
+/** Tools advertised over MCP: the frozen 41 plus the Skills + Motion + Analysis extensions. */
+export const ALL_TOOL_DEFS: ToolDef[] = [...TOOL_DEFS, ...SKILL_TOOL_DEFS, ...MOTION_TOOL_DEFS, ...ANALYSIS_TOOL_DEFS];
 
 export const TOOL_NAMES = TOOL_DEFS.map((t) => t.name);

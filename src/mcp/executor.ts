@@ -19,6 +19,8 @@ import { encodeManifest, decodeManifest } from "../model/media";
 import { probeMedia } from "./probe";
 import { SkillStore } from "./skills";
 import { extractWaveform, type WaveformEnvelope } from "../audio/waveform";
+import { analyzeBeats } from "../audio/beats";
+import { extractPalette } from "../color/palette";
 import { generate, type GenConfig, type GenKind } from "../gen/hosted";
 import { join } from "node:path";
 import { mkdir, writeFile } from "node:fs/promises";
@@ -92,6 +94,45 @@ export class McpExecutor {
       this.waveformJobs.set(mediaRef, job);
     }
     return job;
+  }
+
+  /** Resolve a mediaRef, or a clipId's underlying mediaRef, to an absolute file path. */
+  private mediaPathFor(a: Args): string | null {
+    let ref = aStr(a, "mediaRef");
+    const clipId = aStr(a, "clipId");
+    if (!ref && clipId) ref = this.engine.clipRef(clipId)?.mediaRef;
+    if (!ref) return null;
+    const asset = this.media.asset(ref);
+    return asset ? resolveRenderMediaPath(asset.source, this.projectDir ?? ".", publicDir()) : null;
+  }
+
+  // analyze_audio — beats/onsets/tempo of an audio or video clip's audio, in project frames, so the
+  // AI can cut and keyframe on the beat. Our own energy-flux detector over bundled-FFmpeg PCM.
+  private async analyzeAudio(a: Args): Promise<ToolResult> {
+    const path = this.mediaPathFor(a);
+    if (!path) throw new ToolFail("analyze_audio: provide a resolvable mediaRef or clipId (call get_media/get_timeline first).");
+    const res = await analyzeBeats(path, this.fps);
+    return okJson({
+      durationSec: Number(res.durationSec.toFixed(3)),
+      tempoBpm: res.tempoBpm,
+      fps: this.fps,
+      beatFrames: res.beatFrames,
+      onsetFrames: res.onsetFrames,
+      note: "Frames are PROJECT frames. Cut on beats with split_clips / ripple_delete_ranges, or keyframe punches with set_keyframes.",
+    });
+  }
+
+  // extract_palette — dominant colours (hex + prominence) of a clip/asset, for palette-driven
+  // creative + brand styling. Our own median-cut over bundled-FFmpeg RGB pixels.
+  private async extractPalette(a: Args): Promise<ToolResult> {
+    const path = this.mediaPathFor(a);
+    if (!path) throw new ToolFail("extract_palette: provide a resolvable mediaRef or clipId.");
+    const colors = Math.max(2, Math.min(12, aInt(a, "colors") ?? 6));
+    const pal = await extractPalette(path, colors);
+    return okJson({
+      swatches: pal.swatches.map((s) => ({ hex: s.hex, rgb: s.rgb, weight: Number(s.weight.toFixed(3)) })),
+      note: "Sorted by prominence. Use these for on-brand text colors (add_texts textStyle) and grading targets (apply_color).",
+    });
   }
 
   getState(): { version: number; timeline: unknown; media: unknown; projectDir: string | null } {
@@ -262,7 +303,7 @@ export class McpExecutor {
     const READ_ONLY = new Set([
       "get_timeline", "get_media", "inspect_media", "get_transcript", "inspect_timeline",
       "search_media", "inspect_color", "list_folders", "list_models", "send_feedback", "export_project",
-      "list_skills", "read_skill",
+      "list_skills", "read_skill", "analyze_audio", "extract_palette",
     ]);
     try {
       const result = await this.run(name, args ?? {});
@@ -288,6 +329,9 @@ export class McpExecutor {
       // Motion graphics (Maestro extension)
       case "generate_title": return this.generateTitle(a);
       case "generate_motion": return this.generateMotion(a);
+      // Analysis (Maestro extension — enables beat-sync + palette/brand skills)
+      case "analyze_audio": return this.analyzeAudio(a);
+      case "extract_palette": return this.extractPalette(a);
       // Read
       case "get_timeline": return this.getTimeline(a);
       case "get_media": return okJson({ media: this.media.mediaRows() });
