@@ -426,7 +426,14 @@ export class McpExecutor {
   // local generators above — so a clip the AI generates lands on the timeline in BOTH connect paths.
   private async generateHosted(kind: GenKind, a: Args): Promise<ToolResult> {
     const cfg = this.genConfig;
-    if (!cfg || !cfg.apiKey) {
+    const ready = cfg && (cfg.provider === "gcp-ltx" ? !!cfg.baseUrl : !!cfg.apiKey);
+    if (!ready) {
+      if (cfg?.provider === "gcp-ltx") {
+        return err(
+          "The GPU isn't started yet. Open Settings → Generation → GPU and click Start GPU (it boots your Google Cloud LTX server). " +
+          "Once it's ready, retry. This is a setup step, not a failure.",
+        );
+      }
       return err(
         "Generation needs your own Fal or Replicate key. Open Settings → Generation in Maestro and paste your key " +
         "(pay-per-clip on your account: ~$0.02–0.10/video, ~$0.003–0.03/image). Then retry. This is a setup step, not a failure.",

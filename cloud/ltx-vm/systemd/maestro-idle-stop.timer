@@ -1,0 +1,13 @@
+# Fires the idle watchdog 5 min after boot, then every 5 min. Install:
+#   sudo cp maestro-idle-stop.{service,timer} /etc/systemd/system/
+#   sudo systemctl enable --now maestro-idle-stop.timer
+[Unit]
+Description=Run the Maestro LTX idle watchdog every 5 minutes
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=5min
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target

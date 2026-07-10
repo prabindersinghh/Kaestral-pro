@@ -159,4 +159,20 @@ export class ProjectBridge {
     if (!r.ok) return { provider: "fal", hasKey: false };
     return (await r.json()) as { provider: string; hasKey: boolean };
   }
+
+  // --- gcp-ltx GPU lifecycle ---
+  async saveGpuConfig(cfg: { project: string; zone: string; instance: string; port: number; token?: string }): Promise<void> {
+    const r = await fetch(`${BRIDGE_URL}/gpu/config`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(cfg) });
+    if (!r.ok) throw new Error((await r.json().catch(() => ({ error: `gpu-config ${r.status}` }))).error ?? `gpu-config ${r.status}`);
+  }
+  async gpuAction(action: "start" | "stop"): Promise<{ status: string; detail?: string; baseUrl?: string }> {
+    const r = await fetch(`${BRIDGE_URL}/gpu/${action}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+    if (!r.ok) throw new Error((await r.json().catch(() => ({ error: `gpu ${action} ${r.status}` }))).error ?? `gpu ${action} ${r.status}`);
+    return (await r.json()) as { status: string; detail?: string; baseUrl?: string };
+  }
+  async gpuStatus(): Promise<{ status: string; detail?: string; baseUrl?: string }> {
+    const r = await fetch(`${BRIDGE_URL}/gpu/status`);
+    if (!r.ok) return { status: "error", detail: `status ${r.status}` };
+    return (await r.json()) as { status: string; detail?: string; baseUrl?: string };
+  }
 }

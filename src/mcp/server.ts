@@ -11,6 +11,7 @@ import { ALL_TOOL_DEFS } from "./toolDefs";
 import { resolveRenderMediaPath } from "../render/mediaPath";
 import { publicDir } from "./env";
 import { DEFAULT_MODELS as DEFAULT_GEN_MODELS } from "../gen/hosted";
+import { startVm, stopVm, gpuState as probeGpu, type GpuConfig, type GpuState } from "../gen/gcp";
 import type { McpExecutor } from "./executor";
 
 export const MCP_PORT = 19789;
@@ -51,11 +52,19 @@ const RESOURCES = [
 
 export class McpServer {
   private server: Server | null = null;
+  // gcp-ltx GPU lifecycle (start/stop the user's LTX VM). Client-side fast path; the on-VM idle
+  // watchdog is the real credit guard. baseUrl is pushed into genConfig when the VM is ready.
+  private gpuConfig: GpuConfig | null = null;
+  private gpuState: GpuState = { status: "stopped" };
   constructor(
     private readonly executor: McpExecutor,
     private readonly port: number = MCP_PORT,
     private readonly host: string = MCP_HOST,
   ) {}
+
+  private setGpuBaseUrl(baseUrl?: string): void {
+    if (this.executor.genConfig?.provider === "gcp-ltx") this.executor.genConfig.baseUrl = baseUrl;
+  }
 
   start(): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -102,20 +111,62 @@ export class McpServer {
     // POST sets provider/apiKey/models so generate_video/image work from BOTH connect paths.
     if (path === "/gen-config" && req.method === "GET") {
       const c = this.executor.genConfig;
-      return sendJson(res, 200, { provider: c?.provider ?? "fal", hasKey: !!c?.apiKey, videoModel: c?.videoModel, imageModel: c?.imageModel }, CORS);
+      // gcp-ltx is "ready" when it has a server URL (set when the GPU starts); Fal/Replicate need a key.
+      const ready = c?.provider === "gcp-ltx" ? !!c?.baseUrl : !!c?.apiKey;
+      return sendJson(res, 200, { provider: c?.provider ?? "fal", hasKey: ready, baseUrl: c?.baseUrl, videoModel: c?.videoModel, imageModel: c?.imageModel }, CORS);
     }
     if (path === "/gen-config" && req.method === "POST") {
       try {
-        const b = JSON.parse((await readBodyBuffer(req)).toString("utf8")) as { provider?: string; apiKey?: string; videoModel?: string; imageModel?: string };
-        const provider = b.provider === "replicate" ? "replicate" : "fal";
+        const b = JSON.parse((await readBodyBuffer(req)).toString("utf8")) as { provider?: string; apiKey?: string; videoModel?: string; imageModel?: string; baseUrl?: string };
+        const provider = b.provider === "replicate" ? "replicate" : b.provider === "gcp-ltx" ? "gcp-ltx" : "fal";
         const key = typeof b.apiKey === "string" ? b.apiKey.trim() : "";
-        this.executor.genConfig = key
-          ? { provider, apiKey: key, videoModel: b.videoModel?.trim() || DEFAULT_GEN_MODELS[provider].video, imageModel: b.imageModel?.trim() || DEFAULT_GEN_MODELS[provider].image }
+        const baseUrl = typeof b.baseUrl === "string" ? b.baseUrl.trim() : "";
+        // gcp-ltx is configured when it has a server URL (or a key alone, so it persists before the VM starts).
+        const configured = provider === "gcp-ltx" ? !!(baseUrl || key) : !!key;
+        this.executor.genConfig = configured
+          ? { provider, apiKey: key, baseUrl: baseUrl || undefined, videoModel: b.videoModel?.trim() || DEFAULT_GEN_MODELS[provider].video, imageModel: b.imageModel?.trim() || DEFAULT_GEN_MODELS[provider].image }
           : null;
-        return sendJson(res, 200, { ok: true, provider, hasKey: !!key }, CORS);
+        return sendJson(res, 200, { ok: true, provider, hasKey: configured }, CORS);
       } catch (e) {
         return sendJson(res, 400, { error: e instanceof Error ? e.message : String(e) }, CORS);
       }
+    }
+    // --- GPU lifecycle (gcp-ltx): the app's one-click Start/Stop for the LTX VM. ---
+    if (path === "/gpu/config" && req.method === "POST") {
+      try {
+        const b = JSON.parse((await readBodyBuffer(req)).toString("utf8")) as Partial<GpuConfig>;
+        if (!b.project || !b.zone || !b.instance) return sendJson(res, 400, { error: "project, zone, and instance are required" }, CORS);
+        this.gpuConfig = { project: b.project, zone: b.zone, instance: b.instance, port: b.port || 8000, token: b.token };
+        return sendJson(res, 200, { ok: true }, CORS);
+      } catch (e) {
+        return sendJson(res, 400, { error: e instanceof Error ? e.message : String(e) }, CORS);
+      }
+    }
+    if (path === "/gpu/status" && req.method === "GET") {
+      if (!this.gpuConfig) return sendJson(res, 200, { status: "stopped", detail: "no GPU configured" }, CORS);
+      if (this.gpuState.status === "starting" || this.gpuState.status === "stopping") return sendJson(res, 200, this.gpuState, CORS);
+      try { this.gpuState = await probeGpu(this.gpuConfig); this.setGpuBaseUrl(this.gpuState.status === "ready" ? this.gpuState.baseUrl : undefined); }
+      catch (e) { this.gpuState = { status: "error", detail: e instanceof Error ? e.message : String(e) }; }
+      return sendJson(res, 200, this.gpuState, CORS);
+    }
+    if (path === "/gpu/start" && req.method === "POST") {
+      if (!this.gpuConfig) return sendJson(res, 400, { error: "Configure the GPU first (project/zone/instance)." }, CORS);
+      if (this.gpuState.status === "starting") return sendJson(res, 200, this.gpuState, CORS);
+      this.gpuState = { status: "starting", detail: "starting…" };
+      // Kick off the boot+wait in the background; the UI polls /gpu/status. Never block the request.
+      void startVm(this.gpuConfig, undefined, (s) => { this.gpuState = { status: "starting", detail: s }; })
+        .then((baseUrl) => { this.gpuState = { status: "ready", baseUrl }; this.setGpuBaseUrl(baseUrl); })
+        .catch((e) => { this.gpuState = { status: "error", detail: e instanceof Error ? e.message : String(e) }; });
+      return sendJson(res, 202, this.gpuState, CORS);
+    }
+    if (path === "/gpu/stop" && req.method === "POST") {
+      if (!this.gpuConfig) return sendJson(res, 400, { error: "no GPU configured" }, CORS);
+      this.gpuState = { status: "stopping", detail: "stopping…" };
+      this.setGpuBaseUrl(undefined);
+      void stopVm(this.gpuConfig)
+        .then(() => { this.gpuState = { status: "stopped" }; })
+        .catch((e) => { this.gpuState = { status: "error", detail: e instanceof Error ? e.message : String(e) }; });
+      return sendJson(res, 202, this.gpuState, CORS);
     }
     if (path === "/upload" && req.method === "POST") {
       try {

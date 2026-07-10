@@ -4,7 +4,10 @@
 // file and imports it onto the timeline. GTX-1650-class GPUs can't run LTX/FLUX locally, so this
 // runs on the provider's servers — the user pays per clip.
 
-export type GenProvider = "fal" | "replicate";
+// "gcp-ltx" is the user's OWN LTX-2 server on a Google Cloud GPU VM (see docs/GCP-LTX-GUIDE). Same
+// contract as Fal/Replicate — submit a prompt, get a result media URL that the executor downloads and
+// drops on the timeline — but it runs on the user's $300-credit GPU. VM start/stop lives in gcp.ts.
+export type GenProvider = "fal" | "replicate" | "gcp-ltx";
 export type GenKind = "video" | "image";
 
 export interface GenConfig {
@@ -12,11 +15,13 @@ export interface GenConfig {
   apiKey: string;
   videoModel: string; // e.g. fal: "fal-ai/ltx-video"   replicate: "owner/model" or a version hash
   imageModel: string; // e.g. fal: "fal-ai/flux/schnell" replicate: "black-forest-labs/flux-schnell"
+  baseUrl?: string;   // gcp-ltx: the VM's LTX server, e.g. http://34.x.x.x:8000
 }
 
 export const DEFAULT_MODELS: Record<GenProvider, { video: string; image: string }> = {
   fal: { video: "fal-ai/ltx-video", image: "fal-ai/flux/schnell" },
   replicate: { video: "lightricks/ltx-video", image: "black-forest-labs/flux-schnell" },
+  "gcp-ltx": { video: "ltx-2.3-distilled", image: "ltx-2.3-distilled" },
 };
 
 export interface GenResult { url: string; kind: GenKind }
@@ -25,9 +30,35 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** Submit + poll a generation job; returns the first output media URL. Throws on failure/timeout. */
 export async function generate(cfg: GenConfig, kind: GenKind, prompt: string, opts: { durationSeconds?: number; aspectRatio?: string } = {}): Promise<GenResult> {
+  if (cfg.provider === "gcp-ltx") return { url: await runGcpLtx(cfg, kind, prompt, opts), kind };
   if (!cfg.apiKey) throw new Error("No generation API key set. Add your Fal or Replicate key in Settings → Generation.");
   const url = cfg.provider === "fal" ? await runFal(cfg, kind, prompt, opts) : await runReplicate(cfg, kind, prompt, opts);
   return { url, kind };
+}
+
+// ---- gcp-ltx (self-hosted LTX-2 on a GCP GPU VM) ----
+// The VM's FastAPI server: POST /generate → { jobId }; GET /jobs/{jobId} → { status, url? }. Async so a
+// clip that takes minutes never blocks on one long HTTP request. Every call touches the VM's activity
+// stamp, so an active queue never trips the idle watchdog.
+async function runGcpLtx(cfg: GenConfig, kind: GenKind, prompt: string, opts: { durationSeconds?: number; aspectRatio?: string }): Promise<string> {
+  const base = (cfg.baseUrl ?? "").replace(/\/$/, "");
+  if (!base) throw new Error("gcp-ltx: no server URL. Start the GPU (Settings → Generation → GPU) so Maestro knows the VM's address.");
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (cfg.apiKey) headers.Authorization = `Bearer ${cfg.apiKey}`;
+  const body = JSON.stringify({ kind, prompt, seconds: opts.durationSeconds ?? 5, aspect_ratio: opts.aspectRatio ?? "16:9" });
+
+  const sub = await fetch(`${base}/generate`, { method: "POST", headers, body });
+  if (!sub.ok) throw new Error(`gcp-ltx submit ${sub.status}: ${(await sub.text()).slice(0, 200)}`);
+  const { jobId } = (await sub.json()) as { jobId: string };
+  if (!jobId) throw new Error("gcp-ltx: server returned no jobId.");
+
+  for (let i = 0; i < 360; i++) { // up to ~30 min (video clips are slow on an L4)
+    await sleep(5000);
+    const st = await (await fetch(`${base}/jobs/${jobId}`, { headers })).json() as { status: string; url?: string; error?: string };
+    if (st.status === "done" && st.url) return st.url;
+    if (st.status === "error") throw new Error(`gcp-ltx job failed: ${st.error ?? "unknown"}`);
+  }
+  throw new Error("gcp-ltx: timed out waiting for the clip (30 min). The GPU may be overloaded or the clip too long.");
 }
 
 // ---- Fal.ai (queue API) ----

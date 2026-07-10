@@ -1,0 +1,27 @@
+# The LTX server — auto-starts on every boot so a fresh VM (or a spot-preemption restart) is ready
+# to serve without you SSHing in. Install: sudo cp into /etc/systemd/system/, then
+#   sudo systemctl enable --now maestro-ltx
+[Unit]
+Description=Maestro LTX-2 server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/ltx
+# Point these at your setup. LTX_TOKEN must match the token you paste into Maestro.
+Environment=LTX_PORT=8000
+Environment=LTX_TOKEN=CHANGE_ME_SHARED_SECRET
+Environment=LTX_CHECKPOINT=ltx-2.3-22b-distilled-1.1
+Environment=LTX_QUANT=fp8-cast
+Environment=LTX_OUT_DIR=/opt/ltx/out
+# Optional: results survive VM stop if you set a bucket (recommended for real batches).
+# Environment=LTX_GCS_BUCKET=gs://your-bucket
+Environment=LTX_PUBLIC_BASE=
+ExecStart=/opt/ltx/venv/bin/python /opt/ltx/ltx_server.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -54,9 +54,14 @@ export class EditorStore {
     model: lsGet("maestro.model") ?? "claude-sonnet-5",
     connectMode: (lsGet("maestro.connectMode") as "choose" | "inapp" | "claudecode") ?? "choose",
     showChat: false,
-    // Hosted-generation BYOK (Fal/Replicate). The key persists locally and is pushed to the server.
-    genProvider: (lsGet("maestro.genProvider") as "fal" | "replicate") ?? "fal",
+    // Hosted-generation BYOK (Fal/Replicate/gcp-ltx). The key persists locally and is pushed to the server.
+    genProvider: (lsGet("maestro.genProvider") as "fal" | "replicate" | "gcp-ltx") ?? "fal",
     genKey: lsGet("maestro.genKey") ?? "",
+    // gcp-ltx GPU VM lifecycle config (your own LTX server on a Google Cloud GPU).
+    gpuProject: lsGet("maestro.gpuProject") ?? "",
+    gpuZone: lsGet("maestro.gpuZone") ?? "us-central1-a",
+    gpuInstance: lsGet("maestro.gpuInstance") ?? "ltx-gpu",
+    gpuPort: Number(lsGet("maestro.gpuPort") ?? "8000"),
   };
   private listeners = new Set<() => void>();
   private version = 0;
@@ -181,16 +186,39 @@ export class EditorStore {
   async syncNow(): Promise<void> { await this.bridge?.syncNow(); }
 
   // --- hosted generation (BYOK) ---
-  setGenProvider(p: "fal" | "replicate"): void { this.settings.genProvider = p; lsSet("maestro.genProvider", p); this.emit(); }
+  setGenProvider(p: "fal" | "replicate" | "gcp-ltx"): void { this.settings.genProvider = p; lsSet("maestro.genProvider", p); this.emit(); void this.pushGenConfig(); }
   /** Save the generation key locally + push it to the server so generate_video/image can use it. */
   async saveGenKey(key: string): Promise<void> {
     this.settings.genKey = key; lsSet("maestro.genKey", key);
     await this.bridge?.saveGenConfig({ provider: this.settings.genProvider, apiKey: key });
     this.emit();
   }
-  /** Re-push the stored key to the server (called on startup so a fresh server picks it up). */
+  /** Re-push the current provider config (called on startup + provider change) so the server has it. */
   async pushGenConfig(): Promise<void> {
-    if (this.settings.genKey) await this.bridge?.saveGenConfig({ provider: this.settings.genProvider, apiKey: this.settings.genKey });
+    await this.bridge?.saveGenConfig({ provider: this.settings.genProvider, apiKey: this.settings.genKey });
+  }
+
+  // --- gcp-ltx GPU lifecycle (start/stop the LTX VM) ---
+  gpuState: { status: string; detail?: string; baseUrl?: string } = { status: "stopped" };
+  setGpuField(k: "gpuProject" | "gpuZone" | "gpuInstance", v: string): void { this.settings[k] = v; lsSet(`maestro.${k}`, v); this.emit(); }
+  setGpuPort(v: number): void { this.settings.gpuPort = v; lsSet("maestro.gpuPort", String(v)); this.emit(); }
+  /** Push the VM config to the server (project/zone/instance/port + token=genKey). */
+  async saveGpuConfig(): Promise<void> {
+    await this.bridge?.saveGpuConfig({ project: this.settings.gpuProject, zone: this.settings.gpuZone, instance: this.settings.gpuInstance, port: this.settings.gpuPort, token: this.settings.genKey });
+  }
+  async startGpu(): Promise<void> { await this.saveGpuConfig(); this.gpuState = await this.bridge!.gpuAction("start"); this.emit(); this.pollGpu(); }
+  async stopGpu(): Promise<void> { this.gpuState = await this.bridge!.gpuAction("stop"); this.emit(); this.pollGpu(); }
+  private gpuPollTimer: ReturnType<typeof setInterval> | null = null;
+  /** Poll GPU status until it settles (ready/stopped/error), so the button + label stay live. */
+  private pollGpu(): void {
+    if (this.gpuPollTimer) return;
+    this.gpuPollTimer = setInterval(async () => {
+      try {
+        this.gpuState = await this.bridge!.gpuStatus();
+        this.emit();
+        if (["ready", "stopped", "error"].includes(this.gpuState.status)) { clearInterval(this.gpuPollTimer!); this.gpuPollTimer = null; }
+      } catch { /* keep polling */ }
+    }, 4000);
   }
   /** Run a generation tool (generate_video/generate_image) from the UI; result auto-imports+places. */
   async generate(kind: "video" | "image", prompt: string, opts: { aspectRatio?: string; durationSeconds?: number } = {}): Promise<Record<string, unknown>> {

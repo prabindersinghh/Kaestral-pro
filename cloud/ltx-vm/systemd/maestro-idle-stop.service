@@ -1,0 +1,8 @@
+# One-shot that runs the idle watchdog. Paired with maestro-idle-stop.timer (every 5 min).
+[Unit]
+Description=Maestro LTX idle watchdog (stops the VM when idle to save credits)
+
+[Service]
+Type=oneshot
+Environment=LTX_IDLE_LIMIT_MIN=15
+ExecStart=/opt/ltx/idle-stop.sh
