@@ -7,6 +7,7 @@ import { Inspector } from "./Inspector";
 import { MediaPanel } from "./MediaPanel";
 import { Settings } from "./Settings";
 import { GenerationPanel } from "./GenerationPanel";
+import { WaitlistModal } from "./WaitlistModal";
 import { ChatPanel } from "./ChatPanel";
 import { exportVideoFromUI } from "./exportVideo";
 import { previewAudio } from "../audio/previewAudio";
@@ -154,7 +155,7 @@ export function Editor() {
       <div style={{ display: "flex", alignItems: "center", gap: theme.space.smMd, height: 44, padding: `0 ${theme.space.mdLg}px`, borderBottom: `1px solid ${theme.color.borderPrimary}`, background: theme.color.raised, flex: "0 0 auto" }}>
         <span style={{ fontSize: theme.fontSize.md, fontWeight: 600, letterSpacing: 0.2 }}>Maestro</span>
         <span
-          title={store.bridge?.connected ? "Project server connected — Claude can edit via MCP" : "Project server offline — run: npm run mcp"}
+          title={store.bridge?.connected ? "Connected — the AI can edit your project" : "Reconnecting to the project engine…"}
           style={{ width: 7, height: 7, borderRadius: 4, background: store.bridge?.connected ? theme.color.success : "#e0a63b" }}
         />
         <div style={{ flex: 1 }} />
@@ -170,6 +171,12 @@ export function Editor() {
           style={{ background: store.settings.showChat ? theme.color.prominent : "transparent", color: theme.color.textSecondary, border: `1px solid ${theme.color.borderSubtle}`, borderRadius: theme.radius.sm, padding: "6px 12px", fontSize: theme.fontSize.smMd, cursor: "pointer", fontFamily: theme.font.ui, display: "flex", alignItems: "center", gap: 6 }}
         >
           <span style={{ width: 7, height: 7, borderRadius: 4, background: store.bridge?.connected ? theme.color.success : "#e0a63b" }} /> {store.settings.connectMode === "inapp" && store.settings.apiKey.trim() ? "AI Chat" : "Connect AI"}
+        </button>
+        <button
+          onClick={() => store.openWaitlist(true)} title="Maestro Pro — AI generation (join the waitlist)"
+          style={{ background: "transparent", color: theme.color.accent, border: `1px solid ${theme.color.borderSubtle}`, borderRadius: theme.radius.sm, padding: "6px 12px", fontSize: theme.fontSize.smMd, fontWeight: 600, cursor: "pointer", fontFamily: theme.font.ui }}
+        >
+          ✨ Pro
         </button>
         <button
           onClick={() => store.openSettings(true)} title="Settings"
@@ -241,6 +248,7 @@ export function Editor() {
 
       <Settings />
       <GenerationPanel />
+      <WaitlistModal />
 
       {/* Drag-drop hint overlay */}
       {dragActive && (

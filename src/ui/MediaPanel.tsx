@@ -98,7 +98,7 @@ export function MediaPanel() {
         {busy && <div style={{ fontSize: theme.fontSize.sm, color: theme.color.textSecondary, marginBottom: theme.space.smMd, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Importing {busy}…</div>}
         {!store.bridge?.connected && (
           <div style={{ fontSize: theme.fontSize.xs, color: "#e0a63b", marginBottom: theme.space.smMd, lineHeight: 1.4 }}>
-            Project server offline — import & Claude sync unavailable. Run: npm run mcp
+            Connecting to the project engine… import resumes in a moment.
           </div>
         )}
         {assets.length === 0 && <div style={{ color: theme.color.textMuted, fontSize: theme.fontSize.smMd, lineHeight: 1.5 }}>Drop a video, image, or audio file here — or click ＋ Import.</div>}

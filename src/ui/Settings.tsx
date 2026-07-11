@@ -195,7 +195,7 @@ function ClaudeCodeSetup({ connected }: { connected: boolean }) {
       <BackLink />
       <div style={{ display: "flex", alignItems: "center", gap: theme.space.sm, marginBottom: theme.space.mdLg }}>
         <span style={{ width: 9, height: 9, borderRadius: 5, background: connected ? theme.color.success : "#e0a63b" }} />
-        <span style={{ fontSize: theme.fontSize.smMd }}>{connected ? "Project server running" : "Project server offline — run npm run mcp"}</span>
+        <span style={{ fontSize: theme.fontSize.smMd }}>{connected ? "Connected — ready to edit" : "Connecting to the project engine…"}</span>
         <span style={{ fontFamily: theme.font.mono, fontSize: theme.fontSize.xs, color: theme.color.textMuted, marginLeft: "auto" }}>{MCP_URL}</span>
       </div>
       <div style={{ fontSize: theme.fontSize.smMd, color: theme.color.textSecondary, marginBottom: theme.space.mdLg }}>Free with your Claude plan. Runs in a separate terminal; edits still appear here live.</div>

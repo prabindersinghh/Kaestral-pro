@@ -59,6 +59,9 @@ export class EditorStore {
     exportCodec: "H.264", exportResolution: "1080p", showSettings: false, showGenerate: false,
     /** Hidden dev flag: when false (default) there is NO generation UI anywhere in the app. */
     genDevMode: genDevDefault,
+    /** "Pro / AI features — join the waitlist" (visible; gauges demand without exposing generation). */
+    showWaitlist: false,
+    waitlistJoined: lsGet("maestro.waitlist") === "1",
     apiKey: lsGet("maestro.apiKey") ?? "",
     model: lsGet("maestro.model") ?? "claude-sonnet-5",
     connectMode: (lsGet("maestro.connectMode") as "choose" | "inapp" | "claudecode") ?? "choose",
@@ -186,6 +189,21 @@ export class EditorStore {
   }
 
   openSettings(open: boolean): void { this.settings.showSettings = open; this.emit(); }
+  openWaitlist(open: boolean): void { this.settings.showWaitlist = open; this.emit(); }
+  /** Join the Pro/AI-features waitlist. POSTs to VITE_WAITLIST_URL if set; else signals a mailto fallback. */
+  async joinWaitlist(email: string): Promise<{ ok: boolean; mode: "posted" | "mailto" | "error"; detail?: string }> {
+    const url = ((): string => { try { return (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_WAITLIST_URL ?? ""; } catch { return ""; } })();
+    const markJoined = () => { this.settings.waitlistJoined = true; lsSet("maestro.waitlist", "1"); this.emit(); };
+    if (url) {
+      try {
+        const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, source: "maestro-pro-waitlist" }) });
+        if (r.ok) { markJoined(); return { ok: true, mode: "posted" }; }
+        return { ok: false, mode: "error", detail: `Server returned ${r.status}. Try again in a moment.` };
+      } catch (e) { return { ok: false, mode: "error", detail: e instanceof Error ? e.message : String(e) }; }
+    }
+    markJoined();
+    return { ok: true, mode: "mailto" }; // no endpoint configured — the modal opens the user's mail client
+  }
   /** No-op unless the hidden generation dev flag is on — so nothing can open the Generate panel in the shipping UI. */
   openGenerate(open: boolean): void { if (!this.settings.genDevMode) return; this.settings.showGenerate = open; this.emit(); }
   /** Toggle the hidden generation dev flag (console-only: window.store.enableGenDev(true)). Persists locally. */
