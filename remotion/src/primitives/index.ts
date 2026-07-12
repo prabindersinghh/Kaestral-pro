@@ -6,8 +6,16 @@ import { GlowField } from "./GlowField";
 import { LogoMark } from "./LogoMark";
 import { Particles } from "./Particles";
 import { Hairline } from "./Hairline";
+import { Waveform } from "./Waveform";
+import { Timeline } from "./Timeline";
+import { CaptionKaraoke } from "./CaptionKaraoke";
+import { BarChart } from "./BarChart";
+import { LineChart } from "./LineChart";
+import { AreaChart } from "./AreaChart";
+import { Counter } from "./Counter";
 
 export { Particles, Hairline };
+export { Waveform, Timeline, CaptionKaraoke, BarChart, LineChart, AreaChart, Counter };
 export { Camera, DEFAULT_CAMERA, cameraTransform, parallaxOffset, rackBlurFor } from "./Camera";
 export type { CameraSpec } from "./Camera";
 export { applyTransition, TRANSITION_FRAMES } from "./Transitions";
@@ -27,6 +35,10 @@ export { Grid, GlowField };
 // MUST have an entry — a missing key would mean a validated SceneSpec layer silently renders
 // nothing, which violates "fail loud, never silent-substitute" in spirit even though Noop
 // itself renders nothing on purpose as an explicit, visible placeholder.
+//
+// TASK 7 UPGRADE — "show the product working" (binding critique #7): waveform/timeline/
+// captionKaraoke (editor motifs, ported from CondenseReel.tsx/HeroDemo.tsx) plus barChart/
+// lineChart/areaChart/counter (data-story primitives) now render real content instead of Noop.
 
 /** Renders nothing. Placeholder for elements not yet implemented as primitives. */
 export const Noop: React.FC<PrimitiveProps> = () => null;
@@ -37,16 +49,16 @@ export const REGISTRY: Record<string, React.FC<PrimitiveProps>> = {
   video: Noop,
   image: Noop,
   screenMock: Noop,
-  waveform: Noop,
-  timeline: Noop,
+  waveform: Waveform,
+  timeline: Timeline,
   logo: LogoMark,
   shape: Shape,
   hairline: Hairline,
-  barChart: Noop,
-  lineChart: Noop,
-  areaChart: Noop,
-  counter: Noop,
-  captionKaraoke: Noop,
+  barChart: BarChart,
+  lineChart: LineChart,
+  areaChart: AreaChart,
+  counter: Counter,
+  captionKaraoke: CaptionKaraoke,
   particles: Particles,
   arrow: Noop,
   highlightBox: Noop,

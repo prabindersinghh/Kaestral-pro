@@ -80,4 +80,63 @@ describe("Generative render", () => {
     expect(res.height).toBe(1080);
     expect(statSync(out).size).toBeGreaterThan(10000);
   }, 240000);
+
+  it("renders a data-story spec (barChart + counter, then timeline + captionKaraoke across a wipe transition) — 'show the product working' primitives", async () => {
+    const v = validateSceneSpec({
+      meta: { aspect: "16:9", fps: 30 },
+      beats: [
+        {
+          durationInFrames: 60,
+          background: { kind: "glow", accent: "#16b16a" },
+          transitionOut: { kind: "wipe", accent: "#16b16a", snapToBeat: false },
+          layers: [
+            {
+              element: "barChart",
+              props: {
+                title: "Growth",
+                bars: [
+                  { label: "Jan", value: 42 },
+                  { label: "Feb", value: 65 },
+                  { label: "Mar", value: 88 },
+                ],
+              },
+              position: { x: 0.5, y: 0.42 },
+              enter: { anim: "spring" },
+            },
+            {
+              element: "counter",
+              props: { value: 1280, label: "renders", suffix: "+" },
+              position: { x: 0.5, y: 0.82 },
+              enter: { anim: "spring", delay: 10 },
+            },
+          ],
+        },
+        {
+          durationInFrames: 60,
+          background: { kind: "grid", accent: "#16b16a" },
+          layers: [
+            {
+              element: "timeline",
+              props: {},
+              position: { x: 0.5, y: 0.35 },
+              enter: { anim: "spring" },
+            },
+            {
+              element: "captionKaraoke",
+              props: { words: ["show", "the", "product", "working"] },
+              position: { x: 0.5, y: 0.75 },
+              enter: { anim: "spring", delay: 8 },
+            },
+          ],
+        },
+      ],
+    });
+    expect(v.ok).toBe(true);
+    if (!v.ok) return;
+    const out = join(remotionDir, ".test-out", "gen-data-story.mp4");
+    const res = await renderRemotion("Generative", { spec: v.spec }, out, remotionDir);
+    expect(res.width).toBe(1920);
+    expect(res.height).toBe(1080);
+    expect(statSync(out).size).toBeGreaterThan(10000);
+  }, 240000);
 });
