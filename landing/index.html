@@ -364,25 +364,25 @@
 
 <section id="compare">
   <div class="wrap">
-    <span class="kicker">Honest comparison</span>
-    <h2>Kaestral vs <span class="draw">Palmier Pro.</span></h2>
-    <p class="lead">Kaestral is a Windows port of the AI-native editor Palmier Pro — with eyes and ears they don’t have. Here’s the honest picture, including where they win.</p>
+    <span class="kicker">Why Kaestral</span>
+    <h2>An AI editor with <span class="draw">eyes and ears.</span></h2>
+    <p class="lead">Native to Windows, free, and open source. It doesn’t just take commands — it watches your frames, hears every word, and edits through a real, editable timeline.</p>
     <div class="cmp rev">
       <div class="cmp-scroll">
       <table>
-        <thead><tr><th>&nbsp;</th><th>Kaestral</th><th>Palmier Pro</th></tr></thead>
+        <thead><tr><th>&nbsp;</th><th>Kaestral</th><th>What that means</th></tr></thead>
         <tbody>
-          <tr><td>Platform</td><td class="win">Windows <span style="color:var(--ink-3)">(macOS on roadmap)</span></td><td>macOS only</td></tr>
-          <tr><td>AI editing over MCP</td><td class="win ok">✓</td><td>✓ (the original)</td></tr>
-          <tr><td>Perception — transcribe / see / beats</td><td class="win">✓ on-device</td><td>✓</td></tr>
-          <tr><td>AI video <b>generation</b></td><td>⏳ Pro (waitlist)</td><td>✓ paid cloud (shipping)</td></tr>
-          <tr><td>Price</td><td class="win">Free · GPLv3</td><td>Paid</td></tr>
-          <tr><td>Maturity</td><td>New, open-source</td><td>Established (YC S24)</td></tr>
+          <tr><td>Platform</td><td class="win ok">Windows</td><td>Native desktop app · macOS on the roadmap</td></tr>
+          <tr><td>AI editing over MCP</td><td class="win ok">✓</td><td>Drive it from the Claude Code you already have</td></tr>
+          <tr><td>Perception</td><td class="win ok">✓ on-device</td><td>Transcribe · see frames · detect beats &amp; silence — locally</td></tr>
+          <tr><td>Real timeline</td><td class="win ok">✓</td><td>Multi-track, keyframes, blend modes — a true editable project</td></tr>
+          <tr><td>Price</td><td class="win ok">Free · GPLv3</td><td>Open source; yours to keep and modify</td></tr>
+          <tr><td>AI generation</td><td>⏳ Pro (waitlist)</td><td>Prompt-to-clip is coming to the Pro tier</td></tr>
         </tbody>
       </table>
       </div>
     </div>
-    <p class="honest"><b>Where Palmier wins:</b> they ship AI generation today and they’re more mature. Kaestral doesn’t compete on generation — that’s their paid cloud and our deferred Pro tier. Kaestral’s edge is <b>Windows + real perception + a free, open, Claude-Code-native workflow.</b></p>
+    <p class="honest">Kaestral doesn’t compete on generation today — its edge is <b>Windows + real perception + a free, open, Claude-Code-native workflow.</b> Generation lands later, in the Pro tier.</p>
   </div>
 </section>
 
@@ -407,7 +407,7 @@
         <div class="item"><h4>MCP server — the fast path</h4><p><code>npx kaestral</code>, then point Claude Code at it. Nothing to install and learn.</p></div>
         <div class="item"><h4>Windows installer</h4><p>Double-click; the editor and engine start internally — no terminal.</p></div>
         <div class="item"><h4>In-app chat</h4><p>Bring your own Anthropic key and edit from the app window.</p></div>
-        <div class="item"><h4>Compatibility</h4><p>Speaks <code>palmier-pro</code> and the <code>.palmier</code> format — a drop-in for the Palmier ecosystem. Exports <b>Premiere (XMEML)</b> and <b>Resolve / FCP (FCPXML)</b>.</p></div>
+        <div class="item"><h4>Compatibility</h4><p>Standard MCP over HTTP with a stable tool contract. Exports <b>Premiere (XMEML)</b> and <b>Resolve / FCP (FCPXML)</b>.</p></div>
       </div>
     </div>
   </div>
@@ -450,11 +450,9 @@
       </div>
     </div>
     <p class="legal">
-      <b style="color:var(--ink-2)">GPLv3.</b> Kaestral is an open-source Windows port of
-      <a href="https://github.com/palmier-io/palmier-pro">Palmier Pro</a> © Palmier Inc. (GPLv3).
-      The <code>.palmier</code> format, MCP contract, and editing semantics are theirs; the Windows
-      implementation is ours. Palmier’s cloud generation backend is not ported. Third-party components
-      (whisper.cpp, FFmpeg, Remotion) retain their permissive licenses. Not affiliated with or endorsed by Palmier Inc.
+      <b style="color:var(--ink-2)">Kaestral</b> — the AI-operated video editor for Windows. Free and open source under <b style="color:var(--ink-2)">GPLv3</b>.
+      Third-party components (whisper.cpp, FFmpeg, Remotion) retain their permissive licenses.<br>
+      <span style="color:var(--ink-3);opacity:.75">As required by the GPLv3, Kaestral is a derivative Windows port of the upstream project <a href="https://github.com/palmier-io/palmier-pro" style="color:var(--ink-3)">palmier-io/palmier-pro</a> © Palmier Inc.; not affiliated with or endorsed by them. See <a href="https://github.com/prabindersinghh/kaestral/blob/main/NOTICE.md" style="color:var(--ink-3)">NOTICE.md</a> for full attributions.</span>
     </p>
   </div>
 </footer>
