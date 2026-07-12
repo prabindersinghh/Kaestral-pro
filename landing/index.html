@@ -151,7 +151,7 @@
   .shot{border:1px solid var(--white-line-2);border-radius:12px;overflow:hidden;background:var(--panel);position:relative;
     box-shadow:0 28px 70px -28px rgba(0,0,0,.75)}
   .shot::before{content:"";position:absolute;inset:0;border-radius:12px;border:1px solid var(--gold-dim);pointer-events:none;z-index:1}
-  .shot img{display:block;width:100%;height:auto}
+  .shot img,.shot video{display:block;width:100%;height:auto}
   @media(max-width:820px){.feat{grid-template-columns:1fr;gap:26px;padding:38px 0}.feat:nth-child(even) .txt{order:0}}
 
   /* ---- capability chips ---- */
@@ -316,7 +316,9 @@
         <h3>Raw footage → publish-ready reel.</h3>
         <p>Drop a 20-minute recording; get a tight, captioned, beat-cut short. Kaestral <b>removes filler words</b>, <b>finds the hook</b>, and <b>captions on the word</b> — automatically. Transcription runs on-device; cuts land on silences and beats.</p>
       </div>
-      <div class="shot"><img src="assets/captions.png" alt="Word-level captions on a clip in the Kaestral timeline" loading="lazy"/></div>
+      <!-- Generate condense-demo.mp4 in Kaestral (prompt in the chat), drop it in assets/, and this plays it.
+           Until then it falls back to the captions screenshot. -->
+      <div class="shot"><video poster="assets/captions.png" autoplay muted loop playsinline preload="metadata" aria-label="A raw recording turned into a captioned reel in Kaestral"><source src="assets/condense-demo.mp4" type="video/mp4"></video></div>
     </div>
 
     <div class="feat rev">
@@ -325,7 +327,7 @@
         <h3>Make SaaS &amp; product videos without an editor.</h3>
         <p>Animated intros, logo reveals, <b>data-viz</b>, and transition stingers — <b>generated from a sentence</b> and rendered onto your timeline. Launch videos, demos, and ads, without hiring an editor.</p>
       </div>
-      <div class="shot"><img src="assets/dataviz.png" alt="An animated motion-graphic composition on the Kaestral timeline" loading="lazy"/></div>
+      <div class="shot"><video id="leorit" src="assets/leorit-saas.mp4#t=11" autoplay muted loop playsinline preload="metadata" aria-label="A SaaS product film made in Kaestral"></video></div>
     </div>
 
     <div class="chips rev">
@@ -515,6 +517,18 @@
     function start(){ cancelAnimationFrame(raf); size(); frame(); if(reduce) cancelAnimationFrame(raf); }
     addEventListener('resize',()=>{ cancelAnimationFrame(raf); start(); });
     start();
+  })();
+
+  // Leorit SaaS film starts at 11s and loops back to 11s (skips the first 10s intro)
+  (function(){
+    const v=document.getElementById('leorit'); if(!v) return;
+    const START=11;
+    const seekStart=()=>{ if(v.currentTime<START) { try{ v.currentTime=START; }catch{} } };
+    v.addEventListener('loadedmetadata',seekStart);
+    v.addEventListener('seeked',()=>{},{once:true});
+    // on loop, timeupdate fires near 0 → snap back to START
+    v.addEventListener('timeupdate',()=>{ if(v.currentTime<START-0.05) v.currentTime=START; });
+    seekStart();
   })();
 
   // scroll reveal + underline draw
