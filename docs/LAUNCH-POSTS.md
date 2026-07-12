@@ -29,8 +29,8 @@ What it actually does today (all on-device, no cloud needed):
 - 48+ MCP tools.
 
 **Honest about the tradeoffs:**
-- It's a port. The `.palmier` format + MCP contract are Palmier's; the MCP server speaks `palmier-pro`
-  on purpose so it's a drop-in for their ecosystem. Full GPLv3 credit in the repo.
+- It's a GPLv3 port; the upstream project is credited in the repo (NOTICE.md). It reads the `.palmier`
+  project format so existing projects open, but it ships as its own product — Kaestral.
 - **AI *generation* is NOT in the free tier.** That's Palmier's paid cloud, and it's my deferred Pro
   tier (waitlist). I'm not competing on generation. Kaestral's wedge is Windows + real perception + a
   free, open, Claude-Code-native workflow.
@@ -59,7 +59,7 @@ line and drive the whole edit by prompt:
 
 ```
 npx kaestral
-claude mcp add --transport http palmier-pro http://127.0.0.1:19789/mcp
+claude mcp add --transport http kaestral http://127.0.0.1:19789/mcp
 claude
 ```
 

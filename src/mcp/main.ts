@@ -1,6 +1,6 @@
 // CLI: run the Kaestral MCP server. Optionally load a .palmier project directory.
 //   npm run mcp -- "C:/path/to/My Project.palmier"
-// Then: claude mcp add --transport http palmier-pro http://127.0.0.1:19789/mcp
+// Then: claude mcp add --transport http kaestral http://127.0.0.1:19789/mcp
 
 import { McpServer, MCP_PORT } from "./server";
 import { McpExecutor } from "./executor";

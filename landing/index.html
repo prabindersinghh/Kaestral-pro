@@ -11,7 +11,7 @@
 <meta name="theme-color" content="#0b0a0d" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800;900&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800;900&family=Geist+Mono:wght@400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,400..900;1,9..144,400..800&display=swap" rel="stylesheet">
 <style>
   /* ============================================================
      Kaestral landing — palette sampled from the app logo (app-icon.png):
@@ -34,6 +34,7 @@
 
     --ui:'Geist',system-ui,-apple-system,sans-serif;
     --mono:'Geist Mono',ui-monospace,'SF Mono',monospace;
+    --serif:'Fraunces',Georgia,'Times New Roman',serif;
     --maxw:1120px; --gutter:26px;
   }
   *{box-sizing:border-box;margin:0;padding:0}
@@ -89,11 +90,17 @@
 
   /* ---- hero ---- */
   header{padding:96px 0 44px;text-align:center;position:relative}
+  /* animated geometric constellation mesh behind the hero (canvas) */
+  .mesh{position:absolute;inset:-40px 0 -80px;width:100%;z-index:-1;pointer-events:none;
+    -webkit-mask-image:radial-gradient(72% 78% at 50% 42%,#000 55%,transparent 100%);
+    mask-image:radial-gradient(72% 78% at 50% 42%,#000 55%,transparent 100%)}
+  .mesh canvas{display:block;width:100%;height:100%}
   .eyebrow{display:inline-flex;align-items:center;gap:9px;font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--green-hi);border:1px solid var(--green-dim);border-radius:999px;padding:6px 15px;margin-bottom:30px;background:var(--green-wash)}
   .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--green-hi);box-shadow:0 0 9px var(--green-hi);animation:pulse 2.6s ease-in-out infinite}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
-  h1{font-size:clamp(40px,7.2vw,78px);font-weight:800;letter-spacing:-.035em;line-height:1.0;max-width:15ch;margin:0 auto;text-wrap:balance}
-  h1 .g{color:var(--green-hi);position:relative;white-space:nowrap}
+  h1{font-family:var(--serif);font-size:clamp(44px,7.6vw,88px);font-weight:600;letter-spacing:-.02em;line-height:1.02;max-width:15ch;margin:0 auto;text-wrap:balance;font-optical-sizing:auto}
+  h1 .g{color:var(--green-hi);position:relative;white-space:nowrap;font-style:italic;font-weight:500}
+  h1 .it{display:block;font-style:italic;font-weight:400;color:var(--ink)}
   .sub{font-size:clamp(18px,2.3vw,22px);color:var(--ink-2);margin:24px auto 0;max-width:46ch;font-weight:400;text-wrap:balance}
   .sub b{color:var(--ink);font-weight:600}
   .cta{display:flex;gap:13px;justify-content:center;margin-top:36px;flex-wrap:wrap}
@@ -257,9 +264,10 @@
 
 <div id="top"></div>
 <header>
+  <div class="mesh" aria-hidden="true"><canvas id="mesh"></canvas></div>
   <div class="wrap">
     <span class="eyebrow"><span class="dot"></span>AI-native · Windows · Open source</span>
-    <h1>The <span class="g">AI-operated</span> video editor for Windows.</h1>
+    <h1>The <span class="g">AI-operated</span><span class="it">video editor for Windows.</span></h1>
     <p class="sub"><b>You describe the edit. It makes it.</b> Kaestral watches your footage, hears every word, and cuts.</p>
     <div class="cta">
       <a class="btn btn-primary" href="https://github.com/prabindersinghh/kaestral/releases">
@@ -396,7 +404,7 @@
 <span class="k">npx</span> kaestral
 
 <span class="c"># 2 · connect Claude Code</span>
-<span class="k">claude</span> mcp add --transport http palmier-pro <span class="s">\</span>
+<span class="k">claude</span> mcp add --transport http kaestral <span class="s">\</span>
   http://127.0.0.1:19789/mcp
 <span class="k">claude</span>
 
@@ -458,6 +466,57 @@
 </footer>
 
 <script>
+  // ---- hero constellation mesh: drifting nodes joined by thin gold/white geometric lines ----
+  (function(){
+    const cv=document.getElementById('mesh'); if(!cv) return;
+    const ctx=cv.getContext('2d');
+    const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+    let W,H,DPR,nodes=[],raf;
+    const LINK=230;                 // max distance to draw a line
+    function size(){
+      const r=cv.parentElement.getBoundingClientRect();
+      DPR=Math.min(2,devicePixelRatio||1);
+      W=r.width; H=r.height;
+      cv.width=W*DPR; cv.height=H*DPR; ctx.setTransform(DPR,0,0,DPR,0,0);
+      const count=Math.max(20,Math.min(42,Math.round(W*H/22000)));
+      nodes=Array.from({length:count},()=>({
+        x:Math.random()*W, y:Math.random()*H,
+        vx:(Math.random()-.5)*0.18, vy:(Math.random()-.5)*0.18
+      }));
+    }
+    function frame(){
+      ctx.clearRect(0,0,W,H);
+      for(const n of nodes){
+        n.x+=n.vx; n.y+=n.vy;
+        if(n.x<0||n.x>W) n.vx*=-1;
+        if(n.y<0||n.y>H) n.vy*=-1;
+      }
+      for(let i=0;i<nodes.length;i++){
+        for(let j=i+1;j<nodes.length;j++){
+          const a=nodes[i],b=nodes[j];
+          const dx=a.x-b.x, dy=a.y-b.y, d=Math.hypot(dx,dy);
+          if(d<LINK){
+            const t=1-d/LINK;                 // closer = brighter
+            const gold=((i+j)%3===0);         // alternate gold / white hairlines
+            ctx.strokeStyle= gold
+              ? 'rgba(201,162,39,'+(t*0.34).toFixed(3)+')'
+              : 'rgba(255,255,255,'+(t*0.16).toFixed(3)+')';
+            ctx.lineWidth=1;
+            ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+          }
+        }
+      }
+      for(const n of nodes){
+        ctx.beginPath(); ctx.arc(n.x,n.y,1.6,0,7);
+        ctx.fillStyle='rgba(31,206,126,0.55)'; ctx.fill();
+      }
+      raf=requestAnimationFrame(frame);
+    }
+    function start(){ cancelAnimationFrame(raf); size(); frame(); if(reduce) cancelAnimationFrame(raf); }
+    addEventListener('resize',()=>{ cancelAnimationFrame(raf); start(); });
+    start();
+  })();
+
   // scroll reveal + underline draw
   const io = new IntersectionObserver((es)=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.14});
   document.querySelectorAll('.rev,.draw').forEach(el=>io.observe(el));

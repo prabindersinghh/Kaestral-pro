@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // `npx kaestral` — starts the Kaestral editor engine (the MCP server) so Claude Code can drive it:
 //   npx kaestral
-//   claude mcp add --transport http palmier-pro http://127.0.0.1:19789/mcp
+//   claude mcp add --transport http kaestral http://127.0.0.1:19789/mcp
 // Requires FFmpeg + ffprobe on PATH. The whisper model (~142 MB) downloads on first transcription.
 // Optionally pass a .palmier project path to load it.
 
@@ -33,7 +33,7 @@ const env = {
   // FFmpeg/ffprobe are expected on PATH; override with MAESTRO_FFMPEG / MAESTRO_FFPROBE if needed.
 };
 
-console.error("Kaestral engine starting… connect with:\n  claude mcp add --transport http palmier-pro http://127.0.0.1:19789/mcp\n");
+console.error("Kaestral engine starting… connect with:\n  claude mcp add --transport http kaestral http://127.0.0.1:19789/mcp\n");
 const child = spawn(process.execPath, [server, ...process.argv.slice(2)], { stdio: "inherit", env });
 child.on("exit", (code) => process.exit(code ?? 0));
 process.on("SIGINT", () => child.kill("SIGINT"));

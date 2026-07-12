@@ -69,7 +69,7 @@ already have at it.
 ### 1. MCP server (primary — one line)
 ```bash
 npx kaestral            # starts the local editor engine on http://127.0.0.1:19789/mcp
-claude mcp add --transport http palmier-pro http://127.0.0.1:19789/mcp
+claude mcp add --transport http kaestral http://127.0.0.1:19789/mcp
 claude
 ```
 Then just ask: *"get_timeline, then cut the silent parts of demo.mp4, add captions, and export it."*
@@ -90,27 +90,23 @@ Roadmap. Kaestral is Windows-first by design (that's the wedge). macOS is planne
 
 ---
 
-## Honest comparison — Kaestral vs Palmier Pro
+## What makes it different
 
-| | **Kaestral** | **Palmier Pro** |
-|---|---|---|
-| Platform | **Windows** (macOS on roadmap) | macOS only |
-| AI editing over MCP | ✅ | ✅ (the original) |
-| Perception (transcribe/see/beats) | ✅ on-device | ✅ |
-| AI video **generation** | ⏳ Pro (waitlist) | ✅ **paid cloud (shipping)** |
-| Maturity | new, open-source | established, funded (YC S24) |
-| Price | free, GPLv3 | paid |
-| The format & MCP contract | **theirs** (`.palmier`, palmier-pro) | theirs |
+| | **Kaestral** |
+|---|---|
+| Platform | **Windows** (macOS on roadmap) |
+| AI editing over MCP | ✅ drive it from the Claude Code you already have |
+| Perception (transcribe / see / beats) | ✅ on-device |
+| Real timeline | ✅ multi-track, keyframes, blend modes — a true editable project |
+| AI video **generation** | ⏳ Pro (waitlist) |
+| Price | free, GPLv3 |
 
-**Where Palmier wins:** they ship AI generation today and they're more mature. Kaestral doesn't compete
-on generation — that's their paid cloud and our deferred Pro tier. Kaestral's edge is **Windows + real
-perception + a free, open, Claude-Code-native workflow.**
+Kaestral's edge is **Windows + real perception + a free, open, Claude-Code-native workflow.**
+Generation lands later, in the Pro tier.
 
-## Why the MCP server is named `palmier-pro`
-Kaestral is a Windows port of Palmier Pro. To stay a **drop-in** for the Palmier ecosystem, the MCP
-server identifies as **`palmier-pro`** and speaks the **`.palmier`** project format — so agents,
-configs, and MCP clients built for Palmier work against Kaestral unchanged. This is a frozen
-compatibility contract; the *product* is Kaestral, the *wire protocol* is palmier-pro on purpose.
+## Project format
+Kaestral reads and writes the **`.palmier`** project format so existing projects open unchanged. This is
+a data-format detail; the product is **Kaestral** and the MCP server identifies as **`kaestral`**.
 
 ## Development
 ```bash

@@ -7,7 +7,7 @@ Everything below is set up and verified locally. These are the steps **you** run
 ## 1. npm — `npx kaestral` (primary distribution)
 
 The package is publish-ready: `name: kaestral`, a `bin`, a `files` allowlist, and a `prepublishOnly`
-that bundles the server. Verified locally — `node bin/kaestral.mjs` starts the MCP server (palmier-pro).
+that bundles the server. Verified locally — `node bin/kaestral.mjs` starts the MCP server (kaestral).
 
 ```bash
 cd palmier-win
@@ -19,7 +19,7 @@ npm publish --access public
 Then anyone can run:
 ```bash
 npx kaestral
-claude mcp add --transport http palmier-pro http://127.0.0.1:19789/mcp
+claude mcp add --transport http kaestral http://127.0.0.1:19789/mcp
 ```
 
 **Prereq for users:** FFmpeg + ffprobe on PATH (document this). The whisper model (~142 MB) downloads

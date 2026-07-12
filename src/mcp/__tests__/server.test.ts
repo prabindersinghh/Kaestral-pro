@@ -32,7 +32,7 @@ describe("Stage-C: MCP HTTP transport (kaestral on 127.0.0.1)", () => {
 
   it("initialize returns kaestral 1.0.0 with tools capability", async () => {
     const { json } = await rpc("initialize", { protocolVersion: "2025-06-18" });
-    expect(json.result.serverInfo).toEqual({ name: "palmier-pro", version: "1.0.0" });
+    expect(json.result.serverInfo).toEqual({ name: "kaestral", version: "1.0.0" });
     expect(json.result.capabilities.tools).toBeDefined();
     expect(json.result.capabilities.resources).toBeDefined();
   });
@@ -66,8 +66,8 @@ describe("Stage-C: MCP HTTP transport (kaestral on 127.0.0.1)", () => {
   it("resources/list exposes the two model resources", async () => {
     const { json } = await rpc("resources/list", {});
     expect(json.result.resources.map((r: { uri: string }) => r.uri)).toEqual([
-      "palmier-pro://models/video",
-      "palmier-pro://models/image",
+      "kaestral://models/video",
+      "kaestral://models/image",
     ]);
   });
 
