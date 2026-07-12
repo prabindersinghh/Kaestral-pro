@@ -1,0 +1,94 @@
+import { interpolate, spring, Easing } from "remotion";
+import type { PrimitiveProps } from "./types";
+import { TOKENS, tokenColor } from "./tokens";
+
+// Ported from `remotion/src/compositions/HeroDemo.tsx` beat 3 (the thesis line): white display
+// text with a green-accent second line, heavy weight, tight negative letter-spacing, spring
+// entrance with a translateY settle. This is the quality baseline for every text render —
+// do not soften the weight/letter-spacing or swap the spring for a cheaper linear fade.
+
+const ease = Easing.bezier(0.22, 0.61, 0.16, 1);
+
+function roleColor(role: string | undefined): string {
+  if (role === "accent") return TOKENS.greenHi;
+  if (role === "muted") return TOKENS.ink2;
+  return TOKENS.ink; // "display" or unset
+}
+
+export const Text: React.FC<PrimitiveProps> = ({ props, frame, fps, height, opacity, blur, position, enter, style }) => {
+  const text = typeof props.text === "string" ? props.text : "";
+  const delay = enter?.delay ?? 0;
+  const local = frame - delay;
+
+  const size = style?.size ?? 0.086; // fraction of height, matches HeroDemo's thesis line
+  const fontSize = Math.round(height * size);
+  const color = style?.role ? roleColor(style.role) : props.color ? tokenColor(String(props.color)) : roleColor(undefined);
+
+  const anim = enter?.anim ?? "fade";
+
+  let animOpacity = 1;
+  let translateY = 0;
+  let translateX = 0;
+  let visibleText = text;
+  let scale = 1;
+
+  if (anim === "spring") {
+    const p = spring({ frame: local, fps, config: { damping: 15 } });
+    animOpacity = p;
+    const from = enter?.from ?? "below";
+    if (from === "below") translateY = interpolate(p, [0, 1], [22, 0]);
+    else if (from === "left") translateX = interpolate(p, [0, 1], [-30, 0]);
+    else if (from === "scale") scale = interpolate(p, [0, 1], [0.85, 1]);
+  } else if (anim === "typewriter") {
+    const typed = Math.floor(
+      interpolate(local, [0, Math.max(10, text.length * 1.6)], [0, text.length], {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+        easing: ease,
+      })
+    );
+    visibleText = text.slice(0, typed);
+    animOpacity = interpolate(local, [0, 4], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  } else if (anim === "wordReveal") {
+    const words = text.split(" ");
+    const revealed = Math.floor(
+      interpolate(local, [0, Math.max(8, words.length * 6)], [0, words.length], {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+        easing: ease,
+      })
+    );
+    visibleText = words.slice(0, revealed).join(" ");
+    animOpacity = 1;
+  } else if (anim === "kinetic") {
+    const p = spring({ frame: local, fps, config: { damping: 12, mass: 0.6 } });
+    animOpacity = p;
+    translateY = interpolate(p, [0, 1], [40, 0]);
+    scale = interpolate(p, [0, 1], [1.15, 1]);
+  } else {
+    // fade (default) — also covers karaoke/draw/collapse/maskReveal until later tasks implement them
+    animOpacity = interpolate(local, [0, 12], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: ease });
+  }
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: `${position.x * 100}%`,
+        top: `${position.y * 100}%`,
+        transform: `translate(-50%, -50%) translate(${translateX}px, ${translateY}px) scale(${scale})`,
+        opacity: opacity * animOpacity,
+        filter: blur > 0 ? `blur(${blur}px)` : undefined,
+        fontFamily: TOKENS.fontSans,
+        fontWeight: 800,
+        fontSize,
+        color,
+        letterSpacing: -1.5,
+        textAlign: "center",
+        whiteSpace: "pre",
+      }}
+    >
+      {visibleText}
+    </div>
+  );
+};
