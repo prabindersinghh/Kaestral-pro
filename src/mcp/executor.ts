@@ -24,6 +24,7 @@ import { extractPalette } from "../color/palette";
 import { extractFrames, type SampleMode } from "../vision/frames";
 import { transcribe, whisperAvailable, type TranscriptWord } from "../audio/transcribe";
 import { generate, type GenConfig, type GenKind } from "../gen/hosted";
+import { validateSceneSpec, type SceneSpec } from "../gen/sceneSpec";
 import { ytdlpAvailable, downloadUrl } from "../gen/download";
 import { join } from "node:path";
 import { mkdir, writeFile } from "node:fs/promises";
@@ -448,6 +449,77 @@ export class McpExecutor {
     return okJson({ assetId: asset.id, name: asset.name, template, frames: res.durationInFrames, width: res.width, height: res.height, engine: "remotion", placed: place });
   }
 
+  // compose_motion (STRATEGY ③ — the Generative engine): validate an agent-authored SceneSpec, render
+  // it via the "Generative" Remotion composition, import + place the result. Fail loud: a validation
+  // error returns immediately (no render attempted). Only if a REAL render attempt throws do we fall
+  // back to a deterministic template — and that result is always labelled fallback:true with a reason,
+  // never presented as if it were the bespoke generative render.
+  private async composeMotion(a: Args): Promise<ToolResult> {
+    const v = validateSceneSpec((a as any).spec);
+    if (!v.ok) return err(`compose_motion: ${v.error}`);
+
+    const place = aBool(a, "place") !== false;
+    const dir = join(dataDir(), "generated");
+    await mkdir(dir, { recursive: true });
+    const { renderRemotion } = await import("../motion/renderRemotion");
+
+    try {
+      const outputPath = join(dir, `generative-${cryptoId()}.mp4`);
+      const res = await renderRemotion("Generative", { spec: v.spec }, outputPath, remotionDir());
+      const dur = res.durationInFrames / res.fps;
+      const asset = this.media.addAsset({
+        name: "Motion: generative", type: "video", duration: dur,
+        source: { kind: "external", absolutePath: outputPath },
+        sourceWidth: res.width, sourceHeight: res.height, sourceFPS: res.fps, hasAudio: false,
+      });
+      this.stateVersion++;
+      if (place) {
+        const trackIndex = this.ensureTrack("video");
+        this.engine.addClips([{ mediaRef: asset.id, trackIndex, startFrame: this.currentFrame, durationFrames: res.durationInFrames, mediaType: "video", sourceClipType: "video" }]);
+        this.track(true, "Compose Motion");
+      }
+      return okJson({ assetId: asset.id, name: asset.name, frames: res.durationInFrames, width: res.width, height: res.height, engine: "generative", fallback: false, placed: place });
+    } catch (e) {
+      // Bespoke render failed — fall back to a deterministic labelled template, never silently.
+      const { template, props } = this.templateFallbackFor(v.spec);
+      const outputPath = join(dir, `motion-fallback-${cryptoId()}.mp4`);
+      const res = await renderRemotion(template, props, outputPath, remotionDir());
+      const dur = res.durationInFrames / res.fps;
+      const asset = this.media.addAsset({
+        name: `Motion: ${template}`, type: "video", duration: dur,
+        source: { kind: "external", absolutePath: outputPath },
+        sourceWidth: res.width, sourceHeight: res.height, sourceFPS: res.fps, hasAudio: false,
+      });
+      this.stateVersion++;
+      if (place) {
+        const trackIndex = this.ensureTrack("video");
+        this.engine.addClips([{ mediaRef: asset.id, trackIndex, startFrame: this.currentFrame, durationFrames: res.durationInFrames, mediaType: "video", sourceClipType: "video" }]);
+        this.track(true, "Compose Motion (fallback)");
+      }
+      return okJson({
+        assetId: asset.id, name: asset.name, template, frames: res.durationInFrames, width: res.width, height: res.height,
+        engine: "remotion-template", fallback: true, fallbackReason: String(e).slice(0, 300), placed: place,
+      });
+    }
+  }
+
+  /** Deterministic template + props chosen from the spec's dominant element, for the compose_motion fallback path. */
+  private templateFallbackFor(spec: SceneSpec): { template: string; props: Record<string, unknown> } {
+    const layers = spec.beats.flatMap((b) => b.layers);
+    const hasChart = layers.some((l) => l.element === "barChart" || l.element === "lineChart" || l.element === "areaChart");
+    const hasLogo = layers.some((l) => l.element === "logo");
+    const firstText = layers.find((l) => l.element === "text");
+    const title = (firstText?.props?.text as string | undefined) ?? "Kaestral";
+    const durationSeconds = Math.max(1, spec.beats.reduce((s, b) => s + b.durationInFrames, 0) / spec.meta.fps);
+    if (hasChart) {
+      return { template: "DataViz", props: { title, durationSeconds } };
+    }
+    if (hasLogo) {
+      return { template: "LogoReveal", props: { title, durationSeconds } };
+    }
+    return { template: "AnimatedIntro", props: { title, durationSeconds } };
+  }
+
   // generate_video / generate_image (hosted, BYOK Fal/Replicate): call the provider, download the
   // result, probe it, import it, and place it on the timeline. Same auto-import contract as the
   // local generators above — so a clip the AI generates lands on the timeline in BOTH connect paths.
@@ -533,6 +605,7 @@ export class McpExecutor {
       // Motion graphics (Kaestral extension)
       case "generate_title": return this.generateTitle(a);
       case "generate_motion": return this.generateMotion(a);
+      case "compose_motion": return this.composeMotion(a);
       // Analysis + perception (Kaestral extension)
       case "analyze_audio": return this.analyzeAudio(a);
       case "extract_palette": return this.extractPalette(a);

@@ -48,12 +48,13 @@ describe("Stage-C: MCP HTTP transport (kaestral on 127.0.0.1)", () => {
     expect(names).toContain("list_skills");
     expect(names).toContain("generate_title");
     expect(names).toContain("generate_motion");
+    expect(names).toContain("compose_motion");
     // Plus the Analysis + perception extensions (reel/creative skills): beat, palette, vision.
     expect(names).toContain("analyze_audio");
     expect(names).toContain("extract_palette");
     expect(names).toContain("see_video");
     expect(names).toContain("import_from_url");
-    expect(json.result.tools.length).toBe(49); // 41 frozen + skills(2) + motion(2) + analysis(3) + import_from_url
+    expect(json.result.tools.length).toBe(50); // 41 frozen + skills(2) + motion(3) + analysis(3) + import_from_url
   });
 
   it("tools/call get_timeline returns canGenerate:false", async () => {

@@ -750,6 +750,14 @@ export const MOTION_TOOL_DEFS: ToolDef[] = [
       place: bool("Place at the playhead (default true). false = only import."),
     }, ["template"]),
   },
+  {
+    name: "compose_motion",
+    description: "Bespoke generative motion graphics — compose a scene from a SceneSpec JSON and render it (STRATEGY ③, the Generative engine). Use this instead of generate_motion when you need a custom, beat-synced, multi-layer composition rather than a canned template. Emit JSON ONLY, never code, never CSS, never URLs — the renderer only accepts closed enums, clamped numbers, and brand-token-or-#rrggbb colors. SceneSpec shape: { meta: { aspect: '16:9'|'9:16'|'1:1', fps, brand?, beatMarkers? }, beats: [ { durationInFrames, camera?, background?, transitionOut?, layers: [ { element, props, position?, opacity?, blur?, depth?, mask?, motionBlur?, kenBurns?, lightingSweep?, enter?, exit?, style? } ] } ] }. Elements: text, textOnPath, video, image, screenMock, waveform, timeline, logo, shape, hairline, barChart, lineChart, areaChart, counter, captionKaraoke, particles, arrow, highlightBox, pointerLine, spotlightDim, splitLayout, gridLayout, countdown. Animations (layer.enter.anim / exit.anim): spring, typewriter, wordReveal, kinetic, draw, fade, collapse, maskReveal. Per-layer modifiers let you fine-tune depth-of-field (blur), parallax depth, Ken Burns drift, lighting sweeps, and masked reveals. Beat-sync: set enter.snapToBeat / transitionOut.snapToBeat true and list meta.beatMarkers (frame indices) so entrances/transitions land on the beat. On error you get back the EXACT offending path (e.g. 'beats[0].layers[1].element: unknown value...') — fix just that field and retry; nothing is rendered on a validation failure.",
+    inputSchema: obj({
+      spec: obj({}, []),
+      place: bool("Place at the playhead (default true). false = only import."),
+    }, ["spec"]),
+  },
 ];
 
 // Analysis extension — enables the reel/creative skills. analyze_audio powers beat-synced cutting;
