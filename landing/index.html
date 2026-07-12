@@ -8,155 +8,242 @@
 <meta property="og:title" content="Kaestral — The AI-operated video editor for Windows" />
 <meta property="og:description" content="You describe the edit. It makes it." />
 <meta property="og:type" content="website" />
+<meta name="theme-color" content="#0b0a0d" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800;900&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
+  /* ============================================================
+     Kaestral landing — palette sampled from the app logo (app-icon.png):
+       green #16b16a (top timeline bar) · slate #484852 / #2b2931 (lower bars)
+       ground #0b0a0d. Gold + white hairlines are the structural instrument.
+     ============================================================ */
   :root{
-    --bg:#0a0b0d; --panel:#101216; --panel2:#15181e; --line:#1d2128; --line2:#282e38;
-    --ink:#e8eaee; --ink2:#9aa2ae; --ink3:#646b78;
-    --amber:#f0b429; --amber2:#ffd166; --amber-dim:#8a6a1e;
-    --ok:#3ddc84;
-    --ui:'Geist',system-ui,-apple-system,sans-serif; --mono:'Geist Mono',ui-monospace,monospace;
-    --maxw:1080px;
+    --bg:#0b0a0d; --bg-2:#0e0d11; --panel:#121116; --panel-2:#17161c; --raised:#1c1b22;
+    --ink:#eaeaef; --ink-2:#9a9aa6; --ink-3:#5c5b66;
+
+    /* accent — exact logo green */
+    --green:#16b16a; --green-hi:#1fce7e; --green-dim:#0f6f43;
+    --green-glow:rgba(31,206,126,.16); --green-wash:rgba(22,177,106,.06);
+
+    /* precision hairlines */
+    --gold:#c9a227; --gold-line:rgba(201,162,39,.34); --gold-dim:rgba(201,162,39,.14);
+    --white-line:rgba(255,255,255,.085); --white-line-2:rgba(255,255,255,.14);
+
+    --slate:#484852; --slate-2:#2b2931;
+
+    --ui:'Geist',system-ui,-apple-system,sans-serif;
+    --mono:'Geist Mono',ui-monospace,'SF Mono',monospace;
+    --maxw:1120px; --gutter:26px;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html{scroll-behavior:smooth}
-  body{background:var(--bg);color:var(--ink);font-family:var(--ui);line-height:1.5;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  body{background:var(--bg);color:var(--ink);font-family:var(--ui);line-height:1.55;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;overflow-x:hidden}
   a{color:inherit;text-decoration:none}
-  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 24px}
+  ::selection{background:rgba(31,206,126,.28);color:#fff}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 var(--gutter);position:relative}
   .mono{font-family:var(--mono)}
-  .amber{color:var(--amber)}
-  /* subtle grid + glow backdrop */
-  body::before{content:"";position:fixed;inset:0;z-index:-2;background:
-    radial-gradient(60% 40% at 50% -5%, rgba(240,180,41,0.10), transparent 60%),
-    radial-gradient(40% 30% at 85% 10%, rgba(240,180,41,0.05), transparent 60%);}
-  body::after{content:"";position:fixed;inset:0;z-index:-1;opacity:.5;
-    background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
-    background-size:64px 64px;mask-image:radial-gradient(70% 50% at 50% 0%,#000,transparent 80%);}
 
-  /* nav */
-  nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(12px);background:rgba(10,11,13,0.7);border-bottom:1px solid var(--line)}
-  nav .wrap{display:flex;align-items:center;gap:28px;height:60px}
-  .logo{display:flex;align-items:center;gap:9px;font-weight:700;font-size:17px;letter-spacing:-.01em}
-  .logo .mark{width:20px;height:20px}
-  nav .links{display:flex;gap:24px;margin-left:auto;font-size:14px;color:var(--ink2)}
+  /* ---- ambient backdrop: kestrel-eye glow + faint timeline grid ---- */
+  .bg-glow{position:fixed;inset:0;z-index:-3;pointer-events:none;
+    background:
+      radial-gradient(46% 34% at 50% -4%, var(--green-glow), transparent 62%),
+      radial-gradient(30% 24% at 84% 8%, rgba(201,162,39,.05), transparent 60%);
+    will-change:transform}
+  .bg-grid{position:fixed;inset:0;z-index:-2;pointer-events:none;opacity:.5;
+    background-image:
+      linear-gradient(var(--white-line) 1px,transparent 1px),
+      linear-gradient(90deg,var(--white-line) 1px,transparent 1px);
+    background-size:72px 72px;
+    -webkit-mask-image:radial-gradient(80% 55% at 50% 0%,#000,transparent 78%);
+    mask-image:radial-gradient(80% 55% at 50% 0%,#000,transparent 78%)}
+
+  /* ---- left-gutter playhead rail: the page IS a timeline you scrub ---- */
+  .rail{position:fixed;left:max(14px,calc((100vw - var(--maxw))/2 - 14px));top:0;bottom:0;width:2px;z-index:40;pointer-events:none;
+    background:linear-gradient(180deg,transparent,var(--gold-dim) 8%,var(--gold-dim) 92%,transparent)}
+  .rail .head{position:absolute;left:-4px;width:10px;height:10px;transform:translateY(-50%) rotate(45deg);
+    background:var(--green);box-shadow:0 0 14px var(--green-hi);top:0;transition:top .08s linear}
+  .rail .fill{position:absolute;left:0;top:0;width:2px;background:linear-gradient(180deg,var(--green-hi),var(--green));box-shadow:0 0 10px var(--green-glow)}
+  @media(max-width:1180px){.rail{display:none}}
+
+  /* ---- buttons ---- */
+  .btn{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:14px;border-radius:8px;padding:10px 17px;cursor:pointer;border:1px solid transparent;transition:.16s ease;font-family:var(--ui);white-space:nowrap}
+  .btn-primary{background:var(--green);color:#04180d;border-color:var(--green)}
+  .btn-primary:hover{background:var(--green-hi);box-shadow:0 0 0 1px var(--green-hi),0 8px 28px -8px var(--green-glow);transform:translateY(-1px)}
+  .btn-ghost{background:transparent;color:var(--ink);border-color:var(--white-line-2)}
+  .btn-ghost:hover{border-color:var(--gold-line);background:rgba(201,162,39,.05)}
+  .btn svg{width:15px;height:15px}
+
+  /* ---- nav ---- */
+  nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(14px) saturate(1.2);background:rgba(11,10,13,.72);border-bottom:1px solid var(--white-line)}
+  nav .wrap{display:flex;align-items:center;gap:30px;height:62px}
+  .brand{display:flex;align-items:center;gap:11px;font-weight:700;font-size:17px;letter-spacing:-.015em}
+  .mark{width:22px;height:22px;flex:none}
+  nav .links{display:flex;gap:26px;margin-left:auto;font-size:14px;color:var(--ink-2)}
+  nav .links a{position:relative;padding:2px 0}
   nav .links a:hover{color:var(--ink)}
-  .btn{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:14px;border-radius:9px;padding:9px 16px;cursor:pointer;border:1px solid transparent;transition:.15s;font-family:var(--ui)}
-  .btn-primary{background:var(--amber);color:#1a1204;border-color:var(--amber)}
-  .btn-primary:hover{background:var(--amber2)}
-  .btn-ghost{background:transparent;color:var(--ink);border-color:var(--line2)}
-  .btn-ghost:hover{border-color:var(--ink3);background:var(--panel)}
-  nav .btn{padding:7px 14px}
-  @media(max-width:720px){nav .links{display:none}}
+  nav .links a::after{content:"";position:absolute;left:0;right:100%;bottom:-3px;height:1px;background:var(--green);transition:right .22s ease}
+  nav .links a:hover::after{right:0}
+  nav .btn{padding:8px 15px}
+  @media(max-width:820px){nav .links{display:none}}
 
-  /* hero */
-  header{padding:88px 0 40px;text-align:center}
-  .eyebrow{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--amber);border:1px solid var(--amber-dim);border-radius:999px;padding:5px 13px;margin-bottom:26px}
-  h1{font-size:clamp(38px,7vw,72px);font-weight:800;letter-spacing:-.03em;line-height:1.02;max-width:16ch;margin:0 auto;text-wrap:balance}
-  .sub{font-size:clamp(18px,2.4vw,22px);color:var(--ink2);margin:22px auto 0;max-width:44ch;font-weight:400}
+  /* ---- hero ---- */
+  header{padding:96px 0 44px;text-align:center;position:relative}
+  .eyebrow{display:inline-flex;align-items:center;gap:9px;font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--green-hi);border:1px solid var(--green-dim);border-radius:999px;padding:6px 15px;margin-bottom:30px;background:var(--green-wash)}
+  .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--green-hi);box-shadow:0 0 9px var(--green-hi);animation:pulse 2.6s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+  h1{font-size:clamp(40px,7.2vw,78px);font-weight:800;letter-spacing:-.035em;line-height:1.0;max-width:15ch;margin:0 auto;text-wrap:balance}
+  h1 .g{color:var(--green-hi);position:relative;white-space:nowrap}
+  .sub{font-size:clamp(18px,2.3vw,22px);color:var(--ink-2);margin:24px auto 0;max-width:46ch;font-weight:400;text-wrap:balance}
   .sub b{color:var(--ink);font-weight:600}
-  .cta{display:flex;gap:12px;justify-content:center;margin-top:34px;flex-wrap:wrap}
-  .cta .btn{padding:12px 22px;font-size:15px}
-  .note{margin-top:16px;font-size:13px;color:var(--ink3);font-family:var(--mono)}
+  .cta{display:flex;gap:13px;justify-content:center;margin-top:36px;flex-wrap:wrap}
+  .cta .btn{padding:13px 24px;font-size:15px}
+  .note{margin-top:18px;font-size:12.5px;color:var(--ink-3);font-family:var(--mono);letter-spacing:.02em}
+  .note .sep{color:var(--gold-line);margin:0 8px}
 
-  /* framed screenshot */
-  .frame{margin:56px auto 0;max-width:940px;border:1px solid var(--line2);border-radius:14px;overflow:hidden;background:var(--panel);box-shadow:0 40px 120px -30px rgba(0,0,0,.8),0 0 0 1px rgba(240,180,41,.06)}
-  .frame .bar{display:flex;align-items:center;gap:7px;height:36px;padding:0 14px;background:var(--panel2);border-bottom:1px solid var(--line)}
-  .frame .bar i{width:11px;height:11px;border-radius:50%;background:#2a2f38;display:inline-block}
-  .frame .bar .t{margin-left:12px;font-family:var(--mono);font-size:12px;color:var(--ink3)}
+  /* ---- product frame (window chrome) ---- */
+  .frame{margin:60px auto 0;max-width:960px;border:1px solid var(--white-line-2);border-radius:14px;overflow:hidden;background:var(--panel);
+    box-shadow:0 50px 130px -34px rgba(0,0,0,.85), 0 0 0 1px rgba(31,206,126,.05), inset 0 1px 0 rgba(255,255,255,.03)}
+  .frame .bar{display:flex;align-items:center;gap:8px;height:38px;padding:0 15px;background:var(--panel-2);border-bottom:1px solid var(--white-line)}
+  .frame .bar i{width:11px;height:11px;border-radius:50%;background:var(--slate-2);display:inline-block}
+  .frame .bar i:first-child{background:#3a3a44}
+  .frame .bar .t{margin-left:14px;font-family:var(--mono);font-size:11.5px;color:var(--ink-3);letter-spacing:.02em}
   .frame img{display:block;width:100%;height:auto}
 
-  /* sections */
-  section{padding:72px 0}
-  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--amber);font-weight:500}
-  h2{font-size:clamp(26px,4vw,40px);font-weight:700;letter-spacing:-.02em;margin-top:12px;text-wrap:balance}
-  .lead{color:var(--ink2);font-size:17px;max-width:52ch;margin-top:14px}
+  /* hero demo slot (GIF goes here) */
+  .demo{position:relative;background:var(--bg-2);aspect-ratio:16/9;display:flex;align-items:center;justify-content:center}
+  .demo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .demo .ph{position:relative;text-align:center;color:var(--ink-3);font-family:var(--mono);font-size:13px;letter-spacing:.03em;z-index:1;padding:24px}
+  .demo .ph .play{width:60px;height:60px;border-radius:50%;border:1px solid var(--gold-line);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;background:rgba(201,162,39,.05)}
+  .demo .ph .play::after{content:"";border-left:16px solid var(--green-hi);border-top:10px solid transparent;border-bottom:10px solid transparent;margin-left:4px}
+  .demo .scrub{position:absolute;left:0;bottom:0;height:3px;width:34%;background:linear-gradient(90deg,transparent,var(--green-hi));box-shadow:0 0 12px var(--green-glow)}
+  .demo .scrub::after{content:"";position:absolute;right:0;top:-3px;width:2px;height:9px;background:var(--green-hi);box-shadow:0 0 9px var(--green-hi)}
 
-  /* feature rows */
-  .feat{display:grid;grid-template-columns:1fr 1fr;gap:44px;align-items:center;padding:44px 0;border-top:1px solid var(--line)}
+  /* ---- section scaffolding (hairline ruler ticks) ---- */
+  section{padding:80px 0;position:relative}
+  section+section{border-top:1px solid var(--white-line)}
+  section+section::before{content:"";position:absolute;top:-1px;left:0;width:64px;height:1px;background:var(--gold-line)}
+  .kicker{display:inline-flex;align-items:center;gap:10px;font-family:var(--mono);font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--green-hi);font-weight:500}
+  .kicker::before{content:"";width:22px;height:1px;background:var(--green)}
+  h2{font-size:clamp(28px,4.2vw,44px);font-weight:800;letter-spacing:-.028em;margin-top:14px;text-wrap:balance}
+  .lead{color:var(--ink-2);font-size:17px;max-width:56ch;margin-top:15px;line-height:1.65}
+
+  /* underline that draws in on scroll */
+  .draw{position:relative;display:inline}
+  .draw::after{content:"";position:absolute;left:0;bottom:-6px;height:2px;width:100%;background:var(--green);transform:scaleX(0);transform-origin:left;transition:transform .7s cubic-bezier(.2,.7,.2,1)}
+  .draw.in::after{transform:scaleX(1)}
+
+  /* ---- feature rows ---- */
+  .feat{display:grid;grid-template-columns:1fr 1.08fr;gap:52px;align-items:center;padding:52px 0}
+  .feat+.feat{border-top:1px solid var(--white-line)}
   .feat:nth-child(even) .txt{order:2}
-  .feat .emoji{font-size:26px}
-  .feat h3{font-size:24px;font-weight:700;letter-spacing:-.01em;margin:12px 0 10px}
-  .feat p{color:var(--ink2);font-size:16px}
+  .feat .idx{font-family:var(--mono);font-size:12px;color:var(--gold);letter-spacing:.1em}
+  .feat h3{font-size:25px;font-weight:700;letter-spacing:-.018em;margin:14px 0 12px;line-height:1.15}
+  .feat p{color:var(--ink-2);font-size:16px;line-height:1.7}
   .feat p b{color:var(--ink);font-weight:600}
-  .shot{border:1px solid var(--line2);border-radius:12px;overflow:hidden;background:var(--panel);box-shadow:0 24px 60px -24px rgba(0,0,0,.7)}
+  .shot{border:1px solid var(--white-line-2);border-radius:12px;overflow:hidden;background:var(--panel);position:relative;
+    box-shadow:0 28px 70px -28px rgba(0,0,0,.75)}
+  .shot::before{content:"";position:absolute;inset:0;border-radius:12px;border:1px solid var(--gold-dim);pointer-events:none;z-index:1}
   .shot img{display:block;width:100%;height:auto}
-  @media(max-width:760px){.feat{grid-template-columns:1fr;gap:22px}.feat:nth-child(even) .txt{order:0}}
+  @media(max-width:820px){.feat{grid-template-columns:1fr;gap:26px;padding:38px 0}.feat:nth-child(even) .txt{order:0}}
 
-  /* addon chips */
-  .chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:32px}
-  .chip{font-size:13px;color:var(--ink2);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 12px}
-  .chip b{color:var(--ink)}
+  /* ---- capability chips ---- */
+  .chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:44px}
+  .chip{font-size:13px;color:var(--ink-2);background:var(--panel);border:1px solid var(--white-line);border-radius:7px;padding:8px 13px;transition:.15s}
+  .chip:hover{border-color:var(--gold-line);color:var(--ink)}
+  .chip b{color:var(--ink);font-weight:600}
 
-  /* use cases */
-  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:38px}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:24px;transition:.15s}
-  .card:hover{border-color:var(--line2);transform:translateY(-2px)}
-  .card .n{font-family:var(--mono);font-size:12px;color:var(--amber)}
-  .card h4{font-size:18px;font-weight:600;margin:10px 0 8px;letter-spacing:-.01em}
-  .card p{color:var(--ink2);font-size:14px}
-  .card .prompt{margin-top:14px;font-family:var(--mono);font-size:12.5px;color:var(--ink);background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;line-height:1.5}
-  @media(max-width:760px){.cards{grid-template-columns:1fr}}
+  /* ---- use cases ---- */
+  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:42px}
+  .card{background:linear-gradient(180deg,var(--panel),var(--bg-2));border:1px solid var(--white-line);border-radius:13px;padding:26px;transition:.18s ease;position:relative;overflow:hidden}
+  .card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--slate);transition:.18s}
+  .card:hover{border-color:var(--white-line-2);transform:translateY(-3px)}
+  .card:hover::before{background:var(--green)}
+  .card .n{font-family:var(--mono);font-size:11.5px;color:var(--gold);letter-spacing:.08em}
+  .card h4{font-size:18px;font-weight:650;margin:12px 0 9px;letter-spacing:-.01em}
+  .card p{color:var(--ink-2);font-size:14px;line-height:1.6}
+  .card .prompt{margin-top:16px;font-family:var(--mono);font-size:12.5px;color:var(--ink);background:var(--bg);border:1px solid var(--white-line);border-left:2px solid var(--green);border-radius:0 8px 8px 0;padding:11px 13px;line-height:1.55}
+  @media(max-width:820px){.cards{grid-template-columns:1fr}}
 
-  /* comparison */
-  .cmp{margin-top:36px;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--panel)}
-  table{width:100%;border-collapse:collapse;font-size:15px}
-  th,td{text-align:left;padding:15px 18px;border-bottom:1px solid var(--line)}
-  thead th{font-family:var(--mono);font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3);font-weight:500}
-  thead th:nth-child(2){color:var(--amber)}
-  tbody td{color:var(--ink2)}
+  /* ---- comparison ---- */
+  .cmp{margin-top:40px;border:1px solid var(--white-line);border-radius:13px;overflow:hidden;background:var(--panel)}
+  .cmp-scroll{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:15px;min-width:520px}
+  th,td{text-align:left;padding:16px 20px;border-bottom:1px solid var(--white-line)}
+  thead th{font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);font-weight:500}
+  thead th:nth-child(2){color:var(--green-hi)}
+  tbody td{color:var(--ink-2)}
   tbody td:first-child{color:var(--ink);font-weight:500}
   tbody tr:last-child td{border-bottom:none}
-  .win{background:rgba(240,180,41,.04)}
-  .honest{margin-top:18px;font-size:14px;color:var(--ink2);border-left:2px solid var(--amber-dim);padding-left:16px;line-height:1.6}
+  .win{background:var(--green-wash);color:var(--ink)}
+  .ok{color:var(--green-hi)}
+  .honest{margin-top:22px;font-size:14.5px;color:var(--ink-2);border-left:2px solid var(--gold-line);padding:2px 0 2px 18px;line-height:1.7;max-width:64ch}
   .honest b{color:var(--ink)}
 
-  /* developers */
-  .devgrid{display:grid;grid-template-columns:1.1fr 1fr;gap:32px;align-items:start;margin-top:36px}
-  pre{background:#0d0f13;border:1px solid var(--line2);border-radius:12px;padding:18px 20px;overflow-x:auto;font-family:var(--mono);font-size:13.5px;line-height:1.7;color:#cdd3dc}
-  pre .c{color:var(--ink3)}
-  pre .k{color:var(--amber2)}
-  .devnote{font-size:14px;color:var(--ink2);line-height:1.7}
-  .devnote h4{color:var(--ink);font-size:16px;margin:0 0 8px;font-weight:600}
-  .devnote code{font-family:var(--mono);font-size:13px;background:var(--panel2);padding:1px 6px;border-radius:5px;border:1px solid var(--line)}
-  @media(max-width:760px){.devgrid{grid-template-columns:1fr}}
+  /* ---- developers ---- */
+  .devgrid{display:grid;grid-template-columns:1.15fr 1fr;gap:34px;align-items:start;margin-top:42px}
+  pre{background:var(--bg);border:1px solid var(--white-line-2);border-radius:12px;padding:20px 22px;overflow-x:auto;font-family:var(--mono);font-size:13px;line-height:1.75;color:#cdd3d0}
+  pre .c{color:var(--ink-3)}
+  pre .k{color:var(--green-hi)}
+  pre .s{color:var(--gold)}
+  .devnote{font-size:14px;color:var(--ink-2);line-height:1.7}
+  .devnote h4{color:var(--ink);font-size:15.5px;margin:0 0 8px;font-weight:650}
+  .devnote .item{padding:14px 0;border-bottom:1px solid var(--white-line)}
+  .devnote .item:last-child{border-bottom:none}
+  .devnote code{font-family:var(--mono);font-size:12.5px;background:var(--panel-2);padding:2px 6px;border-radius:5px;border:1px solid var(--white-line);color:var(--ink)}
+  @media(max-width:820px){.devgrid{grid-template-columns:1fr}}
 
-  /* waitlist */
-  .pro{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line2);border-radius:18px;padding:48px 40px;text-align:center;margin-top:20px;position:relative;overflow:hidden}
-  .pro::before{content:"";position:absolute;inset:0;background:radial-gradient(50% 60% at 50% 0%,rgba(240,180,41,.10),transparent 70%)}
-  .pro>*{position:relative}
-  .pro h2{margin-top:6px}
-  .pro p{color:var(--ink2);max-width:46ch;margin:14px auto 0}
-  .wform{display:flex;gap:10px;max-width:420px;margin:26px auto 0}
-  .wform input{flex:1;background:var(--bg);border:1px solid var(--line2);border-radius:10px;padding:12px 14px;color:var(--ink);font-family:var(--ui);font-size:15px}
-  .wform input:focus{outline:none;border-color:var(--amber-dim)}
-  .wmsg{margin-top:14px;font-size:14px;color:var(--ok);min-height:20px}
-  @media(max-width:520px){.wform{flex-direction:column}}
+  /* ---- pro waitlist ---- */
+  .pro{background:radial-gradient(60% 90% at 50% -10%,var(--green-wash),transparent 70%),linear-gradient(180deg,var(--panel),var(--bg-2));border:1px solid var(--white-line-2);border-radius:18px;padding:54px 40px;text-align:center;position:relative;overflow:hidden}
+  .pro::before{content:"";position:absolute;inset:0;border-radius:18px;border:1px solid var(--gold-dim);pointer-events:none}
+  .pro .kicker{justify-content:center}
+  .pro h2{margin-top:12px}
+  .pro p{color:var(--ink-2);max-width:48ch;margin:15px auto 0;line-height:1.65}
+  .wform{display:flex;gap:11px;max-width:440px;margin:30px auto 0}
+  .wform input{flex:1;background:var(--bg);border:1px solid var(--white-line-2);border-radius:9px;padding:13px 15px;color:var(--ink);font-family:var(--ui);font-size:15px;transition:.15s}
+  .wform input:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px var(--green-wash)}
+  .wmsg{margin-top:16px;font-size:14px;color:var(--green-hi);min-height:20px;font-family:var(--mono)}
+  @media(max-width:540px){.wform{flex-direction:column}}
 
-  footer{border-top:1px solid var(--line);padding:44px 0 60px;margin-top:40px}
-  footer .row{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap;align-items:flex-start}
-  footer .logo{margin-bottom:12px}
-  footer p{color:var(--ink3);font-size:13px;max-width:46ch;line-height:1.6}
-  footer .col a{display:block;color:var(--ink2);font-size:14px;margin-bottom:8px}
+  /* ---- footer ---- */
+  footer{border-top:1px solid var(--white-line);padding:52px 0 64px;margin-top:20px}
+  footer::before{content:"";position:absolute;top:-1px;left:0;width:64px;height:1px;background:var(--gold-line)}
+  footer .row{display:flex;justify-content:space-between;gap:30px;flex-wrap:wrap;align-items:flex-start}
+  footer .brand{margin-bottom:14px}
+  footer p.tag{color:var(--ink-3);font-size:13px;max-width:44ch;line-height:1.65}
+  footer .col a{display:block;color:var(--ink-2);font-size:14px;margin-bottom:9px}
   footer .col a:hover{color:var(--ink)}
-  footer .col .h{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);margin-bottom:12px}
-  .legal{margin-top:32px;padding-top:20px;border-top:1px solid var(--line);font-size:12.5px;color:var(--ink3);line-height:1.6}
+  footer .col .h{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin-bottom:14px}
+  .legal{margin-top:40px;padding-top:22px;border-top:1px solid var(--white-line);font-size:12.5px;color:var(--ink-3);line-height:1.7;max-width:82ch}
+  .legal a{color:var(--green-hi)}
+  .legal code{font-family:var(--mono);color:var(--ink-2)}
 
-  /* scroll reveal */
-  .rev{opacity:0;transform:translateY(16px);transition:opacity .6s ease,transform .6s ease}
+  /* ---- scroll reveal ---- */
+  .rev{opacity:0;transform:translateY(18px);transition:opacity .65s ease,transform .65s cubic-bezier(.2,.7,.2,1)}
   .rev.in{opacity:1;transform:none}
-  @media(prefers-reduced-motion:reduce){.rev{opacity:1;transform:none;transition:none}}
+  @media(prefers-reduced-motion:reduce){
+    .rev,.draw::after{opacity:1!important;transform:none!important;transition:none!important}
+    .eyebrow .dot{animation:none}
+    html{scroll-behavior:auto}
+  }
+  :focus-visible{outline:2px solid var(--green-hi);outline-offset:2px;border-radius:4px}
 </style>
 </head>
 <body>
+<div class="bg-glow" id="glow"></div>
+<div class="bg-grid"></div>
+<div class="rail" aria-hidden="true"><div class="fill" id="railfill"></div><div class="head" id="railhead"></div></div>
+
+<!-- reusable logo mark: the app's three-bar timeline, green top bar -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="klogo" viewBox="0 0 24 24">
+  <rect x="3" y="4"  width="18" height="4.4" rx="1.2" fill="#16b16a"/>
+  <rect x="3" y="9.8" width="13" height="4.4" rx="1.2" fill="#484852"/>
+  <rect x="3" y="15.6" width="15.5" height="4.4" rx="1.2" fill="#2b2931"/>
+</symbol></svg>
 
 <nav>
   <div class="wrap">
-    <a class="logo" href="#top">
-      <svg class="mark" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2 L20 8 L15 12 L21 15 L12 22 L3 15 L9 12 L4 8 Z" fill="#f0b429"/></svg>
-      Kaestral
-    </a>
+    <a class="brand" href="#top"><svg class="mark"><use href="#klogo"/></svg>Kaestral</a>
     <div class="links">
       <a href="#features">Features</a>
       <a href="#usecases">Use cases</a>
@@ -171,18 +258,32 @@
 <div id="top"></div>
 <header>
   <div class="wrap">
-    <span class="eyebrow">◆ AI-native · Windows · Open source</span>
-    <h1>The AI-operated video editor for&nbsp;Windows.</h1>
+    <span class="eyebrow"><span class="dot"></span>AI-native · Windows · Open source</span>
+    <h1>The <span class="g">AI-operated</span> video editor for Windows.</h1>
     <p class="sub"><b>You describe the edit. It makes it.</b> Kaestral watches your footage, hears every word, and cuts.</p>
     <div class="cta">
-      <a class="btn btn-primary" href="https://github.com/prabindersinghh/kaestral/releases">↓ Download for Windows</a>
-      <a class="btn btn-ghost" href="https://github.com/prabindersinghh/kaestral">★ View on GitHub</a>
+      <a class="btn btn-primary" href="https://github.com/prabindersinghh/kaestral/releases">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3v13m0 0 4-4m-4 4-4-4M5 21h14"/></svg>
+        Download for Windows
+      </a>
+      <a class="btn btn-ghost" href="https://github.com/prabindersinghh/kaestral">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.58 2 12.25c0 4.53 2.87 8.37 6.84 9.73.5.1.68-.22.68-.49v-1.7c-2.78.62-3.37-1.37-3.37-1.37-.45-1.18-1.11-1.5-1.11-1.5-.91-.63.07-.62.07-.62 1 .07 1.53 1.06 1.53 1.06.89 1.56 2.34 1.11 2.91.85.09-.66.35-1.11.63-1.37-2.22-.26-4.55-1.14-4.55-5.07 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.71 0 0 .84-.28 2.75 1.05a9.4 9.4 0 0 1 5 0c1.91-1.33 2.75-1.05 2.75-1.05.55 1.41.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.94-2.34 4.81-4.57 5.06.36.32.68.94.68 1.9v2.82c0 .27.18.6.69.49A10.26 10.26 0 0 0 22 12.25C22 6.58 17.52 2 12 2Z"/></svg>
+        View on GitHub
+      </a>
     </div>
-    <p class="note">Free · GPLv3 · Works with the Claude Code you already have</p>
+    <p class="note">Free<span class="sep">·</span>GPLv3<span class="sep">·</span>Works with the Claude Code you already have</p>
 
+    <!-- Hero demo: replace assets/hero-demo.gif with your screen recording (prompt → edit). -->
     <div class="frame rev">
-      <div class="bar"><i></i><i></i><i></i><span class="t">Kaestral — editing from a prompt</span></div>
-      <img src="assets/editor.png" alt="Kaestral editor: multi-track timeline with a clip placed by the AI" loading="lazy" />
+      <div class="bar"><i></i><i></i><i></i><span class="t">kaestral — editing from a prompt</span></div>
+      <div class="demo">
+        <!-- <img src="assets/hero-demo.gif" alt="A prompt typed into Kaestral, and the timeline editing itself" /> -->
+        <div class="ph">
+          <div class="play"></div>
+          Hero demo — record a 20s prompt → edit and drop it here
+        </div>
+        <div class="scrub"></div>
+      </div>
     </div>
   </div>
 </header>
@@ -190,46 +291,46 @@
 <section id="features">
   <div class="wrap">
     <span class="kicker">What it does</span>
-    <h2>Three things, done for you.</h2>
+    <h2>Three things, <span class="draw">done for you.</span></h2>
 
     <div class="feat rev">
       <div class="txt">
-        <div class="emoji">🎬</div>
+        <div class="idx">01 — DIRECT</div>
         <h3>AI-operated. You direct, it edits.</h3>
-        <p>Type <b>"cut the boring parts, add captions, punch in on the hook"</b> — and watch your timeline change. Every action runs through the editor's own tools, so you get a real, editable project, not a black-box render. Drive it with <b>Claude Code</b> (free) or the in-app chat.</p>
+        <p>Type <b>“cut the boring parts, add captions, punch in on the hook”</b> — and watch your timeline change. Every action runs through the editor’s own tools, so you get a real, editable project, not a black-box render. Drive it with <b>Claude Code</b> (free) or the in-app chat.</p>
       </div>
-      <div class="shot"><img src="assets/ai-operated.png" alt="A clip generated from a prompt landing on the timeline" loading="lazy"/></div>
+      <div class="shot"><img src="assets/editor.png" alt="Kaestral editor: multi-track timeline with media, preview, and transport controls" loading="lazy"/></div>
     </div>
 
     <div class="feat rev">
       <div class="txt">
-        <div class="emoji">⚡</div>
+        <div class="idx">02 — CONDENSE</div>
         <h3>Raw footage → publish-ready reel.</h3>
         <p>Drop a 20-minute recording; get a tight, captioned, beat-cut short. Kaestral <b>removes filler words</b>, <b>finds the hook</b>, and <b>captions on the word</b> — automatically. Transcription runs on-device; cuts land on silences and beats.</p>
       </div>
-      <div class="shot"><img src="assets/captions.png" alt="Word-level captions burned onto a talking-head clip" loading="lazy"/></div>
+      <div class="shot"><img src="assets/captions.png" alt="Word-level captions on a clip in the Kaestral timeline" loading="lazy"/></div>
     </div>
 
     <div class="feat rev">
       <div class="txt">
-        <div class="emoji">📊</div>
+        <div class="idx">03 — CREATE</div>
         <h3>Make SaaS &amp; product videos without an editor.</h3>
         <p>Animated intros, logo reveals, <b>data-viz</b>, and transition stingers — <b>generated from a sentence</b> and rendered onto your timeline. Launch videos, demos, and ads, without hiring an editor.</p>
       </div>
-      <div class="shot"><img src="assets/dataviz.png" alt="An animated data-visualization generated from a prompt" loading="lazy"/></div>
+      <div class="shot"><img src="assets/dataviz.png" alt="An animated motion-graphic composition on the Kaestral timeline" loading="lazy"/></div>
     </div>
 
     <div class="chips rev">
       <span class="chip"><b>Real pro timeline</b> — multi-track, keyframes, 16 blend modes</span>
       <span class="chip"><b>Vision</b> — the AI sees your frames</span>
       <span class="chip"><b>Transcription</b> — word-level, on-device</span>
-      <span class="chip"><b>Beat/silence</b> detection</span>
+      <span class="chip"><b>Beat / silence</b> detection</span>
       <span class="chip"><b>Palette</b> extraction</span>
       <span class="chip"><b>Color</b> — wheels, curves, LUTs</span>
       <span class="chip"><b>Motion graphics</b> — Remotion</span>
       <span class="chip"><b>Import from a URL</b></span>
-      <span class="chip"><b>Export</b> — H.264/H.265/ProRes + Premiere/Resolve</span>
-      <span class="chip">48+ MCP tools</span>
+      <span class="chip"><b>Export</b> — H.264 / H.265 / ProRes + Premiere / Resolve</span>
+      <span class="chip"><b>48+ MCP tools</b></span>
     </div>
   </div>
 </section>
@@ -237,25 +338,25 @@
 <section id="usecases">
   <div class="wrap">
     <span class="kicker">Jobs to be done</span>
-    <h2>What people make with it.</h2>
+    <h2>What people <span class="draw">make with it.</span></h2>
     <div class="cards">
       <div class="card rev">
-        <div class="n">01</div>
+        <div class="n">SAAS · DEMO</div>
         <h4>Make a SaaS demo video</h4>
         <p>Screen recording in, launch-ready demo out — intro, captions, punch-ins, an outro CTA.</p>
-        <div class="prompt">"Add an animated intro titled Acme 2.0, caption the walkthrough, and end with 'Try free → acme.com'."</div>
+        <div class="prompt">“Add an animated intro titled Acme 2.0, caption the walkthrough, and end with ‘Try free → acme.com’.”</div>
       </div>
       <div class="card rev">
-        <div class="n">02</div>
+        <div class="n">PODCAST · REELS</div>
         <h4>Turn a podcast into reels</h4>
         <p>One long recording becomes several vertical, captioned, beat-cut shorts for every platform.</p>
-        <div class="prompt">"Find the 3 best 30-second moments, make each a 9:16 reel with karaoke captions."</div>
+        <div class="prompt">“Find the 3 best 30-second moments, make each a 9:16 reel with karaoke captions.”</div>
       </div>
       <div class="card rev">
-        <div class="n">03</div>
+        <div class="n">TALKING-HEAD · SHORT</div>
         <h4>Cut a talking-head into a viral short</h4>
         <p>Filler removed, hook up front, captioned on the word, punched in on the punchline.</p>
-        <div class="prompt">"Cut the ums and pauses, open on the strongest line, add bold captions and a zoom punch."</div>
+        <div class="prompt">“Cut the ums and pauses, open on the strongest line, add bold captions and a zoom punch.”</div>
       </div>
     </div>
   </div>
@@ -264,49 +365,49 @@
 <section id="compare">
   <div class="wrap">
     <span class="kicker">Honest comparison</span>
-    <h2>Kaestral vs Palmier Pro.</h2>
-    <p class="lead">Kaestral is a Windows port of the AI-native editor Palmier Pro — with eyes and ears they don't have. Here's the honest picture, including where they win.</p>
+    <h2>Kaestral vs <span class="draw">Palmier Pro.</span></h2>
+    <p class="lead">Kaestral is a Windows port of the AI-native editor Palmier Pro — with eyes and ears they don’t have. Here’s the honest picture, including where they win.</p>
     <div class="cmp rev">
+      <div class="cmp-scroll">
       <table>
-        <thead><tr><th></th><th>Kaestral</th><th>Palmier Pro</th></tr></thead>
+        <thead><tr><th>&nbsp;</th><th>Kaestral</th><th>Palmier Pro</th></tr></thead>
         <tbody>
-          <tr><td>Platform</td><td class="win amber">Windows <span style="color:var(--ink3)">(macOS on roadmap)</span></td><td>macOS only</td></tr>
-          <tr><td>AI editing over MCP</td><td class="win">✓</td><td>✓ (the original)</td></tr>
+          <tr><td>Platform</td><td class="win">Windows <span style="color:var(--ink-3)">(macOS on roadmap)</span></td><td>macOS only</td></tr>
+          <tr><td>AI editing over MCP</td><td class="win ok">✓</td><td>✓ (the original)</td></tr>
           <tr><td>Perception — transcribe / see / beats</td><td class="win">✓ on-device</td><td>✓</td></tr>
           <tr><td>AI video <b>generation</b></td><td>⏳ Pro (waitlist)</td><td>✓ paid cloud (shipping)</td></tr>
           <tr><td>Price</td><td class="win">Free · GPLv3</td><td>Paid</td></tr>
           <tr><td>Maturity</td><td>New, open-source</td><td>Established (YC S24)</td></tr>
         </tbody>
       </table>
+      </div>
     </div>
-    <p class="honest"><b>Where Palmier wins:</b> they ship AI generation today and they're more mature. Kaestral doesn't compete on generation — that's their paid cloud and our deferred Pro tier. Kaestral's edge is <b>Windows + real perception + a free, open, Claude-Code-native workflow.</b></p>
+    <p class="honest"><b>Where Palmier wins:</b> they ship AI generation today and they’re more mature. Kaestral doesn’t compete on generation — that’s their paid cloud and our deferred Pro tier. Kaestral’s edge is <b>Windows + real perception + a free, open, Claude-Code-native workflow.</b></p>
   </div>
 </section>
 
 <section id="developers">
   <div class="wrap">
     <span class="kicker">For developers</span>
-    <h2>MCP-first. One line in.</h2>
+    <h2>MCP-first. <span class="draw">One line in.</span></h2>
     <p class="lead">Kaestral is an MCP server. Point the Claude Code you already have at it and start editing by prompt — no new app to learn.</p>
     <div class="devgrid">
       <pre class="rev"><span class="c"># 1 · start the editor engine (MCP server)</span>
 <span class="k">npx</span> kaestral
 
 <span class="c"># 2 · connect Claude Code</span>
-<span class="k">claude</span> mcp add --transport http palmier-pro \
+<span class="k">claude</span> mcp add --transport http palmier-pro <span class="s">\</span>
   http://127.0.0.1:19789/mcp
 <span class="k">claude</span>
 
 <span class="c"># 3 · just ask</span>
-<span class="c"># "get_timeline, cut the silent parts of demo.mp4,</span>
-<span class="c">#  add captions, and export it."</span></pre>
+<span class="c"># “cut the silent parts of demo.mp4,</span>
+<span class="c">#  add captions, and export it.”</span></pre>
       <div class="devnote rev">
-        <h4>Three ways to run it</h4>
-        <p style="margin-bottom:14px"><b>MCP server</b> (primary) — <code>npx kaestral</code>, connect Claude Code. The fastest path for devs.</p>
-        <p style="margin-bottom:14px"><b>Windows installer</b> — double-click; the editor + engine start internally, no terminal.</p>
-        <p style="margin-bottom:14px"><b>In-app chat</b> — bring your own Anthropic key and edit from the app window.</p>
-        <h4 style="margin-top:20px">Compatibility</h4>
-        <p>The MCP server speaks <code>palmier-pro</code> and the <code>.palmier</code> format — a drop-in for the Palmier ecosystem. Exports to <b>Premiere (XMEML)</b> and <b>Resolve/FCP (FCPXML)</b> too.</p>
+        <div class="item"><h4>MCP server — the fast path</h4><p><code>npx kaestral</code>, then point Claude Code at it. Nothing to install and learn.</p></div>
+        <div class="item"><h4>Windows installer</h4><p>Double-click; the editor and engine start internally — no terminal.</p></div>
+        <div class="item"><h4>In-app chat</h4><p>Bring your own Anthropic key and edit from the app window.</p></div>
+        <div class="item"><h4>Compatibility</h4><p>Speaks <code>palmier-pro</code> and the <code>.palmier</code> format — a drop-in for the Palmier ecosystem. Exports <b>Premiere (XMEML)</b> and <b>Resolve / FCP (FCPXML)</b>.</p></div>
       </div>
     </div>
   </div>
@@ -317,12 +418,12 @@
     <div class="pro rev">
       <span class="kicker">Kaestral Pro</span>
       <h2>AI generation is coming.</h2>
-      <p>Type a prompt, get a real clip on your timeline. Generate video, images, and B-roll inside Kaestral. Join the waitlist — we'll email you the moment it opens.</p>
+      <p>Type a prompt, get a real clip on your timeline. Generate video, images, and B-roll inside Kaestral. Join the waitlist — we’ll email you the moment it opens.</p>
       <form class="wform" id="waitlist" onsubmit="return joinWaitlist(event)">
-        <input type="email" id="wemail" placeholder="you@email.com" required aria-label="Email" />
+        <input type="email" id="wemail" placeholder="you@email.com" required aria-label="Email address" />
         <button class="btn btn-primary" type="submit">Join the waitlist</button>
       </form>
-      <div class="wmsg" id="wmsg"></div>
+      <div class="wmsg" id="wmsg" role="status" aria-live="polite"></div>
     </div>
   </div>
 </section>
@@ -331,8 +432,8 @@
   <div class="wrap">
     <div class="row">
       <div style="max-width:340px">
-        <div class="logo"><svg class="mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 L20 8 L15 12 L21 15 L12 22 L3 15 L9 12 L4 8 Z" fill="#f0b429"/></svg> Kaestral</div>
-        <p>The AI-operated video editor for Windows. You describe the edit. It makes it.</p>
+        <div class="brand"><svg class="mark"><use href="#klogo"/></svg>Kaestral</div>
+        <p class="tag">The AI-operated video editor for Windows. You describe the edit. It makes it.</p>
       </div>
       <div class="col">
         <div class="h">Product</div>
@@ -349,37 +450,53 @@
       </div>
     </div>
     <p class="legal">
-      <b style="color:var(--ink2)">GPLv3.</b> Kaestral is an open-source Windows port of
-      <a href="https://github.com/palmier-io/palmier-pro" class="amber">Palmier Pro</a> © Palmier Inc. (GPLv3).
-      The <code style="font-family:var(--mono)">.palmier</code> format, MCP contract, and editing semantics are theirs;
-      the Windows implementation is ours. Palmier's cloud generation backend is not ported. Third-party components
+      <b style="color:var(--ink-2)">GPLv3.</b> Kaestral is an open-source Windows port of
+      <a href="https://github.com/palmier-io/palmier-pro">Palmier Pro</a> © Palmier Inc. (GPLv3).
+      The <code>.palmier</code> format, MCP contract, and editing semantics are theirs; the Windows
+      implementation is ours. Palmier’s cloud generation backend is not ported. Third-party components
       (whisper.cpp, FFmpeg, Remotion) retain their permissive licenses. Not affiliated with or endorsed by Palmier Inc.
     </p>
   </div>
 </footer>
 
 <script>
-  // scroll reveal
-  const io = new IntersectionObserver((es)=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.12});
-  document.querySelectorAll('.rev').forEach(el=>io.observe(el));
+  // scroll reveal + underline draw
+  const io = new IntersectionObserver((es)=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.14});
+  document.querySelectorAll('.rev,.draw').forEach(el=>io.observe(el));
+
+  // playhead rail tracks scroll; hero glow gets a faint parallax
+  const head=document.getElementById('railhead'), fill=document.getElementById('railfill'), glow=document.getElementById('glow');
+  const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  let ticking=false;
+  function onScroll(){
+    if(ticking) return; ticking=true;
+    requestAnimationFrame(()=>{
+      const max=document.documentElement.scrollHeight-innerHeight;
+      const p=max>0?Math.min(1,scrollY/max):0;
+      const y=p*innerHeight*0.92+innerHeight*0.04;
+      head.style.top=y+'px'; fill.style.height=y+'px';
+      if(!reduce&&glow) glow.style.transform='translateY('+(scrollY*0.06)+'px)';
+      ticking=false;
+    });
+  }
+  addEventListener('scroll',onScroll,{passive:true}); addEventListener('resize',onScroll); onScroll();
 
   // waitlist: POSTs { email, source } to WAITLIST_ENDPOINT. Paste your own free Formspree form URL
-  // (https://formspree.io/f/xxxx) here to collect submissions in a dashboard with email alerts.
-  // The plumbing is verified end-to-end; empty = falls back to the visitor's mail client (still works).
+  // (https://formspree.io/f/xxxx) to collect submissions in a dashboard. Empty = mail-client fallback (still works).
   const WAITLIST_ENDPOINT = "";
   const OWNER_EMAIL = "prabindersinghh@gmail.com";
   async function joinWaitlist(e){
     e.preventDefault();
-    const email = document.getElementById('wemail').value.trim();
-    const msg = document.getElementById('wmsg');
+    const email=document.getElementById('wemail').value.trim();
+    const msg=document.getElementById('wmsg');
     if(WAITLIST_ENDPOINT){
       try{
-        const r = await fetch(WAITLIST_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({email,source:'kaestral-landing'})});
-        msg.textContent = r.ok ? "✓ You're on the list — we'll be in touch." : "Something went wrong. Try again.";
-      }catch{ msg.textContent = "Network error — try again."; }
-    } else {
-      window.location.href = `mailto:${OWNER_EMAIL}?subject=${encodeURIComponent('Kaestral Pro — waitlist')}&body=${encodeURIComponent('Add me to the Kaestral Pro waitlist.\n\nEmail: '+email)}`;
-      msg.textContent = "✓ Opening your email app — hit send and you're on the list.";
+        const r=await fetch(WAITLIST_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({email,source:'kaestral-landing'})});
+        msg.textContent=r.ok?"✓ You’re on the list — we’ll be in touch.":"Something went wrong. Try again.";
+      }catch{ msg.textContent="Network error — try again."; }
+    }else{
+      window.location.href=`mailto:${OWNER_EMAIL}?subject=${encodeURIComponent('Kaestral Pro — waitlist')}&body=${encodeURIComponent('Add me to the Kaestral Pro waitlist.\n\nEmail: '+email)}`;
+      msg.textContent="✓ Opening your email app — hit send and you’re on the list.";
     }
     return false;
   }
