@@ -1,0 +1,55 @@
+{
+  "meta": { "aspect": "16:9", "fps": 30, "brand": "kaestral" },
+  "beats": [
+    {
+      "durationInFrames": 66,
+      "camera": { "move": "push-in", "amount": 0.06 },
+      "background": { "kind": "glow", "accent": "#16b16a" },
+      "layers": [
+        { "element": "text", "props": { "text": "The editor that edits itself." },
+          "position": { "x": 0.5, "y": 0.44 },
+          "style": { "role": "display", "size": 0.075 },
+          "enter": { "anim": "wordReveal", "easing": "ease-out" } },
+        { "element": "shape", "props": { "shape": "line", "color": "#16b16a" },
+          "position": { "x": 0.5, "y": 0.6 },
+          "enter": { "anim": "draw", "easing": "ease-out", "delay": 18 } }
+      ]
+    },
+    {
+      "durationInFrames": 72,
+      "camera": { "move": "pan-right", "amount": 0.05 },
+      "background": { "kind": "grid", "accent": "#16b16a" },
+      "layers": [
+        { "element": "text", "props": { "text": "You describe the edit." },
+          "position": { "x": 0.5, "y": 0.4 },
+          "style": { "role": "display", "size": 0.085 },
+          "enter": { "anim": "spring" } },
+        { "element": "text", "props": { "text": "It makes it." },
+          "position": { "x": 0.5, "y": 0.56 },
+          "style": { "role": "accent", "size": 0.085 },
+          "enter": { "anim": "spring", "delay": 14 } }
+      ]
+    },
+    {
+      "durationInFrames": 54,
+      "camera": { "move": "push-in", "amount": 0.08 },
+      "background": { "kind": "glow", "accent": "#16b16a" },
+      "layers": [
+        { "element": "text", "props": { "text": "cut · caption · punch in · grade · export" },
+          "position": { "x": 0.5, "y": 0.5 },
+          "style": { "role": "muted", "size": 0.03 },
+          "enter": { "anim": "typewriter", "easing": "linear" } }
+      ]
+    },
+    {
+      "durationInFrames": 78,
+      "camera": { "move": "push-in", "amount": 0.05 },
+      "background": { "kind": "glow", "accent": "#16b16a" },
+      "layers": [
+        { "element": "logo", "props": { "scale": 0.9 },
+          "position": { "x": 0.5, "y": 0.5 },
+          "enter": { "anim": "spring" } }
+      ]
+    }
+  ]
+}
