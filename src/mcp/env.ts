@@ -10,7 +10,7 @@ export const publicDir = (): string => process.env.MAESTRO_PUBLIC_DIR || join(pr
 export const remotionDir = (): string => process.env.MAESTRO_REMOTION_DIR || join(process.cwd(), "remotion");
 /** Writable working dir for generated clips + uploads (must be user-writable when packaged). */
 export const dataDir = (): string => process.env.MAESTRO_DATA_DIR || process.cwd();
-/** Bundled skill library (Maestro's own editing playbooks). Packaged: resources/skills; dev: ./skills. */
+/** Bundled skill library (Kaestral's own editing playbooks). Packaged: resources/skills; dev: ./skills. */
 export const skillsDir = (): string => process.env.MAESTRO_SKILLS_DIR || join(process.cwd(), "skills");
 /** Bundled whisper.cpp CLI (local transcription). Packaged: resources/whisper (set via MAESTRO_WHISPER); dev: ./vendor/whisper. */
 export const whisperBin = (): string => process.env.MAESTRO_WHISPER || join(process.cwd(), "vendor", "whisper", process.platform === "win32" ? "whisper-cli.exe" : "whisper-cli");

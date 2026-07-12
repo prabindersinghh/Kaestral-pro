@@ -1,4 +1,4 @@
-// Palette / dominant-colour extraction — Maestro's OWN implementation. Decodes a few downscaled
+// Palette / dominant-colour extraction — Kaestral's OWN implementation. Decodes a few downscaled
 // RGB frames with the bundled FFmpeg, then median-cut quantizes the pixels to N buckets and returns
 // each bucket's average colour + prominence weight. Feeds creative/brand skills: extract the reel's
 // palette, then apply_color / text styling to stay on-brand. Median-cut is a classic algorithm

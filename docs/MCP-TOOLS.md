@@ -1,10 +1,10 @@
-# Maestro MCP tools — capability audit
+# Kaestral MCP tools — capability audit
 
 What Claude can actually do over MCP right now (`127.0.0.1:19789/mcp`). Categories: **✅ fully wired**
 (real behavior), **🟡 partial**, **⛔ stubbed** (needs infra not in this build), **🔒 signed-out by
 design** (Palmier's closed cloud). Verified live over the running MCP server unless noted.
 
-Advertised: **43 tools** = the frozen **41** parity tools + **2** Maestro Skills extensions
+Advertised: **43 tools** = the frozen **41** parity tools + **2** Kaestral Skills extensions
 (`read_skill`, `list_skills`).
 
 ## ✅ Fully wired (27)
@@ -55,7 +55,7 @@ Returning `"…not available in this build"` is a deliberate, documented stub �
 `generate_video`, `generate_image`, `generate_audio`, `upscale_media` — return the signed-out shape.
 **STRATEGY ③** replaces these with a free/open generator (LTX-2 local, or Fal/Replicate hosted).
 
-## 🧩 Maestro Skills extensions (beyond the frozen 41)
+## 🧩 Kaestral Skills extensions (beyond the frozen 41)
 | Tool | Notes |
 |------|------|
 | list_skills | **verified live**: lists palmier-skills (color-grading, ugc-editing, ugc-photo-prompts, ugc-video-prompts) |

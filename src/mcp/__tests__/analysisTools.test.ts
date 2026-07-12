@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { McpExecutor } from "../executor";
 
 // Real media so the tools resolve a path and run the actual FFmpeg-backed analyzers.
-const dir = mkdtempSync(join(tmpdir(), "maestro-analysis-"));
+const dir = mkdtempSync(join(tmpdir(), "kaestral-analysis-"));
 const click = join(dir, "click.wav");
 const rb = join(dir, "rb.mp4");
 

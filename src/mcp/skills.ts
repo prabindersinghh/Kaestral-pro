@@ -19,7 +19,7 @@ import { skillsDir } from "./env";
 
 // Skill source, in priority order:
 //  1. MAESTRO_SKILLS_BASE / PALMIER_SKILLS_BASE (explicit override — remote URL or file://)
-//  2. the bundled local skill library (Maestro's OWN playbooks — works offline / in the installer)
+//  2. the bundled local skill library (Kaestral's OWN playbooks — works offline / in the installer)
 //  3. the upstream Palmier skills repo (remote fallback)
 function skillsBase(): string {
   const override = process.env.MAESTRO_SKILLS_BASE ?? process.env.PALMIER_SKILLS_BASE;

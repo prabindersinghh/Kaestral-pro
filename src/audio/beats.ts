@@ -1,4 +1,4 @@
-// Beat / onset detection — Maestro's OWN implementation (no third-party editor code). Decodes mono
+// Beat / onset detection — Kaestral's OWN implementation (no third-party editor code). Decodes mono
 // PCM with the bundled FFmpeg (same approach as waveform.ts), builds a short-time energy envelope,
 // takes the positive energy flux as an onset function, adaptively peak-picks onsets, and estimates
 // tempo by autocorrelating the onset envelope. Output is in PROJECT FRAMES so the AI can cut/keyframe

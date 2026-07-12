@@ -1,9 +1,9 @@
 {
-  "name": "maestro-remotion",
+  "name": "kaestral-remotion",
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Remotion engine for Maestro's complex motion graphics (intros, logo reveals, data-viz, transitions). Rendered to MP4 and imported onto the timeline.",
+  "description": "Remotion engine for Kaestral's complex motion graphics (intros, logo reveals, data-viz, transitions). Rendered to MP4 and imported onto the timeline.",
   "dependencies": {
     "@remotion/bundler": "4.0.290",
     "@remotion/renderer": "4.0.290",

@@ -1,12 +1,12 @@
 // Option A — in-app AI chat. A right-docked panel: the user types prompts + attaches files, and the
-// MaestroAgent runs Claude's tool loop against the local MCP server, so edits and generated clips
+// KaestralAgent runs Claude's tool loop against the local MCP server, so edits and generated clips
 // appear live on the timeline. BYOK (the Anthropic key from Settings → Connect AI).
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { store, useEditorVersion } from "../state/store";
 import { theme } from "./theme";
 import { BRIDGE_URL } from "../state/bridge";
-import { MaestroAgent, type Msg, type ContentBlock } from "../agent/agent";
+import { KaestralAgent, type Msg, type ContentBlock } from "../agent/agent";
 
 function textOf(content: string | ContentBlock[]): string {
   if (typeof content === "string") return content;
@@ -28,7 +28,7 @@ export function ChatPanel() {
   const fileRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const agent = useMemo(() => new MaestroAgent(
+  const agent = useMemo(() => new KaestralAgent(
     { apiKey: () => store.settings.apiKey, model: () => store.settings.model, mcpBase: BRIDGE_URL },
     {
       onMessages: (m, t) => { setMessages([...m]); setThinking(t); if (!t) setActiveTool(null); },

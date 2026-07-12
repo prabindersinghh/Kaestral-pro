@@ -77,7 +77,7 @@ export function GenerationPanel() {
             </div>
             <span style={{ fontSize: theme.fontSize.xs, color: theme.color.textSecondary, lineHeight: 1.4 }}>
               {provider === "gcp-ltx"
-                ? "Runs on YOUR Google Cloud GPU (LTX-2) — ~$0.05/clip on L4 spot, paid from your $300 credits. See docs/GCP-LTX-GUIDE.md. The token authenticates Maestro to your VM."
+                ? "Runs on YOUR Google Cloud GPU (LTX-2) — ~$0.05/clip on L4 spot, paid from your $300 credits. See docs/GCP-LTX-GUIDE.md. The token authenticates Kaestral to your VM."
                 : "Runs on your account — pay per clip (~$0.02–0.10/video, ~$0.003–0.03/image). Key stays on this machine."}
             </span>
           </div>

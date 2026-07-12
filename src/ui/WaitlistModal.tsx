@@ -23,8 +23,8 @@ export function WaitlistModal() {
     setState({ kind: "sending" });
     const r = await store.joinWaitlist(email.trim());
     if (r.mode === "mailto") {
-      const subject = encodeURIComponent("Maestro Pro — waitlist");
-      const body = encodeURIComponent(`Add me to the Maestro Pro / AI-features waitlist.\n\nEmail: ${email.trim()}`);
+      const subject = encodeURIComponent("Kaestral Pro — waitlist");
+      const body = encodeURIComponent(`Add me to the Kaestral Pro / AI-features waitlist.\n\nEmail: ${email.trim()}`);
       window.open(`mailto:${OWNER_EMAIL}?subject=${subject}&body=${body}`, "_blank");
       setState({ kind: "done", msg: "Opening your email app — hit send and you're on the list." });
     } else if (r.ok) {
@@ -39,12 +39,12 @@ export function WaitlistModal() {
       <div onClick={(e) => e.stopPropagation()} style={{ width: 440, maxWidth: "92vw", background: theme.color.surface, border: `1px solid ${theme.color.borderPrimary}`, borderRadius: theme.radius.mdLg, boxShadow: "0 24px 60px rgba(0,0,0,0.6)", fontFamily: theme.font.ui, overflow: "hidden" }}>
         <div style={{ padding: `${theme.space.xl}px ${theme.space.xl}px ${theme.space.lg}px`, background: `linear-gradient(135deg, ${theme.color.raised}, ${theme.color.surface})` }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-            <span style={{ fontSize: 11, fontFamily: theme.font.mono, letterSpacing: "0.12em", textTransform: "uppercase", color: theme.color.accent, fontWeight: 700 }}>Maestro Pro</span>
+            <span style={{ fontSize: 11, fontFamily: theme.font.mono, letterSpacing: "0.12em", textTransform: "uppercase", color: theme.color.accent, fontWeight: 700 }}>Kaestral Pro</span>
             <button onClick={() => store.openWaitlist(false)} style={{ background: "transparent", border: "none", color: theme.color.textSecondary, fontSize: 18, cursor: "pointer", lineHeight: 1 }}>✕</button>
           </div>
           <h2 style={{ margin: "10px 0 8px", fontSize: 22, fontWeight: 750, letterSpacing: "-0.01em" }}>AI generation is coming</h2>
           <p style={{ margin: 0, fontSize: 14, color: theme.color.textSecondary, lineHeight: 1.55 }}>
-            Type a prompt, get a real clip on your timeline. Generate video, images, and B-roll — right inside Maestro. Join the waitlist and we'll let you know the moment it opens.
+            Type a prompt, get a real clip on your timeline. Generate video, images, and B-roll — right inside Kaestral. Join the waitlist and we'll let you know the moment it opens.
           </p>
         </div>
 

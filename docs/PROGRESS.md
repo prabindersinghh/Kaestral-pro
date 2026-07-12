@@ -493,7 +493,7 @@ Also rewrote **UPGRADES.md** into an honest, severity-ranked "gap to real Palmie
 
 ---
 
-## Entry — 2026-07-03 · THE REAL USER LOOP + Maestro rename + GitHub push
+## Entry — 2026-07-03 · THE REAL USER LOOP + Kaestral rename + GitHub push
 
 ### Architecture change: shared project state (the fix for "app and Claude edit different projects")
 The MCP server is now the **project backend**. New pieces (all `palmier-win/`):
@@ -523,12 +523,12 @@ The MCP server is now the **project backend**. New pieces (all `palmier-win/`):
    clip's position the output reads **rgb(0,252,0)**.
 `npm test` 127/127 · `tsc` clean · cargo check clean.
 
-### Maestro rename + GitHub
-Product renamed **Maestro** (UI title, window title, productName, identifier `io.maestro.editor`,
+### Kaestral rename + GitHub
+Product renamed **Kaestral** (UI title, window title, productName, identifier `io.kaestral.editor`,
 package name). **MCP identity `palmier-pro` + `.palmier` format intentionally kept** (frozen contract
-compat; documented in README). New README (Maestro branding, Palmier GPLv3 credit, quickstart, MCP
+compat; documented in README). New README (Kaestral branding, Palmier GPLv3 credit, quickstart, MCP
 guide, honest gaps). Repo initialized from `palmier-win/` (docs/SPEC.md + docs/PROGRESS.md snapshots
-included) and **pushed: https://github.com/prabindersinghh/Maestro-pro (main, 154 files)**.
+included) and **pushed: https://github.com/prabindersinghh/Kaestral-pro (main, 154 files)**.
 
 ### Protocol going forward (user directive)
 Port faithfully from the Palmier source (file-cited), verify LIVE in the app with the user's own file,
@@ -559,7 +559,7 @@ Ported from `Audio/WaveformExtractor.swift`, `Audio/AudioEnvelope.swift`, and
 - Server bridge: `GET /waveform/:id` (executor caches peak envelopes; no-cache on unresolved asset so
   it retries after the UI seeds state). Timeline draws `WaveformStrip` on audio clips; clip labels now
   show the asset name.
-- Demo ships a real audio bed (`public/sample-audio.m4a`); demo title text → "Maestro".
+- Demo ships a real audio bed (`public/sample-audio.m4a`); demo title text → "Kaestral".
 
 ### Gate — verified against the ACTUAL running app (Playwright, real files, screenshot in repo)
 - **Waveform visible:** `docs/screenshots/02-audio-waveform.png` shows the peaks drawn on the A1 clip;
@@ -633,7 +633,7 @@ button/S), transitions, live trim preview while dragging. ③ smooth playback (W
   `uv sync` done, symlinked into `~/.claude/skills/video-use`, helpers verified
   (`transcribe.py --help` OK, ffprobe OK). **BLOCKED on the user's ElevenLabs API key** (write to
   `~/Developer/video-use/.env`) before the live end-to-end test. Seam: video-use → `final.mp4` →
-  Maestro `import_media`.
+  Kaestral `import_media`.
 
 Prereqs confirmed on this machine: Python 3.11, uv 0.10, ffmpeg 8.0, node 22, git.
 
@@ -651,7 +651,7 @@ order, each verified LIVE in the running app (Playwright + screenshots in docs/s
    tabs; gear + Connect-AI buttons in the title bar. `07-settings-connect.png`.
 2. **Typography** (`src/ui/Inspector.tsx` TextSection; `store.editText`; `draw.ts` bg+outline) —
    content, font, size, bold/italic, alignment, color, background, outline, shadow, animation preset +
-   per-word frames. Compositor now renders text background box + outline. Verified: "MAESTRO" with
+   per-word frames. Compositor now renders text background box + outline. Verified: "KAESTRAL" with
    green bg + black outline renders. `08-typography.png`.
 3. **Generation panel** (`src/ui/GenerationPanel.tsx`) — Palmier's generate surface (Video/Image/Audio,
    LTX-2 model picker, prompt, aspect/duration, Generate) with an honest "backend not connected — see
@@ -681,27 +681,27 @@ User provided the ElevenLabs key. Ran the whole loop end-to-end on a real speech
   ("um" 0.96–1.14s, "uh" 4.94–5.00s, "um" 10.88–11.04s, "uh" 11.26–11.42s).
 - **Filler removal**: built an EDL keeping everything except the filler intervals → `render.py`
   → `final.mp4` **19.93s → 19.56s**, loudness-normalized to −14 LUFS.
-- **Import + captions in Maestro** (`scratchpad/captions-loop.mjs`): `import_media(final.mp4)` →
+- **Import + captions in Kaestral** (`scratchpad/captions-loop.mjs`): `import_media(final.mp4)` →
   `add_clips` → **11 caption chunks** derived from the transcript (fillers dropped, timings remapped
-  past the cuts) added via `add_texts`. Verified live: preview shows **"welcome to Maestro." (white)
+  past the cuts) added via `add_texts`. Verified live: preview shows **"welcome to Kaestral." (white)
   overlaid on the video**; timeline = caption track (T1) over cleaned video (V1) over audio (A1).
   `docs/screenshots/11-videouse-captions.png`.
 
-**Maestro fixes this surfaced (committed):** `add_texts` now (a) routes text to a **dedicated text
+**Kaestral fixes this surfaced (committed):** `add_texts` now (a) routes text to a **dedicated text
 track** (`ensureTextTrack`) instead of overwriting the video track, and (b) sets a **default textStyle
 + lower-third transform** so captions actually render (drawText needs both). These make captions a real
 feature, not just clips.
 
 **Honest notes on video-use (MIT):** two Windows path bugs in the repo — `grade.py` auto-grade and the
 subtitle-burn both pass `C:\…` paths into ffmpeg filter strings, whose `:`/`\` break the filter parser.
-Worked around by `grade:null` + `--no-subtitles` and doing **captions in Maestro** instead (better
+Worked around by `grade:null` + `--no-subtitles` and doing **captions in Kaestral** instead (better
 anyway — editable text clips vs burned-in). Fixing video-use's Windows paths is a small upstream patch
 (worth a PR). Cost: one short Scribe call (~20s clip).
 
 136 tests green, tsc clean.
 
 > ✅ The #1 edge over Palmier — transcript-based smart editing — is live end-to-end: talking-head →
-> Scribe → filler cut → cleaned clip + captions on Maestro's timeline, all Claude-drivable over MCP.
+> Scribe → filler cut → cleaned clip + captions on Kaestral's timeline, all Claude-drivable over MCP.
 
 ---
 
@@ -714,7 +714,7 @@ complex React compositions.
 - `src/motion/renderTitle.ts` — draws each frame with canvas (presets: fadeSlideUp, scaleIn,
   typewriter, wordReveal, lowerThird; easing; in/hold/out timing; gradient/spotlight/solid bg,
   accent, subtitle) → pipes to FFmpeg → H.264 MP4.
-- `generate_title` MCP tool (Maestro extension, **44 tools** now = 41 + read_skill/list_skills +
+- `generate_title` MCP tool (Kaestral extension, **44 tools** now = 41 + read_skill/list_skills +
   generate_title). Claude maps a prompt → params, it renders locally, imports via the media library,
   and (by default) places at the playhead. `place=false` to only import.
 
@@ -724,7 +724,7 @@ complex React compositions.
   asset matched). Rendered frame (mid): bold white title + subtitle on a green spotlight gradient —
   `docs/screenshots/12-motion-title.png`; mid-frame has 21,543 white text px.
 - 136 tests green, tsc clean.
-- **In-app screenshot (title clip on Maestro's timeline + preview) pending** — the Playwright MCP
+- **In-app screenshot (title clip on Kaestral's timeline + preview) pending** — the Playwright MCP
   server was disconnected this turn; the render + placement are verified over MCP and the frame above.
 
 Next motion pieces (one at a time): transitions (crossfade/wipe between clips), intro/outro templates,
@@ -757,7 +757,7 @@ subsequent renders ~10-12s. `chromiumOptions.gl:"angle"` for no-GPU robustness. 
 clone: `cd remotion && npm install` once** (node_modules is gitignored).
 
 ### Gate — verified live
-- `generate_motion(AnimatedIntro, "MAESTRO")` over MCP → **11.7s** → 120 frames 1920×1080, engine
+- `generate_motion(AnimatedIntro, "KAESTRAL")` over MCP → **11.7s** → 120 frames 1920×1080, engine
   "remotion", **placed on the timeline**. In-app: preview shows the intro (48,402 white title px +
   3,697 green accent px). `docs/screenshots/13-remotion-intro.png`.
 - All 4 templates render OK (h264 1920×1080): AnimatedIntro (in-app), LogoReveal, DataViz, Transition.
@@ -765,7 +765,7 @@ clone: `cd remotion && npm install` once** (node_modules is gitignored).
 - 136 tests green, tsc clean.
 
 > ✅ Two motion engines, auto-picked: canvas (instant simple titles) + Remotion (complex motion
-> design). "A complex animated intro" → Remotion renders it → it lands on Maestro's timeline.
+> design). "A complex animated intro" → Remotion renders it → it lands on Kaestral's timeline.
 
 ---
 
@@ -778,7 +778,7 @@ Built both ways to connect the AI with an in-app chooser, ported in spirit from 
   B) Claude Code (free w/ Claude plan, separate terminal, copy-paste MCP setup). Persists the choice.
   `docs/screenshots/15-connect-chooser.png`, `16-connect-inapp.png`, `17-connect-claudecode.png`.
 - **Option A — in-app chat** (`src/agent/agent.ts` + `src/ui/ChatPanel.tsx`): a right-docked chat.
-  `MaestroAgent` runs Claude's tool-use loop from the webview — the LLM call hits the Anthropic
+  `KaestralAgent` runs Claude's tool-use loop from the webview — the LLM call hits the Anthropic
   Messages API (BYOK, anthropic-dangerous-direct-browser-access) and every tool_use executes against
   the SAME local MCP server the app is synced to; after each tool it calls `store.syncNow()` so edits
   show live. Attach files → uploaded to the server (become assets) + images passed to the model. Key

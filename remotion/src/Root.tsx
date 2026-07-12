@@ -1,6 +1,6 @@
 import { Composition } from "remotion";
 import { AnimatedIntro } from "./compositions/AnimatedIntro";
-import { MaestroLaunch } from "./compositions/MaestroLaunch";
+import { KaestralLaunch } from "./compositions/KaestralLaunch";
 import { LogoReveal } from "./compositions/LogoReveal";
 import { DataViz } from "./compositions/DataViz";
 import { Transition } from "./compositions/Transition";
@@ -17,13 +17,13 @@ const dur = ({ props }: { props: { durationSeconds?: number } }) => ({
 export const RemotionRoot: React.FC = () => (
   <>
     <Composition
-      id="MaestroLaunch" component={MaestroLaunch} fps={FPS} width={W} height={H} durationInFrames={1800}
+      id="KaestralLaunch" component={KaestralLaunch} fps={FPS} width={W} height={H} durationInFrames={1800}
       defaultProps={{ durationSeconds: 60 }}
       calculateMetadata={dur}
     />
     <Composition
       id="AnimatedIntro" component={AnimatedIntro} fps={FPS} width={W} height={H} durationInFrames={120}
-      defaultProps={{ title: "Maestro", subtitle: "motion graphics", accent: "#1db26b", durationSeconds: 4 }}
+      defaultProps={{ title: "Kaestral", subtitle: "motion graphics", accent: "#1db26b", durationSeconds: 4 }}
       calculateMetadata={dur}
     />
     <Composition

@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { extractPalette } from "../palette";
 
 // A 2s clip that is the left half pure RED and right half pure BLUE → palette must surface both.
-const dir = mkdtempSync(join(tmpdir(), "maestro-palette-"));
+const dir = mkdtempSync(join(tmpdir(), "kaestral-palette-"));
 const clipPath = join(dir, "rb.mp4");
 
 beforeAll(() => {

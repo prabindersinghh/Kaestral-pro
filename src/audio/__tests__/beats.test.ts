@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { analyzeBeats, silencesFromEnvelope } from "../beats";
 
 // A 6s click track: an 880 Hz tone pulsed ON for 50 ms every 500 ms → a clear beat at 120 BPM.
-const dir = mkdtempSync(join(tmpdir(), "maestro-beats-"));
+const dir = mkdtempSync(join(tmpdir(), "kaestral-beats-"));
 const clickPath = join(dir, "click.wav");
 // A "speech-then-silence" clip: 1s of tone, 1s of silence, 1s of tone → one clear dead-air gap.
 const gapPath = join(dir, "gap.wav");

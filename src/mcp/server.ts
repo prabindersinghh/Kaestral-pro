@@ -1,6 +1,6 @@
 // MCP HTTP server. Ported from Agent/MCP/MCPHTTPServer.swift + MCPService.swift.
 // Localhost-only (127.0.0.1) on 19789, POST /mcp, GET SSE keep-alive, oauth probe, and the
-// three validators (origin / content-type / protocol-version). Server identity maestro 1.0.0.
+// three validators (origin / content-type / protocol-version). Server identity palmier-pro 1.0.0.
 
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { createReadStream } from "node:fs";
@@ -16,20 +16,23 @@ import type { McpExecutor } from "./executor";
 
 export const MCP_PORT = 19789;
 export const MCP_HOST = "127.0.0.1";
-const SERVER_INFO = { name: "maestro", version: "1.0.0" };
+// FROZEN COMPATIBILITY CONTRACT: the MCP server identifies as "palmier-pro" (and serves the .palmier
+// format) so Palmier-ecosystem MCP clients recognize it. The PRODUCT is Kaestral; the wire protocol
+// stays palmier-pro on purpose. See README → "Why the MCP server is named palmier-pro".
+const SERVER_INFO = { name: "palmier-pro", version: "1.0.0" };
 const DEFAULT_PROTOCOL = "2025-06-18";
 const SUPPORTED_PROTOCOLS = new Set(["2025-06-18", "2025-03-26", "2024-11-05", DEFAULT_PROTOCOL]);
 
 const SERVER_INSTRUCTIONS =
-  "Maestro MCP server (AI-native video editor).\n" +
-  " core rule — BUILD INSIDE MAESTRO, never bypass it: every editing action MUST go through these MCP " +
-  "tools so the result appears on the user's Maestro timeline as you work. NEVER run ffmpeg (or any " +
+  "Kaestral MCP server (AI-native video editor).\n" +
+  " core rule — BUILD INSIDE KAESTRAL, never bypass it: every editing action MUST go through these MCP " +
+  "tools so the result appears on the user's Kaestral timeline as you work. NEVER run ffmpeg (or any " +
   "external tool) yourself to produce a finished standalone video file, and never hand the user a raw " +
   "file path as the deliverable. If you create an asset (a motion clip, a title, a score, an image), it " +
   "MUST be imported and placed on the timeline: use generate_motion / generate_title / generate_video / " +
   "generate_image (they auto-import + place), or import_media then add_clips for an external file. The " +
   "ONLY way to produce a final video is export_project(mode:'video'), which renders the CURRENT TIMELINE " +
-  "through Maestro — so the export is exactly what the user watched you build. Work step by step and " +
+  "through Kaestral — so the export is exactly what the user watched you build. Work step by step and " +
   "visibly: add clips, titles, music, effects one tool call at a time.\n" +
   "Call get_timeline at the start of a session. Before editing footage you don't understand, PERCEIVE it: " +
   "see_video returns real frames you can SEE (best moments, subject, framing); get_transcript returns " +
@@ -46,8 +49,8 @@ interface JsonRpcRequest {
 }
 
 const RESOURCES = [
-  { name: "Video Models", uri: "maestro://models/video", description: "Available AI video generation models", mimeType: "application/json" },
-  { name: "Image Models", uri: "maestro://models/image", description: "Available AI image generation models", mimeType: "application/json" },
+  { name: "Video Models", uri: "palmier-pro://models/video", description: "Available AI video generation models", mimeType: "application/json" },
+  { name: "Image Models", uri: "palmier-pro://models/image", description: "Available AI image generation models", mimeType: "application/json" },
 ];
 
 export class McpServer {
@@ -311,7 +314,7 @@ export class McpServer {
           return rpcOk(id, { resources: RESOURCES });
         case "resources/read": {
           const uri = String(params.uri ?? "");
-          if (uri === "maestro://models/video" || uri === "maestro://models/image") {
+          if (uri === "palmier-pro://models/video" || uri === "palmier-pro://models/image") {
             return rpcOk(id, { contents: [{ uri, mimeType: "application/json", text: "[]" }] });
           }
           return rpcError(id ?? null, -32602, `Unknown resource: ${uri}`);

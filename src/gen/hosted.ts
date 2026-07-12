@@ -44,7 +44,7 @@ export async function generate(cfg: GenConfig, kind: GenKind, prompt: string, op
 // stamp, so an active queue never trips the idle watchdog.
 async function runGcpLtx(cfg: GenConfig, kind: GenKind, prompt: string, opts: { durationSeconds?: number; aspectRatio?: string }): Promise<string> {
   const base = (cfg.baseUrl ?? "").replace(/\/$/, "");
-  if (!base) throw new Error("gcp-ltx: no server URL. Start the GPU (Settings → Generation → GPU) so Maestro knows the VM's address.");
+  if (!base) throw new Error("gcp-ltx: no server URL. Start the GPU (Settings → Generation → GPU) so Kaestral knows the VM's address.");
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (cfg.apiKey) headers.Authorization = `Bearer ${cfg.apiKey}`;
   const body = JSON.stringify({ kind, prompt, seconds: opts.durationSeconds ?? 5, aspect_ratio: opts.aspectRatio ?? "16:9" });

@@ -1,4 +1,4 @@
-// URL → file download via yt-dlp. Maestro does NOT bundle yt-dlp (large + site-policy sensitive); it
+// URL → file download via yt-dlp. Kaestral does NOT bundle yt-dlp (large + site-policy sensitive); it
 // shells the user's own yt-dlp if present, else returns a clear install message. Idea from youtube-dl
 // (Unlicense / public domain); this is our own thin wrapper. Enables importing a clip from a URL
 // (YouTube, etc.) straight onto the timeline.

@@ -2,21 +2,21 @@ import { describe, it, expect } from "vitest";
 import { McpExecutor } from "../executor";
 
 // The SkillStore is local-first: with ./skills/catalog.json present (cwd = project root during tests),
-// list_skills/read_skill serve Maestro's own bundled playbooks.
+// list_skills/read_skill serve Kaestral's own bundled playbooks.
 describe("bundled skill library (local-first)", () => {
-  it("list_skills returns Maestro's own reel/creative skills", async () => {
+  it("list_skills returns Kaestral's own reel/creative skills", async () => {
     const ex = new McpExecutor();
     const r = await ex.execute("list_skills", {});
     const { skills } = JSON.parse(r.content[0].text) as { skills: { id: string }[] };
     const ids = skills.map((s) => s.id);
-    for (const id of ["build-in-maestro", "viral-reel", "beat-sync-cutting", "creative-director", "caption-styles", "broll-planner", "platform-delivery", "promo-ad"]) {
+    for (const id of ["build-in-kaestral", "viral-reel", "beat-sync-cutting", "creative-director", "caption-styles", "broll-planner", "platform-delivery", "promo-ad"]) {
       expect(ids).toContain(id);
     }
   });
 
-  it("the house-rule skill forbids standalone renders and requires Maestro's Export", async () => {
+  it("the house-rule skill forbids standalone renders and requires Kaestral's Export", async () => {
     const ex = new McpExecutor();
-    const r = await ex.execute("read_skill", { id: "build-in-maestro" });
+    const r = await ex.execute("read_skill", { id: "build-in-kaestral" });
     expect(r.isError).toBeFalsy();
     const body = r.content[0].text;
     expect(body).toMatch(/never render a standalone|NEVER|Never render/i);

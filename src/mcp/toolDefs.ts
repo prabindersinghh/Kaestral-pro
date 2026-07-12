@@ -701,7 +701,7 @@ if (TOOL_DEFS.length !== 41) {
   throw new Error(`Expected 41 MCP tools (frozen contract), got ${TOOL_DEFS.length}`);
 }
 
-// Maestro extension tools — NOT part of the frozen 41-tool parity contract. The Skills system is
+// Kaestral extension tools — NOT part of the frozen 41-tool parity contract. The Skills system is
 // ported from Palmier's in-app agent (Agent/Skills), which itself adds read_skill on top of the 41
 // MCP tools. Exposed here so Claude Code over MCP can load Palmier's editing playbooks.
 export const SKILL_TOOL_DEFS: ToolDef[] = [
@@ -754,7 +754,7 @@ export const MOTION_TOOL_DEFS: ToolDef[] = [
 
 // Analysis extension — enables the reel/creative skills. analyze_audio powers beat-synced cutting;
 // extract_palette powers palette-driven creative + brand styling. Both run on the bundled FFmpeg with
-// Maestro's own algorithms (no third-party editor code). NOT part of the frozen 41.
+// Kaestral's own algorithms (no third-party editor code). NOT part of the frozen 41.
 export const ANALYSIS_TOOL_DEFS: ToolDef[] = [
   {
     name: "analyze_audio",

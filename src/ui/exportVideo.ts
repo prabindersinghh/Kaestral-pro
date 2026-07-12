@@ -15,7 +15,7 @@ export interface ExportResult {
   codec: string;
 }
 
-export async function exportVideoFromUI(codec = "H.264", resolution = "1080p", fileName = "maestro-export.mp4"): Promise<ExportResult> {
+export async function exportVideoFromUI(codec = "H.264", resolution = "1080p", fileName = "kaestral-export.mp4"): Promise<ExportResult> {
   const projectJson = JSON.stringify({
     timeline: encodeTimeline(store.timeline),
     media: encodeManifest(store.media.toManifest()),
@@ -26,7 +26,7 @@ export async function exportVideoFromUI(codec = "H.264", resolution = "1080p", f
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     if (/tauri|invoke|not.*function|undefined/i.test(msg)) {
-      throw new Error("Video export runs in the Maestro desktop app. In the browser preview, export via the MCP export_project tool.");
+      throw new Error("Video export runs in the Kaestral desktop app. In the browser preview, export via the MCP export_project tool.");
     }
     throw new Error(`Export failed: ${msg}`);
   }

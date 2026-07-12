@@ -1,10 +1,10 @@
 [
   {
-    "id": "build-in-maestro",
-    "name": "Build inside Maestro (house rule)",
-    "description": "The non-negotiable way to work — build every edit ON the Maestro timeline via MCP tools so the user watches it happen, and render only with Maestro's own Export. Read before any editing task.",
+    "id": "build-in-kaestral",
+    "name": "Build inside Kaestral (house rule)",
+    "description": "The non-negotiable way to work — build every edit ON the Kaestral timeline via MCP tools so the user watches it happen, and render only with Kaestral's own Export. Read before any editing task.",
     "sha": "local",
-    "path": "build-in-maestro/SKILL.md"
+    "path": "build-in-kaestral/SKILL.md"
   },
   {
     "id": "viral-reel",

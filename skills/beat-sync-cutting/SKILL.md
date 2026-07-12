@@ -5,9 +5,9 @@ description: Cut and animate to the music — get beats/onsets with analyze_audi
 
 # Beat-synced cutting
 
-Follow the `build-in-maestro` house rule: every cut and keyframe happens ON the Maestro timeline via tools, and any music you add is imported and placed (`import_media` + `add_clips`) — never rendered outside Maestro. Finish with `export_project(mode:"video")`.
+Follow the `build-in-kaestral` house rule: every cut and keyframe happens ON the Kaestral timeline via tools, and any music you add is imported and placed (`import_media` + `add_clips`) — never rendered outside Kaestral. Finish with `export_project(mode:"video")`.
 
-Make the edit feel locked to the track. Maestro's `analyze_audio` returns beats/onsets in PROJECT FRAMES, so you can place cuts and keyframes exactly on them.
+Make the edit feel locked to the track. Kaestral's `analyze_audio` returns beats/onsets in PROJECT FRAMES, so you can place cuts and keyframes exactly on them.
 
 ## 1. Analyze the music
 - Identify the music clip/asset (from `get_media` / `get_timeline`).

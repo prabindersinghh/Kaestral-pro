@@ -1,11 +1,11 @@
 ---
 name: Platform delivery
-description: Package the finished edit for each platform — Reels/TikTok/Shorts (9:16), feed (1:1), YouTube (16:9) — with the right aspect, safe areas, duration, and captions, then export from Maestro.
+description: Package the finished edit for each platform — Reels/TikTok/Shorts (9:16), feed (1:1), YouTube (16:9) — with the right aspect, safe areas, duration, and captions, then export from Kaestral.
 ---
 
 # Platform delivery
 
-Follow the `build-in-maestro` house rule. This skill takes a FINISHED edit and delivers a version tuned for a specific platform. Each platform has different rules; match them, then export.
+Follow the `build-in-kaestral` house rule. This skill takes a FINISHED edit and delivers a version tuned for a specific platform. Each platform has different rules; match them, then export.
 
 ## 1. Pick the target(s)
 Ask which platform(s) the user wants. Common specs:

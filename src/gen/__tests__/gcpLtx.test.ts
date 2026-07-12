@@ -8,9 +8,9 @@ import { generate } from "../hosted";
 import { McpExecutor } from "../../mcp/executor";
 
 // A stand-in for the VM's LTX FastAPI server: POST /generate → {jobId}; GET /jobs/{id} → {status,url};
-// GET /media/x.mp4 serves a tiny real MP4. This proves Maestro's gcp-ltx flow end-to-end (submit →
+// GET /media/x.mp4 serves a tiny real MP4. This proves Kaestral's gcp-ltx flow end-to-end (submit →
 // poll → download → import → place) WITHOUT a real GPU.
-const dir = mkdtempSync(join(tmpdir(), "maestro-gcpltx-"));
+const dir = mkdtempSync(join(tmpdir(), "kaestral-gcpltx-"));
 const clip = join(dir, "clip.mp4");
 let server: Server;
 let base = "";

@@ -1,12 +1,12 @@
-# Maestro
+# Kaestral
 
 **An AI-native video editor for Windows.** Edit on a real multi-track timeline — or let Claude edit
 for you over MCP. Import your footage, cut it by hand or by prompt, and export a real MP4.
 
-Maestro is an open-source (GPLv3) Windows port of [Palmier Pro](https://github.com/palmier-io/palmier-pro)
+Kaestral is an open-source (GPLv3) Windows port of [Palmier Pro](https://github.com/palmier-io/palmier-pro)
 (© Palmier Inc.), rebuilt on **Tauri 2 + React + TypeScript** with an **FFmpeg** render pipeline. It keeps
 Palmier's project format (`.palmier`) and its full **41-tool MCP contract**, so agents and configs built
-for Palmier work against Maestro unchanged. Full credit and the port→upstream file map: [NOTICE.md](./NOTICE.md).
+for Palmier work against Kaestral unchanged. Full credit and the port→upstream file map: [NOTICE.md](./NOTICE.md).
 
 ---
 
@@ -20,7 +20,7 @@ for Palmier work against Maestro unchanged. Full credit and the port→upstream 
   titles), inspector (speed/volume/opacity/blend/transform + keyframe stamping), media panel.
 - **Shared project state:** the app and the MCP server edit the *same* project live — your changes and
   Claude's merge in real time.
-- **MCP server:** `maestro` v1.0.0 on `http://127.0.0.1:19789/mcp` (localhost-only), all 41 tools
+- **MCP server:** `kaestral` v1.0.0 on `http://127.0.0.1:19789/mcp` (localhost-only), all 41 tools
   with Palmier's exact names/schemas. Generation tools honestly report signed-out (no cloud).
 - **Export:** H.264 / H.265 / ProRes video via FFmpeg, plus XMEML (Premiere), FCPXML (Resolve/FCP),
   and `.palmier` package.
@@ -36,10 +36,10 @@ color kernels (LUT/curves/wheels render approximately in preview today).
 Prereqs: **Node 20+**, **Rust** (`rustup`, stable), **FFmpeg + ffprobe on PATH**, Windows 10/11.
 
 ```bash
-git clone https://github.com/prabindersinghh/Maestro-pro
-cd Maestro-pro
+git clone https://github.com/prabindersinghh/Kaestral-pro
+cd Kaestral-pro
 npm install
-npm run tauri dev     # opens the Maestro window (auto-starts the project server)
+npm run tauri dev     # opens the Kaestral window (auto-starts the project server)
 ```
 
 In the app: **＋ Import** (or drop a file anywhere) → click the asset to place it at the playhead →
@@ -52,13 +52,13 @@ scrub the ruler, **Space** to play, **S** split, **Del** delete, **Ctrl+Z** undo
 npm run mcp
 
 # then point Claude Code at it:
-claude mcp add --transport http maestro http://127.0.0.1:19789/mcp
+claude mcp add --transport http kaestral http://127.0.0.1:19789/mcp
 claude
 ```
 
 Ask things like: *“Call get_timeline, then cut the first 2 seconds of my-vacation.mp4, add a title
 that says ‘Trip 2026’, and export the project as video to C:\Users\me\Videos\trip.mp4.”*
-Claude's edits appear in the Maestro window live; your manual edits are visible to Claude the same way.
+Claude's edits appear in the Kaestral window live; your manual edits are visible to Claude the same way.
 
 ## Development
 
@@ -82,7 +82,7 @@ docs/            SPEC.md (frozen contract) + PROGRESS.md (verified gate ledger)
 
 ## License & credit
 
-**GPLv3** — Maestro is a derivative work of **Palmier Pro** by Palmier Inc.
+**GPLv3** — Kaestral is a derivative work of **Palmier Pro** by Palmier Inc.
 ([palmier-io/palmier-pro](https://github.com/palmier-io/palmier-pro), GPLv3), re-implemented for
 Windows using the Swift source as the executable specification. The `.palmier` format, MCP tool
 contract, and editing semantics are theirs; the Windows implementation is this repo. Palmier's

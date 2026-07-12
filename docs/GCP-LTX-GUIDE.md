@@ -1,7 +1,7 @@
 # Run LTX-2 on your own Google Cloud GPU (with your $300 credits)
 
 This is the plain-language guide to generating video clips on a Google Cloud GPU and having them land
-straight on the Maestro timeline. You do the Google Cloud parts once; after that it's click **Start
+straight on the Kaestral timeline. You do the Google Cloud parts once; after that it's click **Start
 GPU** → generate → click **Stop GPU**.
 
 **The one thing to know up front:** Google's free trial gives you $300 in credits **but blocks GPUs
@@ -63,7 +63,7 @@ Do these in order. Each is one action.
 
 7. **Install the LTX server on the VM.** SSH into it (the "SSH" button in the console), then:
    ```bash
-   git clone <your Maestro repo>            # or copy the cloud/ltx-vm/ folder up to the VM
+   git clone <your Kaestral repo>            # or copy the cloud/ltx-vm/ folder up to the VM
    cd cloud/ltx-vm
    bash setup.sh                            # installs the server + the idle watchdog
    ```
@@ -77,22 +77,22 @@ Do these in order. Each is one action.
 
 9. **Turn on the server + guards, then stop the VM.**
    ```bash
-   sudo systemctl start maestro-ltx && curl localhost:8000/health   # should say ok
+   sudo systemctl start kaestral-ltx && curl localhost:8000/health   # should say ok
    # idle watchdog is already enabled by setup.sh
    sudo shutdown -h now      # or click Stop — billing stops within seconds
    ```
 
-## Part B — Connect Maestro (one time)
+## Part B — Connect Kaestral (one time)
 
-1. Open **Generate** in Maestro → provider **My GPU (LTX)**.
+1. Open **Generate** in Kaestral → provider **My GPU (LTX)**.
 2. Paste the **shared secret** (the same token you set on the VM) → **Save**.
 3. Fill in **Project ID**, **Zone** (`us-central1-a`), **Instance** (`ltx-gpu`), **Port** (`8000`).
-4. Install the **Google Cloud CLI** on your PC and run `gcloud auth login` once. *(Maestro uses it to
+4. Install the **Google Cloud CLI** on your PC and run `gcloud auth login` once. *(Kaestral uses it to
    start/stop the VM for you.)*
 
 ## Part C — Daily use (the loop)
 
-1. Click **▶ Start GPU** — Maestro boots the VM and waits until it's ready (~2–4 min the first time).
+1. Click **▶ Start GPU** — Kaestral boots the VM and waits until it's ready (~2–4 min the first time).
 2. Type a prompt → **Generate**. The clip renders on the GPU and **drops onto your timeline**. Repeat
    for as many clips as you want — the GPU stays warm.
 3. Click **■ Stop GPU** when you're done. **Billing stops.**
@@ -104,7 +104,7 @@ Do these in order. Each is one action.
 In order of trust — each catches a failure the one above it might miss:
 
 1. **On-VM idle watchdog (primary).** A script on the VM checks every 5 min; if the GPU has been idle
-   **15 minutes**, the VM **stops itself**. This fires even if Maestro crashes, your laptop sleeps, or
+   **15 minutes**, the VM **stops itself**. This fires even if Kaestral crashes, your laptop sleeps, or
    your Wi-Fi drops mid-batch. It doesn't depend on your PC at all.
 2. **GCP max-run-duration (4h).** Set at VM creation — Google force-stops the VM 4 hours after each
    boot, even if the watchdog wedges.
@@ -138,6 +138,6 @@ gcloud compute instances create ltx-gpu \
 - LTX generation is a **paid-tier feature later** — this is you testing capability on free credits now.
 - The `ltx_server.py` inference call is a **placeholder you wire to the real LTX-2 pipeline** (the repo's
   pipeline API changes; the wrapper is intentionally thin). Everything around it — the API, the job
-  queue, the activity stamp, the idle watchdog, and the Maestro integration — is done.
+  queue, the activity stamp, the idle watchdog, and the Kaestral integration — is done.
 - Speed/VRAM for LTX-2 on an L4 is **not officially published**; step 8 (one real clip) is how you
   confirm it before committing to 600.

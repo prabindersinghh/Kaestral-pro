@@ -79,7 +79,7 @@ export async function transcribe(
   const model = opts.model ?? "base.en";
   const language = opts.language ?? (model.endsWith(".en") ? "en" : "auto");
   const modelPath = await ensureModel(model);
-  const dir = await mkdtemp(join(tmpdir(), "maestro-stt-"));
+  const dir = await mkdtemp(join(tmpdir(), "kaestral-stt-"));
   const wav = join(dir, "stt.wav");
   const outBase = join(dir, "stt");
   try {

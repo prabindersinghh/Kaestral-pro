@@ -9,12 +9,12 @@ import {
   Easing,
 } from "remotion";
 
-export interface MaestroLaunchProps {
+export interface KaestralLaunchProps {
   durationSeconds?: number;
 }
 
 // ---------------------------------------------------------------------------
-// 60-second launch film for Maestro. Eight scenes on a shared dark brand
+// 60-second launch film for Kaestral. Eight scenes on a shared dark brand
 // system: hook → logo sting → editor UI → agent demo → features → stats →
 // tagline → end card. All timing in frames @ 30fps.
 // ---------------------------------------------------------------------------
@@ -144,7 +144,7 @@ const Hook: React.FC<{ len: number }> = ({ len }) => {
   );
 };
 
-// The Maestro mark (from app-icon.png): three timeline bars — green on top,
+// The Kaestral mark (from app-icon.png): three timeline bars — green on top,
 // two grays below. Rebuilt as vectors so the bars can animate like clips.
 // `t(i)` is a 0..1 progress per bar; pass () => 1 for the static version.
 const LogoMark: React.FC<{ size: number; t?: (i: number) => number; glow?: boolean }> = ({
@@ -375,7 +375,7 @@ const EditorScene: React.FC<{ len: number }> = ({ len }) => {
             <div style={{ marginLeft: 16 }}>
               <LogoMark size={24} />
             </div>
-            <div style={{ marginLeft: 10, fontFamily: MONO, fontSize: 16, color: DIM }}>Maestro — trip-2026.palmier</div>
+            <div style={{ marginLeft: 10, fontFamily: MONO, fontSize: 16, color: DIM }}>Kaestral — trip-2026.palmier</div>
           </div>
           {/* main area */}
           <div style={{ display: "flex", height: H - 46 - TL, padding: 14, gap: 14 }}>
@@ -613,7 +613,7 @@ const TaglineScene: React.FC<{ len: number }> = ({ len }) => {
           You direct.
         </div>
         <div style={{ fontFamily: SANS, fontWeight: 800, fontSize: 116, letterSpacing: -2, marginTop: 10, opacity: l2, transform: `translateY(${(1 - l2) * 40}px)`, background: `linear-gradient(90deg, ${ACCENT}, ${ACCENT2})`, WebkitBackgroundClip: "text", color: "transparent" }}>
-          Maestro performs.
+          Kaestral performs.
         </div>
       </div>
     </AbsoluteFill>
@@ -621,7 +621,7 @@ const TaglineScene: React.FC<{ len: number }> = ({ len }) => {
 };
 
 // ------------------------------------------------------------------- root
-export const MaestroLaunch: React.FC<MaestroLaunchProps> = () => {
+export const KaestralLaunch: React.FC<KaestralLaunchProps> = () => {
   const frame = useCurrentFrame();
   const { durationInFrames } = useVideoConfig();
   // scene cue points (frames)
@@ -653,7 +653,7 @@ export const MaestroLaunch: React.FC<MaestroLaunchProps> = () => {
         <TaglineScene len={S.end - S.tagline} />
       </Sequence>
       <Sequence from={S.end} durationInFrames={durationInFrames - S.end}>
-        <LogoSting len={durationInFrames - S.end} tagline="Free. Open source. On Windows, today." sub="github.com/prabindersinghh/Maestro-pro" cta />
+        <LogoSting len={durationInFrames - S.end} tagline="Free. Open source. On Windows, today." sub="github.com/prabindersinghh/Kaestral-pro" cta />
       </Sequence>
     </AbsoluteFill>
   );

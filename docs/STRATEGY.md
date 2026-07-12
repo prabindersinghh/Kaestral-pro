@@ -1,22 +1,22 @@
-# Maestro strategy — beat Palmier by being open
+# Kaestral strategy — beat Palmier by being open
 
-**Maestro = Palmier's open editor (done) + transcript-based smart editing + prompt-to-motion-graphics
+**Kaestral = Palmier's open editor (done) + transcript-based smart editing + prompt-to-motion-graphics
 + free open AI generation — all local/free, all Claude-driven over MCP.**
 
 Palmier bet on a **closed paid cloud** for its headline generation, and — per its own FAQ — has **no
 transitions, no motion graphics, and no transcript-based editing**. We don't win by copying Palmier;
 we win by wiring in free, open, Claude-driven tools Palmier structurally can't match, all landing in
-Maestro's timeline through the one integration seam that already works: the **`import_media` MCP tool**.
+Kaestral's timeline through the one integration seam that already works: the **`import_media` MCP tool**.
 
 ## The integration seam (non-negotiable)
-Every generated or externally-edited clip lands in Maestro's timeline via **`import_media`** (path or
-upload → ffprobe → asset → the app and Claude both see it). We do **not** rebuild Maestro's editor,
+Every generated or externally-edited clip lands in Kaestral's timeline via **`import_media`** (path or
+upload → ffprobe → asset → the app and Claude both see it). We do **not** rebuild Kaestral's editor,
 compositor, or timeline — companion tools **produce an MP4** and Claude **imports it**. New
 capabilities ship as **Claude-Code skills** and/or **companion MCP servers** that run alongside
-Maestro's MCP (`127.0.0.1:19789`) so Claude has everything in one session.
+Kaestral's MCP (`127.0.0.1:19789`) so Claude has everything in one session.
 
 ## Ground rules
-1. One numbered piece at a time, in order. After each: verify **live in the running Maestro app with a
+1. One numbered piece at a time, in order. After each: verify **live in the running Kaestral app with a
    real file** (not just tests — placeholders have fooled us before), screenshot into
    `docs/screenshots/`, and give exact user test steps.
 2. Everything feeds the timeline via `import_media`. Don't rebuild; feed in.
@@ -35,7 +35,7 @@ skill; outputs `<videos_dir>/edit/final.mp4`.
 - **Needs from you:** an **ElevenLabs API key** (free tier fine) — elevenlabs.io/app/settings/api-keys.
 - **Local prereqs (all present):** Python 3.11, uv 0.10, ffmpeg 8.0, git.
 - **Seam:** after `final.mp4` is produced, Claude calls `import_media { path: ".../edit/final.mp4" }`
-  → the cleaned clip appears on Maestro's timeline and exports.
+  → the cleaned clip appears on Kaestral's timeline and exports.
 - **License note:** MIT — compatible; attribute in NOTICE.
 
 ### ② Prompt → motion graphics — Remotion + Motion Canvas + Manim (Palmier has none)
@@ -50,18 +50,18 @@ animated titles/intros/outros/overlays **as code → MP4**, imported onto the ti
 ### ③ Free open AI generation — un-stub generate_video/generate_image (Palmier's paid part, made free)
 Primary: **LTX-2** (Apache-2.0, open weights, 4K + synced audio, free commercial under $10M rev).
 Alt unified backend: Anil-matcha/Open-Generative-AI (MIT; wraps Flux, Wan 2.2, LTX, Kling).
-Rewire Maestro's stubbed `generate_video`/`generate_image` to call a real generator: **local LTX-2 if a
+Rewire Kaestral's stubbed `generate_video`/`generate_image` to call a real generator: **local LTX-2 if a
 capable NVIDIA GPU is present, else a hosted API (Fal / Replicate)**. Result auto-imports to the
 timeline — reconstructing Palmier's "prompt → media on timeline" loop, open/free.
 - **Needs from you:** GPU check (below) + either GPU VRAM (LTX-2 local) or a Fal/Replicate key (hosted,
   per-generation cost). **Decision gate:** confirm hardware, then local-vs-hosted + cost.
-- **Companion-MCP scope (the seam):** a tiny `maestro-gen` MCP with `generate(prompt, kind, seconds)`
+- **Companion-MCP scope (the seam):** a tiny `kaestral-gen` MCP with `generate(prompt, kind, seconds)`
   that calls the chosen backend, downloads the result to disk, and returns the path; Claude then calls
-  Maestro's `import_media`. Keeps generation isolated and swappable. **Not built yet — scoped only.**
+  Kaestral's `import_media`. Keeps generation isolated and swappable. **Not built yet — scoped only.**
 
 ### ④ Skills system — teach Claude to edit like a pro (partly done)
 Palmier's own skills mechanism is **already ported and live over MCP** (`read_skill` + `list_skills`,
-fetching `palmier-io/palmier-skills`; see `src/mcp/skills.ts`). Remaining: author Maestro-specific
+fetching `palmier-io/palmier-skills`; see `src/mcp/skills.ts`). Remaining: author Kaestral-specific
 skills — **"youtube-short"** and **"talking-head-cleanup"** — that chain ①–③ end to end (e.g. video-use
 clean → captions → motion-graphic intro → export).
 
@@ -73,7 +73,7 @@ clean → captions → motion-graphic intro → export).
 ## License ledger (running)
 | Tool | License | Use |
 |------|---------|-----|
-| Palmier Pro (upstream) | GPLv3 | editor/format/MCP/skills — Maestro is a GPLv3 derivative |
+| Palmier Pro (upstream) | GPLv3 | editor/format/MCP/skills — Kaestral is a GPLv3 derivative |
 | palmier-io/palmier-skills | (repo license) | skill bodies fetched at runtime |
 | browser-use/video-use | MIT | ① transcript editing |
 | Remotion | custom (free for small orgs) | ② — **verify before commercial** |

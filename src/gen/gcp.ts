@@ -1,7 +1,7 @@
-// GCP GPU VM lifecycle for the gcp-ltx provider — start / stop / status, driven from Maestro's
+// GCP GPU VM lifecycle for the gcp-ltx provider — start / stop / status, driven from Kaestral's
 // server via the `gcloud` CLI (installed during the GCP setup). This is the FAST-PATH control the
 // user clicks; it is NOT the credit safety net — the on-VM idle watchdog is (it stops the box even
-// if Maestro/PC is gone). Start = boot the VM → wait for its external IP → poll the LTX /health until
+// if Kaestral/PC is gone). Start = boot the VM → wait for its external IP → poll the LTX /health until
 // ready → hand back the baseUrl. Stop = a clean shutdown that halts GPU/vCPU billing within seconds.
 
 import { spawn } from "node:child_process";
@@ -69,7 +69,7 @@ export async function startVm(c: GpuConfig, r: GcpRunner = realRunner, onStep?: 
     if (await r.health(`${baseUrl}/health`)) { onStep?.("GPU ready."); return baseUrl; }
     await r.sleep(5000);
   }
-  throw new Error("The GPU booted but the LTX server never became ready (7.5 min). SSH in and check `systemctl status maestro-ltx`.");
+  throw new Error("The GPU booted but the LTX server never became ready (7.5 min). SSH in and check `systemctl status kaestral-ltx`.");
 }
 
 /** Stop the VM — halts GPU/vCPU billing within seconds (boot disk with the model cache is kept). */

@@ -13,7 +13,7 @@ import type { Clip, Timeline } from "../../model/types";
 // has a 1s LEFT HANDLE (required for a cross-dissolve), placed to butt against A. After
 // addTransitionsAtCuts, the boundary frame should show BOTH clips blended (red AND green present) —
 // proving the compositor renders the overlap as a real dissolve, in the actual FFmpeg export.
-const dir = mkdtempSync(join(tmpdir(), "maestro-xdissolve-"));
+const dir = mkdtempSync(join(tmpdir(), "kaestral-xdissolve-"));
 const redPath = join(dir, "red.mp4");
 const greenPath = join(dir, "green.mp4");
 

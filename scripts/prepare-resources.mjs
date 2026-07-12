@@ -49,7 +49,7 @@ cpSync(path.join(root, "remotion"), path.join(res, "remotion"), {
   filter: (src) => !/[\\/](node_modules|\.bundle-cache)([\\/]|$)/.test(src),
 });
 
-// 7) Bundled skill library (Maestro's own editing playbooks — served by read_skill offline).
+// 7) Bundled skill library (Kaestral's own editing playbooks — served by read_skill offline).
 cpSync(path.join(root, "skills"), path.join(res, "skills"), { recursive: true });
 
 // 8) Bundled whisper.cpp CLI (on-device transcription). The model .bin downloads on first use.

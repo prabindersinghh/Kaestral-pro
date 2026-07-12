@@ -166,7 +166,7 @@ export class McpExecutor {
 
   private whisperMissing(): ToolResult {
     return err(
-      "Transcription needs the on-device speech model. The whisper engine ships with the Maestro installer; " +
+      "Transcription needs the on-device speech model. The whisper engine ships with the Kaestral installer; " +
       "in a dev run set MAESTRO_WHISPER to a whisper-cli binary. On first use the language model (~142 MB) " +
       "downloads automatically. This is a setup step, not a failure.",
     );
@@ -462,7 +462,7 @@ export class McpExecutor {
         );
       }
       return err(
-        "Generation needs your own Fal or Replicate key. Open Settings → Generation in Maestro and paste your key " +
+        "Generation needs your own Fal or Replicate key. Open Settings → Generation in Kaestral and paste your key " +
         "(pay-per-clip on your account: ~$0.02–0.10/video, ~$0.003–0.03/image). Then retry. This is a setup step, not a failure.",
       );
     }
@@ -523,17 +523,17 @@ export class McpExecutor {
 
   private async run(name: string, a: Args): Promise<ToolResult> {
     switch (name) {
-      // Skills (Maestro extension — Palmier Agent/Skills over MCP)
+      // Skills (Kaestral extension — Palmier Agent/Skills over MCP)
       case "list_skills": return okJson({ skills: (await this.skills.catalog()).map((s) => ({ id: s.id, name: s.name, description: s.description })) });
       case "read_skill": {
         const id = requireStr(a, "id");
         const body = await this.skills.body(id);
         return body ? ok(body) : err(`Unknown skill: ${id}. Call list_skills to see available skills.`);
       }
-      // Motion graphics (Maestro extension)
+      // Motion graphics (Kaestral extension)
       case "generate_title": return this.generateTitle(a);
       case "generate_motion": return this.generateMotion(a);
-      // Analysis + perception (Maestro extension)
+      // Analysis + perception (Kaestral extension)
       case "analyze_audio": return this.analyzeAudio(a);
       case "extract_palette": return this.extractPalette(a);
       case "see_video": return this.seeVideo(a);

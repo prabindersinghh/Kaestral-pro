@@ -27,7 +27,7 @@ export function demoProject(): { timeline: Timeline; media: MediaLibrary } {
 
   // Title (text) — top track.
   const title = clip({ id: "c-title", mediaRef: "text-title", start: 0, dur: 150, mediaType: "text" });
-  title.textContent = "Maestro";
+  title.textContent = "Kaestral";
   title.textStyle = { ...defaultTextStyle(), fontSize: 84 };
   title.transform = { centerX: 0.5, centerY: 0.82, width: 0.9, height: 0.2, rotation: 0, flipHorizontal: false, flipVertical: false };
 

@@ -24,15 +24,15 @@ async function rpc(method: string, params: unknown, headers: Record<string, stri
   return { status: res.status, json };
 }
 
-describe("Stage-C: MCP HTTP transport (maestro on 127.0.0.1)", () => {
+describe("Stage-C: MCP HTTP transport (kaestral on 127.0.0.1)", () => {
   it("frozen transport constants", () => {
     expect(MCP_PORT).toBe(19789);
     expect(MCP_HOST).toBe("127.0.0.1");
   });
 
-  it("initialize returns maestro 1.0.0 with tools capability", async () => {
+  it("initialize returns kaestral 1.0.0 with tools capability", async () => {
     const { json } = await rpc("initialize", { protocolVersion: "2025-06-18" });
-    expect(json.result.serverInfo).toEqual({ name: "maestro", version: "1.0.0" });
+    expect(json.result.serverInfo).toEqual({ name: "palmier-pro", version: "1.0.0" });
     expect(json.result.capabilities.tools).toBeDefined();
     expect(json.result.capabilities.resources).toBeDefined();
   });
@@ -43,7 +43,7 @@ describe("Stage-C: MCP HTTP transport (maestro on 127.0.0.1)", () => {
     // The frozen 41 parity tools are all still advertised.
     for (const n of TOOL_NAMES) expect(names).toContain(n);
     expect(names).toContain("get_timeline");
-    // Plus the Maestro extensions: Skills + motion graphics.
+    // Plus the Kaestral extensions: Skills + motion graphics.
     expect(names).toContain("read_skill");
     expect(names).toContain("list_skills");
     expect(names).toContain("generate_title");
@@ -66,8 +66,8 @@ describe("Stage-C: MCP HTTP transport (maestro on 127.0.0.1)", () => {
   it("resources/list exposes the two model resources", async () => {
     const { json } = await rpc("resources/list", {});
     expect(json.result.resources.map((r: { uri: string }) => r.uri)).toEqual([
-      "maestro://models/video",
-      "maestro://models/image",
+      "palmier-pro://models/video",
+      "palmier-pro://models/image",
     ]);
   });
 

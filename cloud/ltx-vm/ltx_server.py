@@ -1,5 +1,5 @@
-# Maestro LTX-2 server — the thin HTTP wrapper that runs ON the GCP GPU VM.
-# Maestro POSTs a prompt here; this runs LTX-2 and returns a video URL that Maestro downloads and
+# Kaestral LTX-2 server — the thin HTTP wrapper that runs ON the GCP GPU VM.
+# Kaestral POSTs a prompt here; this runs LTX-2 and returns a video URL that Kaestral downloads and
 # drops on the timeline (same contract as Fal/Replicate). There is NO official LTX-2 API server, so
 # this is our own small FastAPI wrapper. It is deliberately simple and defensive about credits:
 # every request stamps an activity file so the on-VM idle watchdog never stops the box mid-batch.
@@ -10,7 +10,7 @@
 #   GET  /jobs/{jobId}   -> {status, url?}   (status: running | done | error)
 #   GET  /media/{name}  -> serves the MP4 if you didn't configure a GCS bucket
 #
-# Run under systemd (see maestro-ltx.service) so it auto-starts on every boot.
+# Run under systemd (see kaestral-ltx.service) so it auto-starts on every boot.
 
 import os, sys, threading, time, uuid, subprocess, traceback
 from pathlib import Path
@@ -21,7 +21,7 @@ import uvicorn
 
 # --- config (env-overridable) ---
 PORT = int(os.environ.get("LTX_PORT", "8000"))
-TOKEN = os.environ.get("LTX_TOKEN", "")                       # shared secret; Maestro sends it as a Bearer token
+TOKEN = os.environ.get("LTX_TOKEN", "")                       # shared secret; Kaestral sends it as a Bearer token
 ACTIVITY_FILE = os.environ.get("LTX_ACTIVITY_FILE", "/var/run/ltx_last_activity")
 OUT_DIR = Path(os.environ.get("LTX_OUT_DIR", "/opt/ltx/out")); OUT_DIR.mkdir(parents=True, exist_ok=True)
 GCS_BUCKET = os.environ.get("LTX_GCS_BUCKET", "")             # optional: gs://bucket — results survive VM stop
@@ -40,7 +40,7 @@ GEMMA_ROOT = os.environ.get("LTX_GEMMA_ROOT", f"{MODELS_DIR}/gemma-3-12b")
 FPS = float(os.environ.get("LTX_FPS", "24"))
 CPU_OFFLOAD = os.environ.get("LTX_OFFLOAD", "cpu")           # keep on 24GB L4; set "" on a big GPU
 
-app = FastAPI(title="Maestro LTX-2 server")
+app = FastAPI(title="Kaestral LTX-2 server")
 _jobs: dict[str, dict] = {}
 _pipeline = None
 _ready = threading.Event()
@@ -135,7 +135,7 @@ def _run_job(job_id: str, req: GenReq):
 
 
 def _publish(path: Path) -> str:
-    """Return a URL Maestro can download. Prefer GCS (survives VM stop); else serve from this box."""
+    """Return a URL Kaestral can download. Prefer GCS (survives VM stop); else serve from this box."""
     if GCS_BUCKET:
         dest = f"{GCS_BUCKET}/{path.name}"
         subprocess.run(["gsutil", "-q", "cp", str(path), dest], check=True)

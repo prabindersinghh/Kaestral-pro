@@ -5,9 +5,9 @@ description: Apply modern short-form caption looks — word-pop, karaoke highlig
 
 # Trending caption styles
 
-Follow the `build-in-maestro` house rule: add captions as real text clips ON the Maestro timeline via `add_texts`/`update_text` (the user watches them appear); never burn captions into a standalone file outside Maestro. The final video comes from `export_project(mode:"video")`.
+Follow the `build-in-kaestral` house rule: add captions as real text clips ON the Kaestral timeline via `add_texts`/`update_text` (the user watches them appear); never burn captions into a standalone file outside Kaestral. The final video comes from `export_project(mode:"video")`.
 
-Captions drive retention (most short-form is watched muted). Maestro renders and animates text via `add_texts`/`update_text` with `textStyle` + a `textAnimation` preset. Below are the looks that read as "modern short-form" and exactly how to build each.
+Captions drive retention (most short-form is watched muted). Kaestral renders and animates text via `add_texts`/`update_text` with `textStyle` + a `textAnimation` preset. Below are the looks that read as "modern short-form" and exactly how to build each.
 
 ## Placement + sizing (do this for all styles)
 - Vertical (9:16): place captions in the LOWER-MIDDLE, above the platform UI safe zone (roughly 12–20% up from the bottom). Hooks go TOP third.

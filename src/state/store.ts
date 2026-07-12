@@ -25,7 +25,7 @@ const lsSet = (k: string, v: string): void => { try { if (typeof localStorage !=
 //   • a build env var:  VITE_MAESTRO_GEN=1   (dev / a private build)
 //   • the console:       window.store.enableGenDev(true)   (persists in localStorage)
 const envGen = (() => { try { return (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_MAESTRO_GEN === "1"; } catch { return false; } })();
-const genDevDefault = envGen || lsGet("maestro.genDev") === "1";
+const genDevDefault = envGen || lsGet("kaestral.genDev") === "1";
 
 const PROP_TO_KEY: Record<AnimatableProperty, keyof Clip> = {
   opacity: "opacityTrack", position: "positionTrack", scale: "scaleTrack",
@@ -61,19 +61,19 @@ export class EditorStore {
     genDevMode: genDevDefault,
     /** "Pro / AI features — join the waitlist" (visible; gauges demand without exposing generation). */
     showWaitlist: false,
-    waitlistJoined: lsGet("maestro.waitlist") === "1",
-    apiKey: lsGet("maestro.apiKey") ?? "",
-    model: lsGet("maestro.model") ?? "claude-sonnet-5",
-    connectMode: (lsGet("maestro.connectMode") as "choose" | "inapp" | "claudecode") ?? "choose",
+    waitlistJoined: lsGet("kaestral.waitlist") === "1",
+    apiKey: lsGet("kaestral.apiKey") ?? "",
+    model: lsGet("kaestral.model") ?? "claude-sonnet-5",
+    connectMode: (lsGet("kaestral.connectMode") as "choose" | "inapp" | "claudecode") ?? "choose",
     showChat: false,
     // Hosted-generation BYOK (Fal/Replicate/gcp-ltx). The key persists locally and is pushed to the server.
-    genProvider: (lsGet("maestro.genProvider") as "fal" | "replicate" | "gcp-ltx") ?? "fal",
-    genKey: lsGet("maestro.genKey") ?? "",
+    genProvider: (lsGet("kaestral.genProvider") as "fal" | "replicate" | "gcp-ltx") ?? "fal",
+    genKey: lsGet("kaestral.genKey") ?? "",
     // gcp-ltx GPU VM lifecycle config (your own LTX server on a Google Cloud GPU).
-    gpuProject: lsGet("maestro.gpuProject") ?? "",
-    gpuZone: lsGet("maestro.gpuZone") ?? "us-central1-a",
-    gpuInstance: lsGet("maestro.gpuInstance") ?? "ltx-gpu",
-    gpuPort: Number(lsGet("maestro.gpuPort") ?? "8000"),
+    gpuProject: lsGet("kaestral.gpuProject") ?? "",
+    gpuZone: lsGet("kaestral.gpuZone") ?? "us-central1-a",
+    gpuInstance: lsGet("kaestral.gpuInstance") ?? "ltx-gpu",
+    gpuPort: Number(lsGet("kaestral.gpuPort") ?? "8000"),
   };
   private listeners = new Set<() => void>();
   private version = 0;
@@ -193,10 +193,10 @@ export class EditorStore {
   /** Join the Pro/AI-features waitlist. POSTs to VITE_WAITLIST_URL if set; else signals a mailto fallback. */
   async joinWaitlist(email: string): Promise<{ ok: boolean; mode: "posted" | "mailto" | "error"; detail?: string }> {
     const url = ((): string => { try { return (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_WAITLIST_URL ?? ""; } catch { return ""; } })();
-    const markJoined = () => { this.settings.waitlistJoined = true; lsSet("maestro.waitlist", "1"); this.emit(); };
+    const markJoined = () => { this.settings.waitlistJoined = true; lsSet("kaestral.waitlist", "1"); this.emit(); };
     if (url) {
       try {
-        const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, source: "maestro-pro-waitlist" }) });
+        const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, source: "kaestral-pro-waitlist" }) });
         if (r.ok) { markJoined(); return { ok: true, mode: "posted" }; }
         return { ok: false, mode: "error", detail: `Server returned ${r.status}. Try again in a moment.` };
       } catch (e) { return { ok: false, mode: "error", detail: e instanceof Error ? e.message : String(e) }; }
@@ -209,24 +209,24 @@ export class EditorStore {
   /** Toggle the hidden generation dev flag (console-only: window.store.enableGenDev(true)). Persists locally. */
   enableGenDev(on: boolean): void {
     this.settings.genDevMode = on;
-    lsSet("maestro.genDev", on ? "1" : "0");
+    lsSet("kaestral.genDev", on ? "1" : "0");
     if (!on) this.settings.showGenerate = false;
     this.emit();
     // eslint-disable-next-line no-console
-    console.info(`[maestro] generation dev mode ${on ? "ENABLED — Generate button now visible in Media panel" : "disabled — no generation UI"}.`);
+    console.info(`[kaestral] generation dev mode ${on ? "ENABLED — Generate button now visible in Media panel" : "disabled — no generation UI"}.`);
   }
   openChat(open: boolean): void { this.settings.showChat = open; this.emit(); }
-  setApiKey(k: string): void { this.settings.apiKey = k; lsSet("maestro.apiKey", k); this.emit(); }
-  setModel(m: string): void { this.settings.model = m; lsSet("maestro.model", m); this.emit(); }
-  setConnectMode(m: "choose" | "inapp" | "claudecode"): void { this.settings.connectMode = m; lsSet("maestro.connectMode", m); this.emit(); }
+  setApiKey(k: string): void { this.settings.apiKey = k; lsSet("kaestral.apiKey", k); this.emit(); }
+  setModel(m: string): void { this.settings.model = m; lsSet("kaestral.model", m); this.emit(); }
+  setConnectMode(m: "choose" | "inapp" | "claudecode"): void { this.settings.connectMode = m; lsSet("kaestral.connectMode", m); this.emit(); }
   /** Pull the latest server state now (after the in-app agent runs a tool) so edits show instantly. */
   async syncNow(): Promise<void> { await this.bridge?.syncNow(); }
 
   // --- hosted generation (BYOK) ---
-  setGenProvider(p: "fal" | "replicate" | "gcp-ltx"): void { this.settings.genProvider = p; lsSet("maestro.genProvider", p); this.emit(); void this.pushGenConfig(); }
+  setGenProvider(p: "fal" | "replicate" | "gcp-ltx"): void { this.settings.genProvider = p; lsSet("kaestral.genProvider", p); this.emit(); void this.pushGenConfig(); }
   /** Save the generation key locally + push it to the server so generate_video/image can use it. */
   async saveGenKey(key: string): Promise<void> {
-    this.settings.genKey = key; lsSet("maestro.genKey", key);
+    this.settings.genKey = key; lsSet("kaestral.genKey", key);
     await this.bridge?.saveGenConfig({ provider: this.settings.genProvider, apiKey: key });
     this.emit();
   }
@@ -237,8 +237,8 @@ export class EditorStore {
 
   // --- gcp-ltx GPU lifecycle (start/stop the LTX VM) ---
   gpuState: { status: string; detail?: string; baseUrl?: string } = { status: "stopped" };
-  setGpuField(k: "gpuProject" | "gpuZone" | "gpuInstance", v: string): void { this.settings[k] = v; lsSet(`maestro.${k}`, v); this.emit(); }
-  setGpuPort(v: number): void { this.settings.gpuPort = v; lsSet("maestro.gpuPort", String(v)); this.emit(); }
+  setGpuField(k: "gpuProject" | "gpuZone" | "gpuInstance", v: string): void { this.settings[k] = v; lsSet(`kaestral.${k}`, v); this.emit(); }
+  setGpuPort(v: number): void { this.settings.gpuPort = v; lsSet("kaestral.gpuPort", String(v)); this.emit(); }
   /** Push the VM config to the server (project/zone/instance/port + token=genKey). */
   async saveGpuConfig(): Promise<void> {
     await this.bridge?.saveGpuConfig({ project: this.settings.gpuProject, zone: this.settings.gpuZone, instance: this.settings.gpuInstance, port: this.settings.gpuPort, token: this.settings.genKey });
@@ -259,7 +259,7 @@ export class EditorStore {
   }
   /** Run a generation tool (generate_video/generate_image) from the UI; result auto-imports+places. */
   async generate(kind: "video" | "image", prompt: string, opts: { aspectRatio?: string; durationSeconds?: number } = {}): Promise<Record<string, unknown>> {
-    if (!this.bridge) throw new Error("Not connected to the Maestro server.");
+    if (!this.bridge) throw new Error("Not connected to the Kaestral server.");
     return this.bridge.callTool(kind === "video" ? "generate_video" : "generate_image", { prompt, ...opts });
   }
   setExportDefaults(p: { codec?: string; resolution?: string }): void {

@@ -1,4 +1,4 @@
-// Render a Remotion composition to MP4 by id + input props. Invoked by the Maestro server
+// Render a Remotion composition to MP4 by id + input props. Invoked by the Kaestral server
 // (generate_motion). Bundles once and caches the bundle in .bundle-cache for fast repeat renders;
 // ensureBrowser() fetches the headless Chromium on first use.
 //

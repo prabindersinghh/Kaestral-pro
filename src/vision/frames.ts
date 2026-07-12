@@ -1,4 +1,4 @@
-// Video vision — Maestro's OWN implementation. Extracts frames with the bundled FFmpeg and returns
+// Video vision — Kaestral's OWN implementation. Extracts frames with the bundled FFmpeg and returns
 // them base64-encoded so a vision-capable model (Claude Code over MCP, or the in-app agent via the
 // Messages API) can actually SEE the footage — to find the best moments, read the subject/framing,
 // and edit on what's in the video, not just its rhythm/color. Ideas informed by the permissive
@@ -48,7 +48,7 @@ export async function extractFrames(
   const maxDim = Math.max(128, Math.min(1024, opts.maxDim ?? 512));
   const mode = opts.mode ?? "interval";
   const scale = `scale='min(${maxDim},iw)':-2`;
-  const dir = await mkdtemp(join(tmpdir(), "maestro-vision-"));
+  const dir = await mkdtemp(join(tmpdir(), "kaestral-vision-"));
   try {
     const frames: VisionFrame[] = [];
 

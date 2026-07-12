@@ -153,7 +153,7 @@ export function Editor() {
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: theme.color.base, color: theme.color.textPrimary, fontFamily: theme.font.ui, overflow: "hidden" }}>
       {/* Title bar */}
       <div style={{ display: "flex", alignItems: "center", gap: theme.space.smMd, height: 44, padding: `0 ${theme.space.mdLg}px`, borderBottom: `1px solid ${theme.color.borderPrimary}`, background: theme.color.raised, flex: "0 0 auto" }}>
-        <span style={{ fontSize: theme.fontSize.md, fontWeight: 600, letterSpacing: 0.2 }}>Maestro</span>
+        <span style={{ fontSize: theme.fontSize.md, fontWeight: 600, letterSpacing: 0.2 }}>Kaestral</span>
         <span
           title={store.bridge?.connected ? "Connected — the AI can edit your project" : "Reconnecting to the project engine…"}
           style={{ width: 7, height: 7, borderRadius: 4, background: store.bridge?.connected ? theme.color.success : "#e0a63b" }}
@@ -173,7 +173,7 @@ export function Editor() {
           <span style={{ width: 7, height: 7, borderRadius: 4, background: store.bridge?.connected ? theme.color.success : "#e0a63b" }} /> {store.settings.connectMode === "inapp" && store.settings.apiKey.trim() ? "AI Chat" : "Connect AI"}
         </button>
         <button
-          onClick={() => store.openWaitlist(true)} title="Maestro Pro — AI generation (join the waitlist)"
+          onClick={() => store.openWaitlist(true)} title="Kaestral Pro — AI generation (join the waitlist)"
           style={{ background: "transparent", color: theme.color.accent, border: `1px solid ${theme.color.borderSubtle}`, borderRadius: theme.radius.sm, padding: "6px 12px", fontSize: theme.fontSize.smMd, fontWeight: 600, cursor: "pointer", fontFamily: theme.font.ui }}
         >
           ✨ Pro

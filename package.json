@@ -1,9 +1,9 @@
 {
-  "name": "maestro",
+  "name": "kaestral",
   "private": true,
   "version": "0.0.1",
   "type": "module",
-  "description": "Maestro — AI-native video editor for Windows (a GPLv3 port of Palmier Pro). Tauri 2 + React + TypeScript.",
+  "description": "Kaestral — AI-native video editor for Windows (a GPLv3 port of Palmier Pro). Tauri 2 + React + TypeScript.",
   "license": "GPL-3.0-or-later",
   "scripts": {
     "dev": "vite",

@@ -12,7 +12,7 @@ import type { Clip } from "../../model/types";
 // palette-driven grade). Actions go through execute() (the thing under test); identity/state is read
 // from the raw engine timeline (get_timeline's compact form strips default fields like mediaType).
 
-const dir = mkdtempSync(join(tmpdir(), "maestro-reel-"));
+const dir = mkdtempSync(join(tmpdir(), "kaestral-reel-"));
 const reel = join(dir, "reel.mp4"); // 4s landscape video WITH audio: tone / ~1s silence / tone
 
 beforeAll(() => {

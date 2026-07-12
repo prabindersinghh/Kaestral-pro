@@ -5,7 +5,7 @@ description: Build a short promo or ad from a product/topic — hook, 2–4 bene
 
 # Promo / ad video
 
-Follow the `build-in-maestro` house rule — build it on the timeline, export from Maestro. A promo is a tight persuasive arc, not a montage. Keep it 15–30s unless told otherwise.
+Follow the `build-in-kaestral` house rule — build it on the timeline, export from Kaestral. A promo is a tight persuasive arc, not a montage. Keep it 15–30s unless told otherwise.
 
 ## The arc
 1. **Hook (0–3s)** — the problem or the wow. Open on the strongest shot (use `see_video` to find it) or a bold claim as a title (`generate_title`, `popIn`). Never open slow.

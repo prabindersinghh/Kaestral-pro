@@ -7,7 +7,7 @@ import { extractFrames } from "../frames";
 import { McpExecutor } from "../../mcp/executor";
 
 // A 3s clip that changes color halfway (red → blue) so scene sampling has something to find.
-const dir = mkdtempSync(join(tmpdir(), "maestro-vision-test-"));
+const dir = mkdtempSync(join(tmpdir(), "kaestral-vision-test-"));
 const clip = join(dir, "shots.mp4");
 
 beforeAll(() => {

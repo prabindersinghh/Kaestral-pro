@@ -8,7 +8,7 @@ import { theme, sectionLabelStyle } from "./theme";
 import { BRIDGE_URL } from "../state/bridge";
 
 const MCP_URL = `${BRIDGE_URL}/mcp`;
-const CONNECT_CMD = `claude mcp add --transport http maestro ${MCP_URL}`;
+const CONNECT_CMD = `claude mcp add --transport http kaestral ${MCP_URL}`;
 
 type Tab = "connect" | "project" | "export";
 
@@ -101,7 +101,7 @@ function ConnectChooser() {
           badge="Option A · Best experience"
           title="In-app chat"
           sub="Uses your own Anthropic API key"
-          points={["Chat right inside Maestro", "Attach files, edits happen live in the window", "Small cost per use (billed to your API key)"]}
+          points={["Chat right inside Kaestral", "Attach files, edits happen live in the window", "Small cost per use (billed to your API key)"]}
           onPick={() => store.setConnectMode("inapp")}
           cta="Set up in-app chat"
         />
@@ -157,7 +157,7 @@ function LaunchButton() {
     try {
       const { invoke } = await import("@tauri-apps/api/core");
       await invoke("launch_claude_code");
-      setStatus("A terminal opened — Claude is connecting to Maestro. Edits will appear here live.");
+      setStatus("A terminal opened — Claude is connecting to Kaestral. Edits will appear here live.");
     } catch (e) {
       setStatus(`Couldn't launch: ${e instanceof Error ? e.message : String(e)}. Make sure Claude Code is installed (see manual steps).`);
     }
@@ -166,15 +166,15 @@ function LaunchButton() {
     <div>
       <button
         onClick={launch} disabled={!inTauri}
-        title={inTauri ? "Open a terminal with Claude Code connected" : "Available in the Maestro app"}
+        title={inTauri ? "Open a terminal with Claude Code connected" : "Available in the Kaestral app"}
         style={{ width: "100%", background: inTauri ? theme.color.accent : theme.color.raised, color: inTauri ? "#1a1a1a" : theme.color.textMuted, border: "none", borderRadius: theme.radius.sm, padding: "11px", fontSize: theme.fontSize.md, fontWeight: 700, cursor: inTauri ? "pointer" : "default" }}
       >
         🚀 Launch Claude Code (connected)
       </button>
       <div style={{ marginTop: theme.space.sm, fontSize: theme.fontSize.xs, color: theme.color.textMuted }}>
         {inTauri
-          ? "One click — opens a terminal, connects to Maestro, and starts Claude. Requires Claude Code installed (npm i -g @anthropic-ai/claude-code)."
-          : "The launch button runs in the Maestro desktop app. In a browser, use the manual steps below."}
+          ? "One click — opens a terminal, connects to Kaestral, and starts Claude. Requires Claude Code installed (npm i -g @anthropic-ai/claude-code)."
+          : "The launch button runs in the Kaestral desktop app. In a browser, use the manual steps below."}
       </div>
       {status && <div style={{ marginTop: theme.space.sm, fontSize: theme.fontSize.xs, color: theme.color.textSecondary, lineHeight: 1.5 }}>{status}</div>}
     </div>
@@ -205,7 +205,7 @@ function ClaudeCodeSetup({ connected }: { connected: boolean }) {
         <div style={{ marginTop: theme.space.md }}>
           <div style={{ ...sectionLabelStyle, marginBottom: theme.space.sm }}>1 · Install Claude Code (once)</div>
           <Cmd cmd="npm i -g @anthropic-ai/claude-code" tag="install" />
-          <div style={{ ...sectionLabelStyle, margin: `${theme.space.md}px 0 ${theme.space.sm}px` }}>2 · Connect it to Maestro</div>
+          <div style={{ ...sectionLabelStyle, margin: `${theme.space.md}px 0 ${theme.space.sm}px` }}>2 · Connect it to Kaestral</div>
           <Cmd cmd={CONNECT_CMD} tag="add" />
           <div style={{ ...sectionLabelStyle, margin: `${theme.space.md}px 0 ${theme.space.sm}px` }}>3 · Start Claude and prompt it</div>
           <Cmd cmd="claude" tag="run" />
@@ -252,7 +252,7 @@ function ExportTab() {
           {["720p", "1080p", "2K", "4K", "Match Timeline"].map((r) => <option key={r} value={r}>{r}</option>)}
         </select>
       </Field>
-      <div style={{ fontSize: theme.fontSize.xs, color: theme.color.textMuted }}>The Export button uses these. Files land next to the project as maestro-export.mp4.</div>
+      <div style={{ fontSize: theme.fontSize.xs, color: theme.color.textMuted }}>The Export button uses these. Files land next to the project as kaestral-export.mp4.</div>
     </div>
   );
 }

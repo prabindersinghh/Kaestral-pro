@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Maestro LTX idle watchdog — the PRIMARY credit guard. Runs ON the GPU VM every ~5 min (systemd
+# Kaestral LTX idle watchdog — the PRIMARY credit guard. Runs ON the GPU VM every ~5 min (systemd
 # timer). Stops the VM when BOTH are true: the GPU has been idle AND no /generate|/jobs request has
 # arrived for IDLE_LIMIT_MIN minutes. Because it runs on the VM and calls `instances stop` itself, it
-# protects your $300 even if Maestro crashes, the laptop sleeps, or the network drops mid-batch.
+# protects your $300 even if Kaestral crashes, the laptop sleeps, or the network drops mid-batch.
 #
 # Requires: the VM created with --scopes=cloud-platform and its service account holding
 # roles/compute.instanceAdmin.v1 (compute.instances.stop). Trust order of the layered guards:

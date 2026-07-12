@@ -1,4 +1,4 @@
-// Design tokens — ported verbatim from Palmier's Sources/PalmierPro/UI/AppTheme.swift so Maestro
+// Design tokens — ported verbatim from Palmier's Sources/PalmierPro/UI/AppTheme.swift so Kaestral
 // matches the real app. Backgrounds/borders/text/track-colors/radii/spacing/font-sizes are the exact
 // Palmier values; timeline layout constants come from Utilities/Constants.swift.
 
