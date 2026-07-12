@@ -5,6 +5,7 @@ import { LogoReveal } from "./compositions/LogoReveal";
 import { DataViz } from "./compositions/DataViz";
 import { Transition } from "./compositions/Transition";
 import { HeroDemo } from "./compositions/HeroDemo";
+import { CondenseReel } from "./compositions/CondenseReel";
 
 const FPS = 30;
 const W = 1920;
@@ -19,6 +20,11 @@ export const RemotionRoot: React.FC = () => (
   <>
     <Composition
       id="HeroDemo" component={HeroDemo} fps={FPS} width={W} height={H} durationInFrames={300}
+      defaultProps={{ accent: "#16b16a", durationSeconds: 10 }}
+      calculateMetadata={dur}
+    />
+    <Composition
+      id="CondenseReel" component={CondenseReel} fps={FPS} width={1080} height={1920} durationInFrames={300}
       defaultProps={{ accent: "#16b16a", durationSeconds: 10 }}
       calculateMetadata={dur}
     />
