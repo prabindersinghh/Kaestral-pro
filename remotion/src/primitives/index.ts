@@ -20,14 +20,24 @@ import { Arrow } from "./Arrow";
 import { HighlightBox } from "./HighlightBox";
 import { PointerLine } from "./PointerLine";
 import { SpotlightDim } from "./SpotlightDim";
+import { SplitLayout } from "./SplitLayout";
+import { GridLayout } from "./GridLayout";
+import { TextOnPath } from "./TextOnPath";
+import { Countdown } from "./Countdown";
+import { setRegistry } from "./registry";
 
 export { Particles, Hairline };
 export { Waveform, Timeline, CaptionKaraoke, BarChart, LineChart, AreaChart, Counter };
 export { Image, Video, ScreenMock, Arrow, HighlightBox, PointerLine, SpotlightDim };
+export { SplitLayout, GridLayout, TextOnPath, Countdown };
+export { Mask } from "./Mask";
+export type { MaskShape, MaskReveal } from "./Mask";
 export { Camera, DEFAULT_CAMERA, cameraTransform, parallaxOffset, rackBlurFor } from "./Camera";
 export type { CameraSpec } from "./Camera";
 export { applyTransition, TRANSITION_FRAMES } from "./Transitions";
 export type { TransitionKind, TransitionStyles } from "./Transitions";
+export { applyKenBurns, applyDepthOfField, applyMotionBlur, applyLightingSweep } from "./modifiers";
+export type { KenBurnsSpec, LightingSweepSpec, MotionBlurResult } from "./modifiers";
 
 // Re-exported for beat-level background rendering (BG_KINDS "grid"/"glow" in sceneSpec.ts) —
 // consumed directly by Generative.tsx in a later task, not addressed by a SceneSpec element name
@@ -58,9 +68,13 @@ export { Grid, GlowField };
 /** Renders nothing. Placeholder for elements not yet implemented as primitives. */
 export const Noop: React.FC<PrimitiveProps> = () => null;
 
+// TASK 9 UPGRADE — the remaining Noop placeholders (textOnPath/splitLayout/gridLayout/countdown)
+// are now real primitives. ZERO Noop mappings remain: every SceneSpec element renders something
+// real. `setRegistry` publishes this map through `./registry.ts`'s indirection so SplitLayout/
+// GridLayout can look up nested child elements without a circular import back to this module.
 export const REGISTRY: Record<string, React.FC<PrimitiveProps>> = {
   text: Text,
-  textOnPath: Noop,
+  textOnPath: TextOnPath,
   video: Video,
   image: Image,
   screenMock: ScreenMock,
@@ -79,7 +93,9 @@ export const REGISTRY: Record<string, React.FC<PrimitiveProps>> = {
   highlightBox: HighlightBox,
   pointerLine: PointerLine,
   spotlightDim: SpotlightDim,
-  splitLayout: Noop,
-  gridLayout: Noop,
-  countdown: Noop,
+  splitLayout: SplitLayout,
+  gridLayout: GridLayout,
+  countdown: Countdown,
 };
+
+setRegistry(REGISTRY);

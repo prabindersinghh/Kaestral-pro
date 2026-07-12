@@ -1,6 +1,21 @@
 import { AbsoluteFill, Sequence, interpolate, useCurrentFrame } from "remotion";
-import { REGISTRY, Grid, GlowField, Particles, Camera, DEFAULT_CAMERA, parallaxOffset, rackBlurFor, applyTransition, TRANSITION_FRAMES } from "../primitives";
-import type { CameraSpec, TransitionKind } from "../primitives";
+import {
+  REGISTRY,
+  Grid,
+  GlowField,
+  Particles,
+  Camera,
+  DEFAULT_CAMERA,
+  parallaxOffset,
+  applyTransition,
+  TRANSITION_FRAMES,
+  Mask,
+  applyKenBurns,
+  applyDepthOfField,
+  applyMotionBlur,
+  applyLightingSweep,
+} from "../primitives";
+import type { CameraSpec, TransitionKind, MaskShape, MaskReveal } from "../primitives";
 import { TOKENS, tokenColor } from "../primitives/tokens";
 import type { PrimitiveProps, EnterSpec, StyleSpec } from "../primitives/types";
 
@@ -35,6 +50,38 @@ import type { PrimitiveProps, EnterSpec, StyleSpec } from "../primitives/types";
 //      whenever a layer's `enter` is missing or incomplete (no `anim` / no `easing`) so nothing
 //      defaults to a dead linear cut. An explicit `easing:"linear"` is always honored verbatim —
 //      defaults only fill gaps, they never override an authored choice.
+//
+// TASK 9 UPGRADE — "premium motion" primitives (masked reveals, multi-panel layouts,
+// depth-of-field, motion blur, kinetic typography, lighting sweeps, Ken Burns, stingers). Every
+// layer now runs through the four composable modifier helpers (`remotion/src/primitives/
+// modifiers.ts`) in a FIXED order, applied by `BeatLayer` below: kenBurns transform -> element ->
+// mask clip -> depth-of-field blur -> motion-blur/trail -> lighting-sweep overlay ->
+// opacity/position wrapper.
+//   6. `layer.mask` (shape circle/pill/rect/logo/wipe, reveal left/up/iris/none) clips the
+//      element via the new `Mask` primitive; `enter.anim === "maskReveal"` gets an implicit
+//      default mask (rect/left) so that enum value actually clips rather than falling through to
+//      a plain fade.
+//   7. `layer.kenBurns` (push/drift/zoom) applies a slow subtle scale/pan transform scoped to the
+//      one layer, independent of the beat's own Camera move — a still image/video can breathe on
+//      its own even on a static camera.
+//   8. `layer.depth` now also drives a baseline depth-of-field blur (foreground sharp, mid/
+//      background progressively blurred) even OUTSIDE a "rack" camera move; `applyDepthOfField`
+//      is the single source of truth for both that baseline and the existing rack-focus sweep.
+//   9. `layer.motionBlur` estimates the entrance spring's velocity and adds a directional blur +
+//      a faint trailing ghost duplicate while the element is still moving fast — nothing "just
+//      appears" at speed with a hard edge.
+//   10. `layer.lightingSweep` composites a specular diagonal light band sweeping across the
+//       layer, screen-blended, Apple-product-shot style.
+//   11. `layer.exit.anim === "glitch"` now renders an RGB-split/jitter/hue-shift burst on the
+//       layer's own wrapper starting at `exit.at`, reusing the same visual language as
+//       `Transitions.tsx`'s beat-level glitch transition.
+//   12. New nested-layout elements registered in the primitive REGISTRY: `splitLayout` (2 panels
+//       side-by-side/stacked with a hairline divider), `gridLayout` (2x2 or filmstrip), `textOnPath`
+//       (kinetic per-word typography arcing along a path, emphasis words in green/gold), and
+//       `countdown` (3-2-1 stinger with overshoot + glow ring). Nested panels/cells look up their
+//       child element through the SAME closed primitive REGISTRY (see `primitives/registry.ts`) —
+//       bounded data only, never a free-form component synthesized from a string. ZERO Noop
+//       mappings remain in REGISTRY after this task.
 
 export interface SceneMeta {
   aspect: "16:9" | "9:16" | "1:1";
@@ -62,6 +109,27 @@ export interface TransitionOut {
   snapToBeat?: boolean;
 }
 
+export interface MaskField {
+  shape: MaskShape;
+  reveal: MaskReveal;
+}
+
+export interface KenBurnsField {
+  move: "push" | "drift" | "zoom" | "none";
+  amount: number;
+}
+
+export interface LightingSweepField {
+  on: boolean;
+  angle: number;
+  speed: number;
+}
+
+export interface ExitField {
+  anim: "fade" | "collapse" | "glitch" | "none";
+  at: number;
+}
+
 export interface Layer {
   element: string;
   props: Record<string, unknown>;
@@ -69,8 +137,12 @@ export interface Layer {
   opacity: number;
   blur: number;
   depth?: "foreground" | "mid" | "background";
+  mask?: MaskField;
   motionBlur?: boolean;
+  kenBurns?: KenBurnsField;
+  lightingSweep?: LightingSweepField;
   enter?: EnterSpec;
+  exit?: ExitField;
   style?: StyleSpec;
 }
 
@@ -212,6 +284,41 @@ function resolveEnter(enter: EnterSpec | undefined): EnterSpec {
   return { ...enter, anim, easing };
 }
 
+/** Default mask used when `enter.anim === "maskReveal"` but the layer authored no explicit
+ * `mask` — a plain rect wipe from the left reads as a clean generic reveal for any element. */
+const DEFAULT_MASK_REVEAL: MaskField = { shape: "rect", reveal: "left" };
+
+/** How many frames the glitch exit's RGB-split/jitter burst lasts once `frame` reaches `exit.at`. */
+const EXIT_GLITCH_FRAMES = 12;
+
+/**
+ * Resolves an `exit.anim === "glitch"` burst into a wrapper style, active for a short window
+ * starting at `exit.at` (frame index within the beat) and BEYOND — once the burst itself finishes
+ * the layer stays fully faded (opacity 0), it never reverts to visible. Reuses the same
+ * RGB-split/jitter/hue-shift language as `Transitions.tsx`'s "glitch" beat transition (see
+ * applyTransition) so a per-layer glitch exit reads as the same family of effect, just scoped to
+ * one layer instead of the whole frame. Returns `undefined` only BEFORE `exit.at` (the layer hasn't
+ * started exiting yet) or for any other/no exit anim.
+ */
+function glitchExitStyle(exit: ExitField | undefined, frame: number): React.CSSProperties | undefined {
+  if (!exit || exit.anim !== "glitch") return undefined;
+  const local = frame - exit.at;
+  if (local < 0) return undefined; // exit hasn't started yet — render normally
+  if (local > EXIT_GLITCH_FRAMES) return { opacity: 0 }; // burst finished — stay gone, never pop back
+  const p = local / EXIT_GLITCH_FRAMES; // 0..1 across the burst
+  const jitter = Math.sin(p * 50) * (1 - p) * 14;
+  const split = Math.sin(p * Math.PI) * 10;
+  return {
+    opacity: 1 - p,
+    transform: `translateX(${jitter}px)`,
+    filter: [
+      `hue-rotate(${(1 - p) * 50}deg)`,
+      `drop-shadow(${split}px 0 0 rgba(255,0,64,0.55))`,
+      `drop-shadow(${-split}px 0 0 rgba(0,200,255,0.55))`,
+    ].join(" "),
+  };
+}
+
 const BeatLayer: React.FC<{
   layer: Layer;
   frame: number;
@@ -225,18 +332,30 @@ const BeatLayer: React.FC<{
   const Primitive = REGISTRY[layer.element];
   if (!Primitive) return null;
 
-  // Per-depth parallax offset + rack-focus blur, layered on top of the layer's authored blur —
-  // this is what makes "rack" / "parallax" camera moves visibly differ per depth plane rather
-  // than moving the whole frame as one flat slab.
+  // Per-depth parallax offset (rack-focus BLUR is now folded into applyDepthOfField below, one
+  // source of truth for both the baseline per-plane blur and the rack-focus sweep).
   const parallaxPx = parallaxOffset(camera, layer.depth, frame, durationInFrames);
-  const rackBlurPx = rackBlurFor(camera, layer.depth, frame, durationInFrames, rackInvert);
   // Defensive defaults: a spec rendered outside `validateSceneSpec` (e.g. a bare hand-authored
   // JSON prop) may omit opacity/blur/position entirely — never let a missing field crash a
   // primitive or silently produce NaN styles.
   const opacity = layer.opacity ?? 1;
   const blur = layer.blur ?? 0;
   const position = layer.position ?? DEFAULT_POSITION;
-  const totalBlur = blur + rackBlurPx;
+
+  const resolvedEnter = resolveEnter(layer.enter);
+
+  // Fixed composition order (per the design spec): kenBurns transform -> element -> mask clip ->
+  // depth-of-field blur -> motion-blur/trail -> lighting-sweep overlay -> opacity/position
+  // wrapper. Every primitive already applies its OWN `opacity`/`blur` props internally at the
+  // exact point it draws itself at `position` (see Text/Image/Shape/etc — there is no separate
+  // "blur the whole subtree" wrapper for authored blur), so DOF blur + motion blur + the
+  // authored `layer.blur` are combined into ONE `totalBlur` value and threaded into
+  // `primitiveProps` BEFORE building the JSX tree below — this still honors the fixed order
+  // visually (DOF/motion-blur apply to "the element" exactly where the spec's order says they
+  // should), it's just computed early because that's where the primitive contract requires it.
+  const dofBlurPx = applyDepthOfField(layer.depth, camera, frame, durationInFrames, rackInvert);
+  const motion = applyMotionBlur(layer.motionBlur, frame, fps);
+  const totalBlur = blur + dofBlurPx + motion.blurPx;
 
   const primitiveProps: PrimitiveProps = {
     props: layer.props,
@@ -247,13 +366,104 @@ const BeatLayer: React.FC<{
     opacity,
     blur: totalBlur,
     position,
-    enter: resolveEnter(layer.enter),
+    enter: resolvedEnter,
     style: layer.style,
   };
 
-  return (
-    <div style={{ position: "absolute", inset: 0, transform: parallaxPx ? `translateX(${parallaxPx}px)` : undefined }}>
+  // 1) Ken Burns — slow push/drift/zoom transform on the element itself (image/video content
+  // moving within its own frame), independent of the beat camera. Wraps the primitive in a
+  // full-frame `inset:0` div so the transform doesn't disturb the primitive's own internal
+  // `position`-based placement (every primitive positions itself via `left/top: position * 100%`
+  // relative to a full-size ancestor, per PrimitiveProps convention).
+  const kenBurnsTransform = applyKenBurns(layer.kenBurns, frame, durationInFrames);
+
+  // 2) element — the primitive (already rendering with the combined DOF/motion/authored blur
+  // baked in via primitiveProps.blur above), wrapped by its Ken Burns transform.
+  let content: React.ReactNode = (
+    <div style={{ position: "absolute", inset: 0, transform: kenBurnsTransform, transformOrigin: "50% 50%" }}>
       <Primitive {...primitiveProps} />
+    </div>
+  );
+
+  // 3) mask clip — explicit `layer.mask`, OR the implicit default when the layer's entrance is
+  // `maskReveal` (the interpreter must make `enter.anim === "maskReveal"` actually clip, not just
+  // read as an unimplemented enum value).
+  const effectiveMask = layer.mask ?? (resolvedEnter.anim === "maskReveal" ? DEFAULT_MASK_REVEAL : undefined);
+  if (effectiveMask) {
+    content = (
+      <Mask
+        shape={effectiveMask.shape}
+        reveal={effectiveMask.reveal}
+        frame={frame}
+        fps={fps}
+        width={width}
+        height={height}
+        delay={resolvedEnter.delay ?? 0}
+      >
+        {content}
+      </Mask>
+    );
+  }
+
+  // 5) motion-blur / trail — velocity-estimated directional ghost trail composited BEHIND the
+  // (already-masked, already-blurred-via-primitiveProps) element when the layer is still moving
+  // fast out of its entrance spring. The blur itself is already folded into `totalBlur` above
+  // (passed through to the primitive), so this step only adds the trailing duplicate. `mainContent`
+  // holds the pre-trail node so the ghost and the "real" element are two independently-keyed
+  // fragment children, not the same element reference reused twice.
+  if (motion.ghostOpacity > 0) {
+    const mainContent = content;
+    content = (
+      <>
+        <div
+          key="ghost"
+          style={{
+            position: "absolute",
+            inset: 0,
+            opacity: motion.ghostOpacity,
+            transform: `translate(${motion.ghostOffsetX}px, ${motion.ghostOffsetY}px)`,
+          }}
+        >
+          {mainContent}
+        </div>
+        <div key="main" style={{ position: "absolute", inset: 0 }}>
+          {mainContent}
+        </div>
+      </>
+    );
+  }
+
+  // 6) lighting-sweep overlay — a specular diagonal band composited above the (now masked/
+  // trailed) element.
+  const sweep = applyLightingSweep(layer.lightingSweep, frame, fps, width);
+  if (sweep) {
+    content = (
+      <div style={{ position: "absolute", inset: 0 }}>
+        {content}
+        <div style={sweep.style} />
+      </div>
+    );
+  }
+
+  // 7) opacity/position wrapper — the OUTERMOST wrapper: full-frame so the primitive's own
+  // `position`-relative placement resolves correctly, plus the parallax depth offset and (if this
+  // layer authored `exit.anim === "glitch"`) the glitch exit burst composited as the final wrapper
+  // style so it visibly affects the whole layer as it exits. Layer-level `opacity` is already
+  // folded into `primitiveProps.opacity` above (every primitive multiplies its own entrance-driven
+  // opacity by the passed-in `opacity`), so it's not reapplied here — only the glitch burst's own
+  // opacity (an independent EXIT effect, not the authored layer opacity) touches this wrapper.
+  const glitchStyle = glitchExitStyle(layer.exit, frame);
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        transform: parallaxPx ? `translateX(${parallaxPx}px)` : undefined,
+        ...glitchStyle,
+      }}
+    >
+      {content}
     </div>
   );
 };

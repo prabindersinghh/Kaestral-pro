@@ -183,4 +183,79 @@ describe("Generative render", () => {
     // flat background alone — a coarse but effective "actually rendered, not blank" proxy.
     expect(statSync(out).size).toBeGreaterThan(15000);
   }, 240000);
+
+  it("renders the Task 9 premium-motion set (maskReveal+kenBurns+lightingSweep on an image, splitLayout, textOnPath, glitch exit) to a non-blank MP4", async () => {
+    const v = validateSceneSpec(
+      {
+        meta: { aspect: "16:9", fps: 30 },
+        beats: [
+          {
+            durationInFrames: 60,
+            background: { kind: "glow", accent: "#16b16a" },
+            transitionOut: { kind: "wipe", accent: "#16b16a", snapToBeat: false },
+            layers: [
+              {
+                element: "image",
+                props: { src: sampleImagePath },
+                position: { x: 0.5, y: 0.45 },
+                depth: "foreground",
+                mask: { shape: "circle", reveal: "iris" },
+                kenBurns: { move: "drift", amount: 0.1 },
+                lightingSweep: { on: true, angle: 25, speed: 1 },
+                enter: { anim: "maskReveal" },
+              },
+            ],
+          },
+          {
+            durationInFrames: 60,
+            background: { kind: "grid", accent: "#16b16a" },
+            transitionOut: { kind: "glitch", accent: "#16b16a", snapToBeat: false },
+            layers: [
+              {
+                element: "splitLayout",
+                props: {
+                  direction: "row",
+                  panels: [
+                    { element: "text", props: { text: "Design" }, style: { role: "display", size: 0.09 } },
+                    { element: "text", props: { text: "Motion" }, style: { role: "accent", size: 0.09 } },
+                  ],
+                },
+                position: { x: 0.5, y: 0.5 },
+                enter: { anim: "spring" },
+              },
+            ],
+          },
+          {
+            durationInFrames: 45,
+            background: { kind: "glow", accent: "#16b16a" },
+            layers: [
+              {
+                element: "textOnPath",
+                props: { text: "Kaestral ships motion", path: "arc", emphasis: [0, 2] },
+                position: { x: 0.5, y: 0.4 },
+                enter: { anim: "kinetic" },
+                exit: { anim: "glitch", at: 30 },
+              },
+              {
+                element: "countdown",
+                props: { from: 3, stepFrames: 12 },
+                position: { x: 0.5, y: 0.78 },
+              },
+            ],
+          },
+        ],
+      },
+      { allowedMediaPaths: [sampleImagePath] },
+    );
+    expect(v.ok).toBe(true);
+    if (!v.ok) return;
+    const out = join(remotionDir, ".test-out", "gen-premium-motion.mp4");
+    const res = await renderRemotion("Generative", { spec: v.spec }, out, remotionDir);
+    expect(res.width).toBe(1920);
+    expect(res.height).toBe(1080);
+    // Every premium technique compositing together (masked image + Ken Burns + lighting sweep +
+    // split-panel text + kinetic text-on-path + countdown + glitch) should compress noticeably
+    // larger than a flat background alone — a coarse but effective "actually rendered" proxy.
+    expect(statSync(out).size).toBeGreaterThan(15000);
+  }, 240000);
 });
