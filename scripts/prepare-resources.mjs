@@ -2,7 +2,7 @@
 // machine, into src-tauri/resources/ (bundled by Tauri as read-only app resources):
 //   node.exe, ffmpeg.exe, ffprobe.exe, dist-server/*.cjs, public/, remotion/ (source only),
 //   node_modules/@napi-rs/canvas (native).
-import { cpSync, mkdirSync, rmSync, existsSync, copyFileSync, statSync } from "node:fs";
+import { cpSync, mkdirSync, rmSync, existsSync, copyFileSync, statSync, readdirSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -15,6 +15,16 @@ function which(bin) {
   catch { return null; }
 }
 const mb = (p) => (existsSync(p) ? (statSync(p).size / 1e6).toFixed(0) : "?");
+// Recursive directory size in MB (for reporting the shipped node_modules footprint).
+function dirBytes(p) {
+  if (!existsSync(p)) return 0;
+  const st = statSync(p);
+  if (st.isFile()) return st.size;
+  let total = 0;
+  for (const e of readdirSync(p)) total += dirBytes(path.join(p, e));
+  return total;
+}
+const mb2 = (p) => (dirBytes(p) / 1e6).toFixed(0);
 
 rmSync(res, { recursive: true, force: true });
 mkdirSync(res, { recursive: true });
@@ -37,7 +47,6 @@ cpSync(path.join(root, "public"), path.join(res, "public"), { recursive: true })
 
 // 5) Native canvas package + its platform binary package (the .node lives in a SEPARATE
 //    @napi-rs/canvas-<platform> package that the loader requires — copy every @napi-rs/canvas*).
-import { readdirSync } from "node:fs";
 const napiDir = path.join(root, "node_modules", "@napi-rs");
 for (const pkg of readdirSync(napiDir).filter((n) => n.startsWith("canvas"))) {
   cpSync(path.join(napiDir, pkg), path.join(res, "node_modules", "@napi-rs", pkg), { recursive: true });
@@ -53,10 +62,16 @@ for (const pkg of readdirSync(napiDir).filter((n) => n.startsWith("canvas"))) {
 if (!existsSync(path.join(root, "remotion", "node_modules", "remotion"))) {
   throw new Error("remotion/node_modules is missing — run `npm ci` (or `npm install`) in remotion/ before packaging.");
 }
-cpSync(path.join(root, "remotion"), path.join(res, "remotion"), {
-  recursive: true,
-  filter: (src) => !/[\\/](\.remotion|\.bundle-cache)([\\/]|$)/.test(src),
-});
+cpSync(path.join(root, "remotion"), path.join(res, "remotion"), { recursive: true });
+// Node's cpSync `filter` does NOT prune a directory subtree when it returns false for the dir, so
+// the transient caches get copied anyway. Delete them from the destination explicitly: the ~590 MB
+// .remotion headless-Chromium cache (re-downloaded on first render into the writable per-user copy)
+// and the per-run .bundle-cache. This keeps the installer ~590 MB smaller.
+rmSync(path.join(res, "remotion", "node_modules", ".remotion"), { recursive: true, force: true });
+rmSync(path.join(res, "remotion", ".bundle-cache"), { recursive: true, force: true });
+if (existsSync(path.join(res, "remotion", "node_modules", ".remotion"))) {
+  throw new Error("packaging: failed to strip remotion/node_modules/.remotion from resources.");
+}
 
 // 7) Bundled skill library (Kaestral's own editing playbooks — served by read_skill offline).
 cpSync(path.join(root, "skills"), path.join(res, "skills"), { recursive: true });
@@ -68,4 +83,5 @@ console.log("resources assembled:");
 console.log(`  node.exe     ${mb(path.join(res, "node.exe"))} MB`);
 console.log(`  ffmpeg.exe   ${mb(path.join(res, "ffmpeg.exe"))} MB`);
 console.log(`  ffprobe.exe  ${mb(path.join(res, "ffprobe.exe"))} MB`);
-console.log(`  + dist-server, public, @napi-rs/canvas, remotion(source), skills, whisper`);
+console.log(`  remotion     ${mb2(path.join(res, "remotion", "node_modules"))} MB node_modules (chromium cache stripped)`);
+console.log(`  + dist-server, public, @napi-rs/canvas, skills, whisper`);
