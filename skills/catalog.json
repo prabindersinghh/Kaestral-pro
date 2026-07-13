@@ -54,5 +54,12 @@
     "description": "Build a short promo or ad — hook, benefit beats, and a clear call-to-action — with titles, captions, music, and pacing. Use for 'make a promo / ad / product video'.",
     "sha": "local",
     "path": "promo-ad/SKILL.md"
+  },
+  {
+    "id": "art-direction",
+    "name": "Art direction (motion)",
+    "description": "Master motion-designer playbook for composing premium films with compose_motion — the decision process, optical composition, rhythm, restraint, transition craft, and the physics of premium motion, with worked examples and failure modes. Read this BEFORE composing any motion piece (launch film, product reel, title sequence, brand sting).",
+    "sha": "local",
+    "path": "art-direction/SKILL.md"
   }
 ]

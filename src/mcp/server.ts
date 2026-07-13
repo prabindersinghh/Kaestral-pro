@@ -38,7 +38,9 @@ const SERVER_INSTRUCTIONS =
   "word-level speech timestamps (on-device whisper). Then add_captions makes word-accurate captions and " +
   "remove_words cuts specific spoken words. generate_video/generate_image run on hosted providers " +
   "(Fal/Replicate) when the user has added their key in Settings → Generation; generate_title/generate_motion " +
-  "render locally and always work. For a task that matches a skill, read_skill first and follow it.";
+  "render locally and always work. For a task that matches a skill, read_skill first and follow it. " +
+  "For any motion-graphics / film / title-sequence work (compose_motion), read_skill('art-direction') FIRST — " +
+  "it teaches how to art-direct at a premium level (decision process, optical composition, rhythm, restraint, the physics of premium motion) so the result reads as designed, not templated.";
 
 interface JsonRpcRequest {
   jsonrpc?: string;
