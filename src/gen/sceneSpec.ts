@@ -154,6 +154,14 @@ export interface SceneSpec {
   beats: Beat[];
 }
 
+/**
+ * Custom easing: either a closed-set preset name (`EASINGS`) or an explicit cubic-bezier curve
+ * `{curve:[x1,y1,x2,y2]}`. Lets the agent reach for a bespoke curve when a preset isn't expressive
+ * enough, while keeping the common case a plain string. See `resolveEasingToBezier` for the single
+ * path both forms render through.
+ */
+export type EasingSpec = (typeof EASINGS)[number] | { curve: [number, number, number, number] };
+
 export type ValidationResult =
   | { ok: true; spec: SceneSpec }
   | { ok: false; error: string };
@@ -334,6 +342,30 @@ function validateStyle(value: unknown, path: string): LayerStyle | undefined {
   const role = checkEnum(obj.role, STYLE_ROLES, `${path}.role`);
   const size = clamp(obj.size, 0.01, 0.4, 0.09);
   return { role, size };
+}
+
+/**
+ * Validates an `EasingSpec`: either a preset string (one of `EASINGS`) or an explicit
+ * `{curve:[x1,y1,x2,y2]}` cubic-bezier. Unlike most numeric fields in this file, a malformed curve
+ * is a loud failure rather than a silent-substituted default — `clamp`'s NaN-to-default fallback
+ * would otherwise mask a badly-shaped agent output as a valid curve, so finiteness is checked
+ * explicitly before any clamping happens.
+ */
+export function validateEasing(value: unknown, path: string): EasingSpec {
+  if (typeof value === "string") {
+    return checkEnum(value, EASINGS, path);
+  }
+  if (isPlainObject(value) && Array.isArray(value.curve)) {
+    const curve = value.curve as unknown[];
+    if (curve.length !== 4 || !curve.every((n) => typeof n === "number" && Number.isFinite(n))) {
+      fail(`${path}.curve`, "must be 4 finite numbers");
+    }
+    const [x1, y1, x2, y2] = curve as number[];
+    return {
+      curve: [clamp(x1, 0, 1, 0), clamp(y1, -2, 3, 0), clamp(x2, 0, 1, 1), clamp(y2, -2, 3, 1)],
+    };
+  }
+  fail(path, "must be a preset (ease-out|spring|linear) or { curve:[x1,y1,x2,y2] }");
 }
 
 const LAYER_KEYS = [
@@ -526,4 +558,27 @@ export function validateSceneSpec(input: unknown, opts?: ValidateOpts): Validati
     }
     return { ok: false, error: `unexpected error: ${e instanceof Error ? e.message : String(e)}` };
   }
+}
+
+// ---------------------------------------------------------------------------
+// Easing resolution — pure, used by the Generative.tsx interpreter so presets and custom curves
+// render through a single bezier path.
+// ---------------------------------------------------------------------------
+
+const EASING_PRESET_BEZIER: Record<(typeof EASINGS)[number], [number, number, number, number]> = {
+  "ease-out": [0.22, 0.61, 0.16, 1],
+  linear: [0, 0, 1, 1],
+  spring: [0.16, 1, 0.3, 1],
+};
+
+/**
+ * Resolves an `EasingSpec` (preset name, custom curve, or `undefined`) to its cubic-bezier tuple.
+ * Pure and total — never throws. `undefined` (no easing specified) resolves to the `ease-out`
+ * tuple, matching `validateEnter`'s default. The interpreter should call this rather than branch
+ * on preset-vs-custom itself, so both forms render through the same bezier path.
+ */
+export function resolveEasingToBezier(e: EasingSpec | undefined): [number, number, number, number] {
+  if (e === undefined) return EASING_PRESET_BEZIER["ease-out"];
+  if (typeof e === "string") return EASING_PRESET_BEZIER[e];
+  return e.curve;
 }
