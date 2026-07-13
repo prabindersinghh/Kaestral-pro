@@ -83,6 +83,19 @@ All additions extend `validateSceneSpec` with closed-enum + clamp + bounded-arra
 rejected with the exact path (existing fail-loud contract). `animate` property keys are a fixed set;
 `curve` must be exactly 4 finite numbers in range. Pure module, never throws.
 
+**Conflict detection (fail loud, do NOT silently resolve precedence).** If a layer sets
+`animate.<prop>` AND a conflicting driver for the SAME property, the validator REJECTS with a specific
+message naming both, so the LLM fixes its own spec. Conflicts:
+- `animate.opacity` + (`enter.anim` in the opacity-driving set e.g. `fade`/`spring`, OR `exit.anim: fade`)
+  → e.g. `beats[0].layers[2]: animate.opacity conflicts with enter.anim:"fade" — both drive opacity; keep one.`
+- `animate.position` + `enter.from` (a directional slide moves position) → analogous message.
+- `animate.scale` + `enter.anim` in the scale-driving set → analogous message.
+- `animate.<prop>` overlapping `hold` on the same property is NOT a conflict (hold defers to animate by
+  the precedence rule) — but the validator still errors if `hold` and `animate.<prop>` windows are both
+  authored to *move* the property (defensive: hold means static). Keep the message specific in every case.
+The precedence rule (animate wins) governs the RENDERER; the validator ensures the LLM never
+accidentally authors the ambiguity in the first place.
+
 ### 🚦 COMPONENT 1 GATE (non-negotiable, shown to user)
 Re-express ONE real beat from `remotion/src/compositions/FilmLaunch.tsx` **purely as a SceneSpec** and
 render it via `compose_motion`/`Generative`. It must reproduce the hand-authored beat: same optical
@@ -189,8 +202,10 @@ After Components 1–3:
 
 - **Component 1 (sceneSpec):** unit tests for each new field — valid bezier curve accepted, out-of-range
   rejected with path; `hold`/`animate`/`enter.spring`/`exit.fade`/`snap`/`overlapFrames` validate and
-  clamp; unknown `animate` property key rejected. Plus a headless render test of a spec exercising
-  per-property `animate` + `hold` + bezier + custom overlap → non-blank MP4.
+  clamp; unknown `animate` property key rejected. **Conflict detection:** `animate.opacity` +
+  `enter.anim:"fade"` (and `animate.position` + `enter.from`) rejected with a message naming BOTH
+  drivers. Plus a headless render test of a spec exercising per-property `animate` + `hold` + bezier +
+  custom overlap → non-blank MP4.
 - **Component 1 gate:** the FilmLaunch-beat reproduction render (visual, shown to user).
 - **Component 2:** the skill is prose; validated by the cold-subagent test, not unit tests. Assert it's
   registered in `catalog.json` and referenced by the tool description.
