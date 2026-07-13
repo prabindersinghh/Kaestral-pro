@@ -75,17 +75,27 @@ export interface SceneMeta {
   beatMarkers?: number[];
 }
 
+export interface SpringConfig {
+  damping: number;
+  mass: number;
+  stiffness: number;
+}
+
 export interface Enter {
   anim: (typeof ANIMS)[number];
-  easing: (typeof EASINGS)[number];
+  easing: EasingSpec;
   delay: number;
   from: (typeof ENTER_FROM)[number];
   snapToBeat: boolean;
+  durationFrames?: number;
+  spring?: SpringConfig;
 }
 
 export interface Exit {
   anim: (typeof EXIT_ANIMS)[number];
   at: number;
+  easing?: EasingSpec;
+  durationFrames?: number;
 }
 
 export interface LayerStyle {
@@ -107,6 +117,8 @@ export interface TransitionOut {
   kind: (typeof TRANSITIONS)[number];
   accent: string;
   snapToBeat: boolean;
+  overlapFrames?: number;
+  easing?: EasingSpec;
 }
 
 export interface Mask {
@@ -230,12 +242,13 @@ function checkUnknownKeys(obj: Record<string, unknown>, known: readonly string[]
 const POSITION_KEYS = ["x", "y"] as const;
 const CAMERA_KEYS = ["move", "amount"] as const;
 const BACKGROUND_KEYS = ["kind", "accent"] as const;
-const TRANSITION_OUT_KEYS = ["kind", "accent", "snapToBeat"] as const;
+const TRANSITION_OUT_KEYS = ["kind", "accent", "snapToBeat", "overlapFrames", "easing"] as const;
 const MASK_KEYS = ["shape", "reveal"] as const;
 const KEN_BURNS_KEYS = ["move", "amount"] as const;
 const LIGHTING_SWEEP_KEYS = ["on", "angle", "speed"] as const;
-const ENTER_KEYS = ["anim", "easing", "delay", "from", "snapToBeat"] as const;
-const EXIT_KEYS = ["anim", "at"] as const;
+const ENTER_KEYS = ["anim", "easing", "delay", "from", "snapToBeat", "durationFrames", "spring"] as const;
+const EXIT_KEYS = ["anim", "at", "easing", "durationFrames"] as const;
+const SPRING_CONFIG_KEYS = ["damping", "mass", "stiffness"] as const;
 const STYLE_KEYS = ["role", "size"] as const;
 
 function validatePosition(value: unknown, path: string): { x: number; y: number } {
@@ -277,7 +290,12 @@ function validateTransitionOut(value: unknown, path: string): TransitionOut | un
   const kind = checkEnum(obj.kind, TRANSITIONS, `${path}.kind`);
   const accent = obj.accent === undefined ? BRAND_TOKENS.green : checkColor(obj.accent, `${path}.accent`);
   const snapToBeat = obj.snapToBeat === undefined ? false : Boolean(obj.snapToBeat);
-  return { kind, accent, snapToBeat };
+  const overlapFrames = obj.overlapFrames === undefined ? undefined : clamp(obj.overlapFrames, 1, 60, 15);
+  const easing = obj.easing === undefined ? undefined : validateEasing(obj.easing, `${path}.easing`);
+  const transitionOut: TransitionOut = { kind, accent, snapToBeat };
+  if (overlapFrames !== undefined) transitionOut.overlapFrames = overlapFrames;
+  if (easing !== undefined) transitionOut.easing = easing;
+  return transitionOut;
 }
 
 function validateMask(value: unknown, path: string): Mask | undefined {
@@ -311,17 +329,39 @@ function validateLightingSweep(value: unknown, path: string): LightingSweep | un
   return { on, angle, speed };
 }
 
+/**
+ * Validates a spring physics config for `Enter.spring`. Each field is independently clamped
+ * (never a loud failure) — a spring config is tuning, not structural, so an out-of-range value
+ * is normalized rather than rejected. Returns `undefined` when `value` is absent so the field
+ * doesn't get materialized with defaults on layers that never requested a spring.
+ */
+function validateSpringConfig(value: unknown, path: string): SpringConfig | undefined {
+  if (value === undefined) return undefined;
+  if (!isPlainObject(value)) fail(path, "must be an object");
+  const obj = value as Record<string, unknown>;
+  checkUnknownKeys(obj, SPRING_CONFIG_KEYS, path);
+  const damping = clamp(obj.damping, 1, 40, 15);
+  const mass = clamp(obj.mass, 0.1, 5, 1);
+  const stiffness = clamp(obj.stiffness, 1, 400, 100);
+  return { damping, mass, stiffness };
+}
+
 function validateEnter(value: unknown, path: string): Enter | undefined {
   if (value === undefined) return undefined;
   if (!isPlainObject(value)) fail(path, "must be an object");
   const obj = value as Record<string, unknown>;
   checkUnknownKeys(obj, ENTER_KEYS, path);
   const anim = checkEnum(obj.anim, ANIMS, `${path}.anim`);
-  const easing = obj.easing === undefined ? "ease-out" : checkEnum(obj.easing, EASINGS, `${path}.easing`);
+  const easing = validateEasing(obj.easing ?? "ease-out", `${path}.easing`);
   const delay = clamp(obj.delay, 0, 600, 0);
   const from = obj.from === undefined ? "below" : checkEnum(obj.from, ENTER_FROM, `${path}.from`);
   const snapToBeat = obj.snapToBeat === undefined ? false : Boolean(obj.snapToBeat);
-  return { anim, easing, delay, from, snapToBeat };
+  const durationFrames = obj.durationFrames === undefined ? undefined : clamp(obj.durationFrames, 1, 600, 30);
+  const spring = validateSpringConfig(obj.spring, `${path}.spring`);
+  const enter: Enter = { anim, easing, delay, from, snapToBeat };
+  if (durationFrames !== undefined) enter.durationFrames = durationFrames;
+  if (spring !== undefined) enter.spring = spring;
+  return enter;
 }
 
 function validateExit(value: unknown, path: string): Exit | undefined {
@@ -331,7 +371,12 @@ function validateExit(value: unknown, path: string): Exit | undefined {
   checkUnknownKeys(obj, EXIT_KEYS, path);
   const anim = checkEnum(obj.anim, EXIT_ANIMS, `${path}.anim`);
   const at = clamp(obj.at, 0, 600, 60);
-  return { anim, at };
+  const easing = obj.easing === undefined ? undefined : validateEasing(obj.easing, `${path}.easing`);
+  const durationFrames = obj.durationFrames === undefined ? undefined : clamp(obj.durationFrames, 1, 600, 30);
+  const exit: Exit = { anim, at };
+  if (easing !== undefined) exit.easing = easing;
+  if (durationFrames !== undefined) exit.durationFrames = durationFrames;
+  return exit;
 }
 
 function validateStyle(value: unknown, path: string): LayerStyle | undefined {

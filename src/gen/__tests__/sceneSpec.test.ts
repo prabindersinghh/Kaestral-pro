@@ -137,4 +137,38 @@ describe("validateSceneSpec", () => {
       expect(r.ok).toBe(true);
     });
   });
+
+  describe("enter/exit/transitionOut expansion (durationFrames, spring, overlapFrames, easing)", () => {
+    // helper to build a one-layer spec with a given layer
+    const specWith = (layer: object, beatExtra: object = {}) => ({
+      meta: { aspect: "16:9", fps: 30 },
+      beats: [{ durationInFrames: 90, layers: [{ element: "text", props: { text: "Hi" }, ...layer }], ...beatExtra }],
+    });
+
+    it("enter accepts a bezier curve + durationFrames + spring, clamped", () => {
+      const r = validateSceneSpec(specWith({ enter: { anim: "spring", easing: { curve: [0.2, 1.6, 0.3, 1] }, durationFrames: 18, spring: { damping: 15, mass: 0.7, stiffness: 100 } } }));
+      expect(r.ok).toBe(true);
+      if (r.ok) {
+        const e = r.spec.beats[0].layers[0].enter!;
+        expect(e.easing).toEqual({ curve: [0.2, 1.6, 0.3, 1] });
+        expect(e.durationFrames).toBe(18);
+        expect(e.spring).toEqual({ damping: 15, mass: 0.7, stiffness: 100 });
+      }
+    });
+
+    it("exit accepts fade + durationFrames; transitionOut accepts overlapFrames", () => {
+      const r = validateSceneSpec(specWith({ exit: { anim: "fade", at: 70, durationFrames: 16 } }, { transitionOut: { kind: "wipe", overlapFrames: 22 } }));
+      expect(r.ok).toBe(true);
+      if (r.ok) {
+        expect(r.spec.beats[0].layers[0].exit!.durationFrames).toBe(16);
+        expect(r.spec.beats[0].transitionOut!.overlapFrames).toBe(22);
+      }
+    });
+
+    it("rejects an unknown enter key with the path", () => {
+      const r = validateSceneSpec(specWith({ enter: { anim: "spring", wobble: 5 } }));
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.error).toMatch(/enter/);
+    });
+  });
 });
