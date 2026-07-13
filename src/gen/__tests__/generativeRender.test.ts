@@ -510,4 +510,72 @@ describe("Generative render", () => {
     expect(res.width).toBe(1920);
     expect(statSync(out).size).toBeGreaterThan(8000);
   }, 240000);
+
+  // TASK 6b2 — hairline ANCHORED draw + honor enter.easing/durationFrames. Before this task
+  // Hairline always CENTERED on `position` (grew symmetrically outward from the midpoint) and
+  // ignored `enter.easing`/`enter.durationFrames` entirely (always used its own hardcoded spring).
+  // This spec pins the rule's LEFT edge at position.x:0.12 via `props.anchor:"start"` and shapes
+  // the draw-in with a custom bezier over an exact 22-frame window (after a 10-frame delay).
+  it("renders a LEFT-anchored hairline shaped by enter.easing/durationFrames, with ink starting at the anchor and not centered on it", async () => {
+    const v = validateSceneSpec({
+      meta: { aspect: "16:9", fps: 30 },
+      beats: [
+        {
+          durationInFrames: 60,
+          background: { kind: "solid", accent: "#0b0a0d" }, // solid black backdrop isolates the hairline's own luma
+          layers: [
+            {
+              element: "hairline",
+              position: { x: 0.12, y: 0.52, snap: false },
+              // `thickness:14` (vs. the primitive's 2px default) so the drawn band is thick enough
+              // to dominate a reasonably-sized ffmpeg sampling crop below without needing a
+              // pixel-fragile, anti-aliasing-sensitive 1-2px-tall crop window.
+              props: { orientation: "horizontal", length: 0.2, anchor: "start", color: "gold", thickness: 14 },
+              enter: { anim: "draw", easing: { curve: [0.22, 0.61, 0.16, 1] }, durationFrames: 22, delay: 10 },
+            },
+          ],
+        },
+      ],
+    });
+    expect(v.ok).toBe(true);
+    if (!v.ok) return;
+    const out = join(remotionDir, ".test-out", "gen-hairline-anchor-draw.mp4");
+    const res = await renderRemotion("Generative", { spec: v.spec }, out, remotionDir);
+    expect(res.width).toBe(1920);
+    expect(res.height).toBe(1080);
+    // Baseline "actually rendered, not blank" proxy, matching every other test in this file.
+    expect(statSync(out).size).toBeGreaterThan(8000);
+
+    const ffmpegAvailable = await checkFfmpegAvailable();
+    if (!ffmpegAvailable) {
+      // Environment without ffmpeg: the render assertions above already prove the spec is legal
+      // and renders successfully; the pixel-level anchored-draw proof is skipped in this case.
+      return;
+    }
+    // Frame 22 = 10-frame delay + 12 frames into the 22-frame draw window -> mid-draw, well past
+    // the point any eased curve would have painted ink starting from the left anchor.
+    const midDrawFrame = 22;
+    // Just RIGHT of the anchor (x:0.12): a thin band at x:[0.13,0.16], y a tight ~14px-tall strip
+    // centered on position.y (0.52, matching the authored `thickness:14`) — must show drawn GOLD
+    // ink if the rule grows rightward from its LEFT-pinned anchor.
+    const rightOfAnchorLuma = await meanLumaOfCrop(out, midDrawFrame, {
+      x: 1920 * 0.13,
+      y: 1080 * 0.52 - 7,
+      w: 1920 * 0.03,
+      h: 14,
+    });
+    // Just LEFT of the anchor (x:0.12): a thin band at x:[0.06,0.10] — must show NO ink (background
+    // only) if the rule is left-anchored rather than centered on position.x (a centered rule at
+    // 20%-length would draw symmetrically outward and this band would ALSO light up).
+    const leftOfAnchorLuma = await meanLumaOfCrop(out, midDrawFrame, {
+      x: 1920 * 0.06,
+      y: 1080 * 0.52 - 7,
+      w: 1920 * 0.04,
+      h: 14,
+    });
+    // Solid #0b0a0d background reads luma ~11; drawn gold ink over it should read materially
+    // brighter in the right-of-anchor band, while the left-of-anchor band stays near the floor.
+    expect(rightOfAnchorLuma).toBeGreaterThan(30);
+    expect(leftOfAnchorLuma).toBeLessThan(20);
+  }, 240000);
 });
