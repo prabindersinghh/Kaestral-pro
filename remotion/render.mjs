@@ -64,7 +64,10 @@ function inlineMediaSrcs(spec) {
 if (inputProps && inputProps.spec) inlineMediaSrcs(inputProps.spec);
 
 async function getServeUrl() {
-  // Cache the webpack bundle so only the first render pays the bundling cost.
+  // Cache the webpack bundle so only the first render pays the bundling cost. This writes next to
+  // render.mjs — which is fine in dev and in the packaged app, because the whole remotion workspace
+  // is copied to a WRITABLE per-user data dir on first launch (see spawn_project_server in lib.rs +
+  // ensureWritableRemotion in the server), so `__dirname` is always writable at render time.
   const cacheDir = path.join(__dirname, ".bundle-cache");
   const marker = path.join(cacheDir, "serveUrl.txt");
   const entryHashPath = path.join(cacheDir, "entry.txt");
@@ -81,6 +84,10 @@ async function getServeUrl() {
 
 const chromiumOptions = { gl: "angle" };
 
+// Headless Chromium: Remotion downloads it into <cwd's package root>/node_modules/.remotion on
+// first render (getDownloadsCacheDir walks up from process.cwd()). render.mjs runs with cwd = the
+// writable remotion workspace, so this lands in writable space. If a browser was shipped in
+// node_modules/.remotion it's already present and this is a no-op.
 await ensureBrowser();
 const serveUrl = await getServeUrl();
 const composition = await selectComposition({ serveUrl, id: compId, inputProps, chromiumOptions });

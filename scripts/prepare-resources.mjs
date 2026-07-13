@@ -43,10 +43,19 @@ for (const pkg of readdirSync(napiDir).filter((n) => n.startsWith("canvas"))) {
   cpSync(path.join(napiDir, pkg), path.join(res, "node_modules", "@napi-rs", pkg), { recursive: true });
 }
 
-// 6) Remotion workspace SOURCE only (node_modules installed on first use into the writable data dir).
+// 6) Remotion workspace: source + node_modules SHIPPED so a fresh install renders motion with ZERO
+//    runtime `npm install`. We exclude only the transient/writable caches:
+//      - node_modules/.remotion : the downloaded headless Chromium (~590 MB). It CANNOT live in the
+//        read-only resources (Remotion writes/updates it), so it's downloaded on first render into
+//        the writable per-user copy of this workspace (see ensure_writable_remotion in lib.rs).
+//      - .bundle-cache : the per-run webpack bundle cache (rebuilt on first render, writable copy).
+//    Requires `npm ci` (or install) to have run in remotion/ before packaging — assert it did.
+if (!existsSync(path.join(root, "remotion", "node_modules", "remotion"))) {
+  throw new Error("remotion/node_modules is missing — run `npm ci` (or `npm install`) in remotion/ before packaging.");
+}
 cpSync(path.join(root, "remotion"), path.join(res, "remotion"), {
   recursive: true,
-  filter: (src) => !/[\\/](node_modules|\.bundle-cache)([\\/]|$)/.test(src),
+  filter: (src) => !/[\\/](\.remotion|\.bundle-cache)([\\/]|$)/.test(src),
 });
 
 // 7) Bundled skill library (Kaestral's own editing playbooks — served by read_skill offline).

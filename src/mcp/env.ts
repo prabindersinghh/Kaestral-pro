@@ -6,7 +6,8 @@ export const ffmpegBin = (): string => process.env.MAESTRO_FFMPEG || "ffmpeg";
 export const ffprobeBin = (): string => process.env.MAESTRO_FFPROBE || "ffprobe";
 /** Bundled/served media root (sample media + generated). */
 export const publicDir = (): string => process.env.MAESTRO_PUBLIC_DIR || join(process.cwd(), "public");
-/** The Remotion workspace (source; node_modules may be installed on first use). */
+/** The Remotion workspace (source + node_modules; in the packaged app this points at a writable
+ * per-user copy so the render bundle-cache and headless Chromium download land in writable space). */
 export const remotionDir = (): string => process.env.MAESTRO_REMOTION_DIR || join(process.cwd(), "remotion");
 /** Writable working dir for generated clips + uploads (must be user-writable when packaged). */
 export const dataDir = (): string => process.env.MAESTRO_DATA_DIR || process.cwd();

@@ -37,12 +37,45 @@ fn packaged(app: &AppHandle) -> Option<Packaged> {
     Some(Packaged { node: res.join("node.exe"), res, data })
 }
 
+/// Recursively copy `from` -> `to` (skips entries that already exist at the destination, so a
+/// partially-copied tree from a previous launch is completed rather than duplicated).
+fn copy_dir_if_absent(from: &std::path::Path, to: &std::path::Path) -> std::io::Result<()> {
+    std::fs::create_dir_all(to)?;
+    for entry in std::fs::read_dir(from)? {
+        let entry = entry?;
+        let src = entry.path();
+        let dst = to.join(entry.file_name());
+        if src.is_dir() {
+            copy_dir_if_absent(&src, &dst)?;
+        } else if !dst.exists() {
+            std::fs::copy(&src, &dst)?;
+        }
+    }
+    Ok(())
+}
+
+/// The Remotion render workspace must live in a WRITABLE dir: rendering writes a webpack bundle
+/// cache and downloads headless Chromium into node_modules/.remotion (Remotion resolves that from
+/// the render cwd). App resources are read-only, so on first launch we mirror the shipped
+/// resources/remotion (source + node_modules) into the per-user data dir and render from there.
+/// Idempotent and cheap after the first run (existing files are skipped).
+fn ensure_writable_remotion(p: &Packaged) -> PathBuf {
+    let dst = p.data.join("remotion");
+    let src = p.res.join("remotion");
+    // Marker: a fully-populated node_modules means we've already mirrored successfully.
+    if !dst.join("node_modules").join("remotion").exists() {
+        let _ = copy_dir_if_absent(&src, &dst);
+    }
+    dst
+}
+
 fn apply_env(cmd: &mut Command, p: &Packaged) {
+    let remotion = ensure_writable_remotion(p);
     cmd.current_dir(&p.data)
         .env("MAESTRO_FFMPEG", p.res.join("ffmpeg.exe"))
         .env("MAESTRO_FFPROBE", p.res.join("ffprobe.exe"))
         .env("MAESTRO_PUBLIC_DIR", p.res.join("public"))
-        .env("MAESTRO_REMOTION_DIR", p.res.join("remotion"))
+        .env("MAESTRO_REMOTION_DIR", &remotion)
         .env("MAESTRO_SKILLS_DIR", p.res.join("skills"))
         .env("MAESTRO_WHISPER", p.res.join("whisper").join("whisper-cli.exe"))
         .env("MAESTRO_MODELS_DIR", p.data.join("models"))
