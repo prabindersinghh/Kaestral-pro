@@ -30,6 +30,14 @@ export const Counter: React.FC<PrimitiveProps> = ({ props, frame, width, height,
   const scale = interpolate(groupIn, [0, 1], [0.9, 1]);
   const size = style?.size ?? 0.14;
   const fontSize = Math.round(Math.min(width, height) * size); // min() keeps portrait (9:16) titles inside the narrow frame
+  // TASK 10 UPGRADE — optical baseline finish (ENGINE-DEFECTS.md root cause D): same upward
+  // correction as Text.tsx, computed as a PIXEL offset (0.08 * `fontSize`) rather than a CSS `em` —
+  // this OUTER div (the one carrying the transform) sets no `fontSize` of its own (only the inner
+  // mono-numeral div below does), so a literal `em` here would resolve against an inherited ambient
+  // size instead of the counter's actual rendered size. The tabular-nums caps-height number sits
+  // optically low under a pure bounding-box center, especially once the muted `label` line is
+  // stacked below it (marginTop 6) and pulls the visual weight of the whole block down.
+  const opticalNudgePx = fontSize * 0.08;
 
   return (
     <div
@@ -37,7 +45,7 @@ export const Counter: React.FC<PrimitiveProps> = ({ props, frame, width, height,
         position: "absolute",
         left: `${position.x * 100}%`,
         top: `${position.y * 100}%`,
-        transform: `translate(-50%, -50%) scale(${scale})`,
+        transform: `translate(-50%, -50%) translateY(${-opticalNudgePx}px) scale(${scale})`,
         opacity: opacity * groupIn,
         filter: blur > 0 ? `blur(${blur}px)` : undefined,
         textAlign: "center",

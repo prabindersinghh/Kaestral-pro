@@ -52,6 +52,12 @@ export const TextOnPath: React.FC<PrimitiveProps> = ({ props, frame, fps, width,
 
   const groupIn = spring({ frame: local, fps, config: { damping: 16, mass: 0.7 } });
   const trackWidth = Math.min(width * 0.86, fontSize * text.length * 0.62);
+  // TASK 10 UPGRADE — optical baseline finish (ENGINE-DEFECTS.md root cause D): same upward
+  // correction as Text.tsx/Counter.tsx, computed as a PIXEL offset (0.08 * this element's own
+  // `fontSize`) rather than a CSS `em` — this wrapper sets no `fontSize` of its own (only the word
+  // spans below it do), so a literal `em` here would resolve against an inherited ambient size
+  // instead of the actual rendered word size, breaking proportionality at non-default `style.size`.
+  const opticalNudgePx = fontSize * 0.08;
 
   return (
     <div
@@ -59,7 +65,7 @@ export const TextOnPath: React.FC<PrimitiveProps> = ({ props, frame, fps, width,
         position: "absolute",
         left: `${position.x * 100}%`,
         top: `${position.y * 100}%`,
-        transform: "translate(-50%, -50%)",
+        transform: `translate(-50%, -50%) translateY(${-opticalNudgePx}px)`,
         width: trackWidth,
         height: fontSize * 2.4,
         opacity: opacity * groupIn,

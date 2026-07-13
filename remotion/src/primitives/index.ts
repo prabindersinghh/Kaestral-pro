@@ -38,6 +38,9 @@ export { applyTransition, TRANSITION_FRAMES } from "./Transitions";
 export type { TransitionKind, TransitionStyles } from "./Transitions";
 export { applyKenBurns, applyDepthOfField, applyMotionBlur, applyLightingSweep } from "./modifiers";
 export type { KenBurnsSpec, LightingSweepSpec, MotionBlurResult } from "./modifiers";
+export { resolveLayoutPosition, SAFE_MARGIN } from "./layout";
+export type { ResolvedPosition } from "./layout";
+export { resolveEntranceTiming, ENTRANCE_COMPLETE_BY_FRACTION } from "./pacing";
 
 // Re-exported for beat-level background rendering (BG_KINDS "grid"/"glow" in sceneSpec.ts) —
 // consumed directly by Generative.tsx in a later task, not addressed by a SceneSpec element name

@@ -14,6 +14,8 @@ import {
   applyDepthOfField,
   applyMotionBlur,
   applyLightingSweep,
+  resolveLayoutPosition,
+  resolveEntranceTiming,
 } from "../primitives";
 import type { CameraSpec, TransitionKind, MaskShape, MaskReveal } from "../primitives";
 import { TOKENS, tokenColor } from "../primitives/tokens";
@@ -184,8 +186,13 @@ function resolveCamera(camera: Beat["camera"] | undefined): CameraSpec {
 /** Default accent used for synthesized ambient atmosphere when a beat authors no background/accent. */
 const AMBIENT_ACCENT = "green";
 
-/** Opacity for the always-on ambient Particles field behind authored layers (critique #4). */
-const AMBIENT_PARTICLES_OPACITY = 0.3;
+/**
+ * Opacity for the always-on ambient Particles field behind authored layers (critique #4).
+ * TASK 10 UPGRADE — restraint defaults (ENGINE-DEFECTS.md root cause C): dialed from 0.5(originally)
+ * / 0.3 down to ~0.14, matching hero-demo's quiet grid (0.10 white, composited well below authored
+ * content) — ambient atmosphere must read as subtle depth behind the shot, never compete with it.
+ */
+const AMBIENT_PARTICLES_OPACITY = 0.14;
 
 /**
  * True unless the beat explicitly opts into the deliberate clean/minimal escape hatch
@@ -276,12 +283,18 @@ const DEFAULT_POSITION = { x: 0.5, y: 0.5 };
  * entirely, or present but missing `anim`/`easing`. An explicit `easing:"linear"` (or any other
  * authored easing) is always preserved verbatim — defaults only fill gaps they never overwrite
  * an authored choice.
+ *
+ * TASK 10 UPGRADE — "hold/settle" pacing (ENGINE-DEFECTS.md root cause B): the resolved `delay` is
+ * ALWAYS passed through `resolveEntranceTiming` against the beat's own duration, here at the single
+ * interpreter choke point every layer's enter passes through — so an authored `delay:34` on a
+ * 60-frame beat (which would otherwise settle at ~90% through the beat, smearing motion across the
+ * whole thing) gets pulled back to complete within the first ~45%. This clamp only ever SHORTENS a
+ * delay, never lengthens one, so a snappy authored entrance is untouched.
  */
-function resolveEnter(enter: EnterSpec | undefined): EnterSpec {
-  if (!enter) return { anim: "spring", easing: "spring", from: "below" };
-  const easing = enter.easing ?? "spring";
-  const anim = enter.anim ?? (easing === "linear" ? "fade" : "spring");
-  return { ...enter, anim, easing };
+function resolveEnter(enter: EnterSpec | undefined, beatDurationInFrames: number): EnterSpec {
+  const base: EnterSpec = enter ? { ...enter, easing: enter.easing ?? "spring", anim: enter.anim ?? (enter.easing === "linear" ? "fade" : "spring") } : { anim: "spring", easing: "spring", from: "below" };
+  const authoredDelay = base.delay ?? 0;
+  return { ...base, delay: resolveEntranceTiming(authoredDelay, beatDurationInFrames) };
 }
 
 /** Default mask used when `enter.anim === "maskReveal"` but the layer authored no explicit
@@ -340,9 +353,14 @@ const BeatLayer: React.FC<{
   // primitive or silently produce NaN styles.
   const opacity = layer.opacity ?? 1;
   const blur = layer.blur ?? 0;
-  const position = layer.position ?? DEFAULT_POSITION;
+  // TASK 10 UPGRADE — layout system (ENGINE-DEFECTS.md root cause A): every layer's authored
+  // position runs through `resolveLayoutPosition` (safe-area clamp + baseline-grid snap) before it
+  // ever reaches a primitive, so a guessed decimal never lands a few px off — see
+  // `../primitives/layout.ts` for the full rationale.
+  const rawPosition = layer.position ?? DEFAULT_POSITION;
+  const position = resolveLayoutPosition(rawPosition, width, height);
 
-  const resolvedEnter = resolveEnter(layer.enter);
+  const resolvedEnter = resolveEnter(layer.enter, durationInFrames);
 
   // Fixed composition order (per the design spec): kenBurns transform -> element -> mask clip ->
   // depth-of-field blur -> motion-blur/trail -> lighting-sweep overlay -> opacity/position

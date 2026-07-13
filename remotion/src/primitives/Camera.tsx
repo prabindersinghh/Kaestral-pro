@@ -25,8 +25,14 @@ export interface CameraSpec {
   amount: number;
 }
 
-/** Default camera applied when a beat specifies none — the frame must never be dead still. */
-export const DEFAULT_CAMERA: CameraSpec = { move: "push-in", amount: 0.05 };
+/**
+ * Default camera applied when a beat specifies none — the frame must never be dead still.
+ * TASK 10 UPGRADE — restraint defaults (ENGINE-DEFECTS.md root cause C): halved from 0.05 to 0.025
+ * so an unauthored beat gets a barely-perceptible breathing push-in rather than a move that
+ * competes with authored content — "dial back defaults... gentler" per the design brief. An
+ * authored `camera:{move,amount}` is unaffected; this only changes the sparse-spec fallback.
+ */
+export const DEFAULT_CAMERA: CameraSpec = { move: "push-in", amount: 0.025 };
 
 function progressOf(frame: number, durationInFrames: number): number {
   return interpolate(frame, [0, Math.max(1, durationInFrames)], [0, 1], {

@@ -92,7 +92,14 @@ export const Text: React.FC<PrimitiveProps> = ({ props, frame, fps, width, heigh
         position: "absolute",
         left: `${position.x * 100}%`,
         top: `${position.y * 100}%`,
-        transform: `translate(-50%, -50%) translate(${translateX}px, ${translateY}px) scale(${scale})`,
+        // TASK 10 UPGRADE — optical baseline finish (ENGINE-DEFECTS.md root cause D):
+        // translate(-50%,-50%) centers the LINE BOX (which includes descender space below the
+        // caps), so caps-height display text sits optically low relative to its anchor. The extra
+        // `translateY(-0.08em)` nudges it up by a font-relative amount (em scales with this
+        // element's own computed fontSize, so it stays proportionally correct at any `style.size`)
+        // to match how HeroDemo's thesis line sits — HeroDemo achieves the same effect implicitly
+        // via its specific line-height/margin combination; this makes it explicit and universal.
+        transform: `translate(-50%, calc(-50% - 0.08em)) translate(${translateX}px, ${translateY}px) scale(${scale})`,
         opacity: opacity * animOpacity,
         filter: blur > 0 ? `blur(${blur}px)` : undefined,
         fontFamily: TOKENS.fontSans,
