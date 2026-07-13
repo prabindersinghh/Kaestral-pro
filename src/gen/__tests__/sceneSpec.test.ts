@@ -251,4 +251,80 @@ describe("validateSceneSpec", () => {
       if (r.ok) expect(r.spec.beats[0].layers[0].enter!.anim).toBe("wordStagger");
     });
   });
+
+  // TASK 6b4 — camera.easing (bezier-shaped push-in/pan/parallax) + beat.outFade (authorable
+  // content out-fade window, replacing the interpreter's hardcoded last-18-frames default).
+  describe("camera.easing / beat.outFade (TASK 6b4)", () => {
+    const specWithBeat = (beatExtra: object) => ({
+      meta: { aspect: "16:9", fps: 30 },
+      beats: [{ durationInFrames: 90, layers: [{ element: "text", props: { text: "Hi" } }], ...beatExtra }],
+    });
+
+    it("validateCamera accepts a bezier easing curve and returns it verbatim", () => {
+      const r = validateSceneSpec(specWithBeat({ camera: { move: "push-in", amount: 0.04, easing: { curve: [0.22, 0.61, 0.16, 1] } } }));
+      expect(r.ok).toBe(true);
+      if (r.ok) {
+        expect(r.spec.beats[0].camera!.easing).toEqual({ curve: [0.22, 0.61, 0.16, 1] });
+      }
+    });
+
+    it("validateCamera accepts a preset easing string", () => {
+      const r = validateSceneSpec(specWithBeat({ camera: { move: "push-in", amount: 0.04, easing: "linear" } }));
+      expect(r.ok).toBe(true);
+      if (r.ok) {
+        expect(r.spec.beats[0].camera!.easing).toBe("linear");
+      }
+    });
+
+    it("camera without easing leaves it undefined (default linear behavior unchanged)", () => {
+      const r = validateSceneSpec(specWithBeat({ camera: { move: "push-in", amount: 0.04 } }));
+      expect(r.ok).toBe(true);
+      if (r.ok) {
+        expect(r.spec.beats[0].camera!.easing).toBeUndefined();
+      }
+    });
+
+    it("rejects a malformed camera.easing curve (wrong array length) with the path", () => {
+      const r = validateSceneSpec(specWithBeat({ camera: { move: "push-in", amount: 0.04, easing: { curve: [0.2, 0.8, 0.3] } } }));
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.error).toMatch(/camera\.easing/);
+    });
+
+    it("rejects an unknown key on camera", () => {
+      const r = validateSceneSpec(specWithBeat({ camera: { move: "push-in", amount: 0.04, wobble: 1 } }));
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.error).toMatch(/camera/);
+    });
+
+    it("beat accepts an outFade window and returns it verbatim", () => {
+      const r = validateSceneSpec(specWithBeat({ outFade: { startFrame: 70, durationFrames: 14 } }));
+      expect(r.ok).toBe(true);
+      if (r.ok) {
+        expect(r.spec.beats[0].outFade).toEqual({ startFrame: 70, durationFrames: 14 });
+      }
+    });
+
+    it("beat with no outFade leaves it undefined (default last-18-frames behavior unchanged)", () => {
+      const r = validateSceneSpec(specWithBeat({}));
+      expect(r.ok).toBe(true);
+      if (r.ok) {
+        expect(r.spec.beats[0].outFade).toBeUndefined();
+      }
+    });
+
+    it("clamps out-of-range outFade.startFrame/durationFrames instead of failing", () => {
+      const r = validateSceneSpec(specWithBeat({ outFade: { startFrame: -5, durationFrames: 9999 } }));
+      expect(r.ok).toBe(true);
+      if (r.ok) {
+        expect(r.spec.beats[0].outFade!.startFrame).toBe(0); // clamp min
+        expect(r.spec.beats[0].outFade!.durationFrames).toBe(600); // clamp max
+      }
+    });
+
+    it("rejects an unknown key on outFade", () => {
+      const r = validateSceneSpec(specWithBeat({ outFade: { startFrame: 10, durationFrames: 10, wobble: 1 } }));
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.error).toMatch(/outFade/);
+    });
+  });
 });

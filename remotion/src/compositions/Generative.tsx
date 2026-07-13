@@ -101,6 +101,7 @@ export interface SceneMeta {
 export interface CameraField {
   move: "push-in" | "pan-left" | "pan-right" | "rack" | "parallax" | "none";
   amount: number;
+  easing?: EasingSpec;
 }
 
 export interface Background {
@@ -202,12 +203,20 @@ export interface Layer {
   animate?: AnimateField;
 }
 
+// TASK 6b4 — authorable content out-fade window, overriding the interpreter's default
+// last-OUT_FADE_FRAMES-frames fallback (see `BeatSequence`'s `ofStart`/`ofEnd` below).
+export interface OutFadeField {
+  startFrame: number;
+  durationFrames: number;
+}
+
 export interface Beat {
   durationInFrames: number;
   camera?: CameraField;
   background?: Background;
   layers: Layer[];
   transitionOut?: TransitionOut;
+  outFade?: OutFadeField;
 }
 
 export interface SceneSpec {
@@ -835,10 +844,18 @@ const BeatSequence: React.FC<{
   // — but ONLY when this beat's own transitionOut is a hard "cut" (or it's the last beat). For any
   // animated transition the overlap/wipe already carries the resolve, and double-fading would
   // dim the crossover. This gives cut-endings and the film's final beat hero's graceful exit.
+  //
+  // TASK 6b4 — `beat.outFade`, when authored, overrides the default last-OUT_FADE_FRAMES-frames
+  // window with an exact `[startFrame, startFrame+durationFrames]` range (e.g. a beat resolving
+  // into the next beat's wipe over its own custom [70,84] tail). No `outFade` authored -> `ofStart`/
+  // `ofEnd` reduce to the exact previous hardcoded window, so an unauthored beat's fade is
+  // byte-for-byte unchanged.
   const OUT_FADE_FRAMES = 18;
   const isLastBeat = !outgoingTransition || outgoingTransition.kind === "cut";
+  const ofStart = beat.outFade ? beat.outFade.startFrame : beat.durationInFrames - OUT_FADE_FRAMES;
+  const ofEnd = beat.outFade ? beat.outFade.startFrame + beat.outFade.durationFrames : beat.durationInFrames;
   const contentFade = isLastBeat
-    ? interpolate(localFrame, [beat.durationInFrames - OUT_FADE_FRAMES, beat.durationInFrames], [1, 0], {
+    ? interpolate(localFrame, [ofStart, ofEnd], [1, 0], {
         extrapolateLeft: "clamp",
         extrapolateRight: "clamp",
       })

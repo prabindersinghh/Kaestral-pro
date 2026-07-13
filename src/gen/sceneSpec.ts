@@ -113,6 +113,7 @@ export interface LayerStyle {
 export interface Camera {
   move: (typeof CAMERA_MOVES)[number];
   amount: number;
+  easing?: EasingSpec;
 }
 
 export interface Background {
@@ -145,6 +146,17 @@ export interface LightingSweep {
 }
 
 export interface Hold {
+  startFrame: number;
+  durationFrames: number;
+}
+
+/**
+ * A beat's authorable content out-fade window: the beat's whole CONTENT (not the camera, not the
+ * transition overlap) fades opacity `[1,0]` over `[startFrame, startFrame+durationFrames]`. When
+ * absent, the interpreter falls back to its default last-`OUT_FADE_FRAMES`-frames window (see
+ * Generative.tsx) — this is purely an authorable override of that default, never a new behavior.
+ */
+export interface OutFade {
   startFrame: number;
   durationFrames: number;
 }
@@ -205,6 +217,7 @@ export interface Beat {
   background?: Background;
   layers: Layer[];
   transitionOut?: TransitionOut;
+  outFade?: OutFade;
 }
 
 export interface SceneSpec {
@@ -286,7 +299,7 @@ function checkUnknownKeys(obj: Record<string, unknown>, known: readonly string[]
 // ---------------------------------------------------------------------------
 
 const POSITION_KEYS = ["x", "y", "snap"] as const;
-const CAMERA_KEYS = ["move", "amount"] as const;
+const CAMERA_KEYS = ["move", "amount", "easing"] as const;
 const BACKGROUND_KEYS = ["kind", "accent"] as const;
 const TRANSITION_OUT_KEYS = ["kind", "accent", "snapToBeat", "overlapFrames", "easing"] as const;
 const MASK_KEYS = ["shape", "reveal"] as const;
@@ -331,7 +344,25 @@ function validateCamera(value: unknown, path: string): Camera | undefined {
   checkUnknownKeys(obj, CAMERA_KEYS, path);
   const move = checkEnum(obj.move, CAMERA_MOVES, `${path}.move`);
   const amount = clamp(obj.amount, 0, 0.3, 0);
-  return { move, amount };
+  const easing = obj.easing === undefined ? undefined : validateEasing(obj.easing, `${path}.easing`);
+  const camera: Camera = { move, amount };
+  if (easing !== undefined) camera.easing = easing;
+  return camera;
+}
+
+/**
+ * Validates `Beat.outFade`: an authorable content out-fade window `{startFrame, durationFrames}`
+ * overriding the interpreter's default last-N-frames fade. Both fields are tuning knobs (like
+ * `Hold`), so out-of-range values clamp rather than fail loud.
+ */
+function validateOutFade(value: unknown, path: string): OutFade | undefined {
+  if (value === undefined) return undefined;
+  if (!isPlainObject(value)) fail(path, "must be an object");
+  const obj = value as Record<string, unknown>;
+  checkUnknownKeys(obj, ["startFrame", "durationFrames"], path);
+  const startFrame = clamp(obj.startFrame, 0, 600, 0);
+  const durationFrames = clamp(obj.durationFrames, 1, 600, 14);
+  return { startFrame, durationFrames };
 }
 
 function validateBackground(value: unknown, path: string): Background | undefined {
@@ -712,7 +743,7 @@ function validateLayer(value: unknown, path: string, opts: ValidateOpts | undefi
   return layer;
 }
 
-const BEAT_KEYS = ["durationInFrames", "camera", "background", "layers", "transitionOut"] as const;
+const BEAT_KEYS = ["durationInFrames", "camera", "background", "layers", "transitionOut", "outFade"] as const;
 
 function validateBeat(value: unknown, path: string, opts: ValidateOpts | undefined): Beat {
   if (!isPlainObject(value)) fail(path, "must be an object");
@@ -729,11 +760,13 @@ function validateBeat(value: unknown, path: string, opts: ValidateOpts | undefin
   const camera = validateCamera(obj.camera, `${path}.camera`);
   const background = validateBackground(obj.background, `${path}.background`);
   const transitionOut = validateTransitionOut(obj.transitionOut, `${path}.transitionOut`);
+  const outFade = validateOutFade(obj.outFade, `${path}.outFade`);
 
   const beat: Beat = { durationInFrames, layers };
   if (camera !== undefined) beat.camera = camera;
   if (background !== undefined) beat.background = background;
   if (transitionOut !== undefined) beat.transitionOut = transitionOut;
+  if (outFade !== undefined) beat.outFade = outFade;
 
   return beat;
 }

@@ -1,5 +1,7 @@
-import { interpolate } from "remotion";
+import { interpolate, Easing } from "remotion";
 import type { ReactNode } from "react";
+import { bezierFromSpec } from "./easing";
+import type { EasingSpec } from "./easing";
 
 // Real Camera primitive — wraps a beat's entire visual content (background + layers) and applies
 // a continuous move across the beat's duration. This replaces Generative.tsx's old inline
@@ -23,6 +25,14 @@ import type { ReactNode } from "react";
 export interface CameraSpec {
   move: "push-in" | "pan-left" | "pan-right" | "rack" | "parallax" | "none";
   amount: number;
+  /**
+   * TASK 6b4 — optional bezier shaping for the push-in/pan/parallax progress curve. When absent
+   * the camera move is driven by a plain linear 0..1 progress (`progressOf`), matching every
+   * pre-existing render exactly. When present, `progressOf`'s linear `t` is remapped through
+   * `Easing.bezier(...bezierFromSpec(easing))` before being used for scale/translate — so an
+   * author can shape a slow push-in's ease the same way `enter`/`exit`/`transitionOut` already do.
+   */
+  easing?: EasingSpec;
 }
 
 /**
@@ -47,9 +57,13 @@ export function cameraTransform(camera: CameraSpec, frame: number, durationInFra
   const amount = camera.amount;
   if (move === "none" || amount <= 0) return {};
   const t = progressOf(frame, durationInFrames);
+  // TASK 6b4 — when the beat authors `camera.easing`, remap the linear 0..1 progress through that
+  // bezier before driving push-in scale / pan / parallax translate. No easing authored -> `et`
+  // equals `t` exactly, so every pre-existing camera render is byte-for-byte unchanged.
+  const et = camera.easing ? Easing.bezier(...bezierFromSpec(camera.easing))(t) : t;
 
   if (move === "push-in") {
-    const scale = interpolate(t, [0, 1], [1, 1 + amount]);
+    const scale = interpolate(et, [0, 1], [1, 1 + amount]);
     return { transform: `scale(${scale})`, transformOrigin: "50% 50%", willChange: "transform" };
   }
   if (move === "pan-left" || move === "pan-right") {
@@ -57,14 +71,14 @@ export function cameraTransform(camera: CameraSpec, frame: number, durationInFra
     // slight overscale so the pan never reveals a hard edge of the frame
     const scale = 1 + amount * 0.6;
     const shiftPct = amount * 100 * dir;
-    const translate = interpolate(t, [0, 1], [0, shiftPct]);
+    const translate = interpolate(et, [0, 1], [0, shiftPct]);
     return { transform: `scale(${scale}) translateX(${translate}%)`, transformOrigin: "50% 50%", willChange: "transform" };
   }
   if (move === "parallax") {
     // whole-frame gentle drift + push, background/mid layers add their own extra offset
     // (see parallaxOffset below) so depth reads as true parallax, not just a single pan.
-    const scale = interpolate(t, [0, 1], [1, 1 + amount * 0.4]);
-    const translate = interpolate(t, [0, 1], [amount * 20, -amount * 20]);
+    const scale = interpolate(et, [0, 1], [1, 1 + amount * 0.4]);
+    const translate = interpolate(et, [0, 1], [amount * 20, -amount * 20]);
     return { transform: `scale(${scale}) translateX(${translate}px)`, transformOrigin: "50% 50%", willChange: "transform" };
   }
   if (move === "rack") {
