@@ -31,6 +31,22 @@ Only now open the SceneSpec.
 
 ---
 
+## 1.5 Conceptual ambition — reach for the brave idea, not the obvious one
+
+Flawless execution of a *safe* idea is still a safe film. The single thing that separates a memorable launch film from a competent one is the **concept** — the angle, the opening image, the metaphor — and it is decided *before* any motion. This is where most drafts settle for less than they could:
+
+- **The obvious opening is a trap.** "Editing used to mean clicking through menus. Now it's easy." is *true, clear, and forgettable* — it states the problem literally, the way a spec sheet would. The brave version finds an image or a turn of phrase that makes the viewer lean in: a metaphor ("A kestrel watches. Total precision. Then it strikes." — the product *is* the kestrel), a provocation, an unexpected admission, a single concrete detail that implies the whole. Ask: *what's the least expected true thing I could open on?*
+
+- **Name the metaphor, then let it run the film.** The strongest films have one governing image that every beat pays off. If the product is precise and fast, that's not a bullet point — it's a hunting bird, a scalpel, a struck match. Pick the image in question 1 (the arc), and let the visual language, the word choice, and even the color accents serve it. A film with a spine reads as *authored*; a film that's just well-composed beats reads as *nice*.
+
+- **Copy is craft, not filler.** The words on screen carry as much of the film as the motion. "It makes it." lands because it's short, certain, and slightly surprising in its confidence. Labor over the lines the way you labor over the easing curve — cut every word that isn't doing work, and make the one important line quotable.
+
+- **Restraint is not timidity.** Apple-level restraint means *removing everything except the brave idea* — not avoiding a brave idea. Don't confuse "clean and safe" with "premium." The cleanest possible frame around a dull concept is still dull. Spend your restraint budget protecting one bold idea, not sanding a bland one smooth.
+
+The test: after you draft the concept, ask — *would this make someone stop scrolling? or is it merely correct?* If it's merely correct, you have not yet found the film. Go back to question 1 and reach further. The execution craft in the rest of this skill exists to serve an idea worth executing.
+
+---
+
 ## 2. Trade-offs — there are no right answers, only tensions you resolve on purpose
 
 Craft is choosing a point on a spectrum *knowingly*. The amateur picks a default; the designer picks a position and can say why. The main tensions:
