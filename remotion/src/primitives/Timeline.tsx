@@ -41,7 +41,10 @@ export const Timeline: React.FC<PrimitiveProps> = ({ props, frame, width, height
   const delay = enter?.delay ?? 0;
   const local = frame - delay;
 
-  const groupIn = interpolate(local, [0, 14], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: ease });
+  const rawGroupIn = interpolate(local, [0, 14], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: ease });
+  // TASK 5 FIX (per-property `animate` "sole driver" contract, see Generative.tsx's `BeatLayer`) —
+  // `animate.position` alone must not also kill this primitive's own opacity fade-in.
+  const groupIn = enter?.neutralizeOpacity ? 1 : rawGroupIn;
   const playhead = interpolate(local, [6, 60], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: ease });
 
   // Honor an authored props.width (fraction of frame width, clamped 0.2..1); default 0.66.

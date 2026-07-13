@@ -22,7 +22,10 @@ export const Counter: React.FC<PrimitiveProps> = ({ props, frame, width, height,
   const delay = enter?.delay ?? 0;
   const local = frame - delay;
 
-  const groupIn = interpolate(local, [0, 10], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const rawGroupIn = interpolate(local, [0, 10], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  // TASK 5 FIX (per-property `animate` "sole driver" contract, see Generative.tsx's `BeatLayer`) —
+  // `animate.position` alone must not also kill this primitive's own opacity fade-in.
+  const groupIn = enter?.neutralizeOpacity ? 1 : rawGroupIn;
   const countP = interpolate(local, [4, 56], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: ease });
   const shown = target * countP;
   const display = decimals > 0 ? shown.toFixed(decimals) : Math.round(shown).toLocaleString("en-US");

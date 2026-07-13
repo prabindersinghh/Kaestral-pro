@@ -18,6 +18,9 @@ export const Hairline: React.FC<PrimitiveProps> = ({ props, frame, fps, width, h
   const local = frame - delay;
   const p = spring({ frame: local, fps, config: { damping: 18, mass: 0.6 } });
   const draw = interpolate(p, [0, 1], [0, 1]);
+  // TASK 5 FIX (per-property `animate` "sole driver" contract, see Generative.tsx's `BeatLayer`) —
+  // `animate.position` alone must not also kill this primitive's own opacity fade-in.
+  const drawOpacity = enter?.neutralizeOpacity ? 1 : draw;
 
   const fullLen = orientation === "horizontal" ? width * lengthFrac : height * lengthFrac;
   const drawnLen = fullLen * draw;
@@ -35,7 +38,7 @@ export const Hairline: React.FC<PrimitiveProps> = ({ props, frame, fps, width, h
         height: boxH,
         background: color,
         boxShadow: `0 0 12px ${color}`,
-        opacity: opacity * interpolate(p, [0, 1], [0, 1]),
+        opacity: opacity * drawOpacity,
         transform: "translate(-50%, -50%)",
         borderRadius: thickness,
       }}

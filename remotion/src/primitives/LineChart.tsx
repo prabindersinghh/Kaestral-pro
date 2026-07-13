@@ -45,7 +45,10 @@ export const LineChart: React.FC<PrimitiveProps> = ({ props, frame, fps, width, 
   }
   pathLen = Math.max(1, pathLen);
 
-  const groupIn = interpolate(local, [0, 12], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const rawGroupIn = interpolate(local, [0, 12], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  // TASK 5 FIX (per-property `animate` "sole driver" contract, see Generative.tsx's `BeatLayer`) —
+  // `animate.position` alone must not also kill this primitive's own opacity fade-in.
+  const groupIn = enter?.neutralizeOpacity ? 1 : rawGroupIn;
   const draw = interpolate(local, [6, 60], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: ease });
   const dashOffset = pathLen * (1 - draw);
 

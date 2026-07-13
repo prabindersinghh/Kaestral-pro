@@ -3,10 +3,74 @@ import { renderRemotion } from "../../motion/renderRemotion";
 import { validateSceneSpec } from "../sceneSpec";
 import { join } from "node:path";
 import { statSync } from "node:fs";
+import { spawn } from "node:child_process";
 
 const sampleImagePath = join(process.cwd(), "public", "sample-image.png");
 
 const remotionDir = join(process.cwd(), "remotion");
+
+// --- ffmpeg pixel-proof helpers (used only by the FINDING 1 regression test below) ---------------
+// Deliberately minimal: no new dependency, just shells out to ffmpeg (already present in this
+// environment) to extract ONE frame as raw 8-bit grayscale pixels, then averages them in Node. This
+// gives a real "how bright is this region at this frame" signal without needing an image-decoding
+// library — sufficient to distinguish "opacity pinned to full at frame 0" (bug) from "opacity fading
+// in from near-black" (fixed).
+
+function runFfmpeg(args: string[]): Promise<{ stdout: Buffer; code: number | null }> {
+  return new Promise((resolve, reject) => {
+    const child = spawn("ffmpeg", args);
+    const chunks: Buffer[] = [];
+    let err = "";
+    child.stdout.on("data", (d: Buffer) => chunks.push(d));
+    child.stderr.on("data", (d) => { err += String(d); });
+    child.on("error", (e) => reject(e));
+    child.on("close", (code) => {
+      if (code !== 0 && chunks.length === 0) return reject(new Error(`ffmpeg failed (exit ${code}): ${err.slice(-500)}`));
+      resolve({ stdout: Buffer.concat(chunks), code });
+    });
+  });
+}
+
+/** True if an `ffmpeg` binary is reachable on PATH — the regression test degrades gracefully (render
+ * assertions only, no pixel proof) rather than failing outright when it's absent. */
+async function checkFfmpegAvailable(): Promise<boolean> {
+  try {
+    await runFfmpeg(["-version"]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Extracts a single frame from `videoPath` at EXACT frame index `frameIndex` (via the `select`
+ * filter — deliberately NOT `-ss` time-seeking, which for a file with a sparse keyframe/GOP
+ * structure can decode-and-return the wrong actual frame depending on ffmpeg's nearest-keyframe
+ * seek heuristics; `select=eq(n,frameIndex)` is unambiguous regardless of GOP layout), crops to
+ * `rect` (pixel coords), downsamples to 8-bit grayscale raw pixels, and returns the mean pixel
+ * value (0=black..255=white) — a coarse but effective "how bright/opaque does this region read"
+ * proxy.
+ */
+async function meanLumaOfCrop(
+  videoPath: string,
+  frameIndex: number,
+  rect: { x: number; y: number; w: number; h: number }
+): Promise<number> {
+  const { x, y, w, h } = rect;
+  const { stdout } = await runFfmpeg([
+    "-y",
+    "-i", videoPath,
+    "-vf", `select=eq(n\\,${frameIndex}),crop=${Math.round(w)}:${Math.round(h)}:${Math.round(x)}:${Math.round(y)},format=gray`,
+    "-frames:v", "1",
+    "-f", "rawvideo",
+    "-pix_fmt", "gray",
+    "pipe:1",
+  ]);
+  if (stdout.length === 0) throw new Error(`ffmpeg produced no pixel data for frame ${frameIndex} of ${videoPath}`);
+  let sum = 0;
+  for (const byte of stdout) sum += byte;
+  return sum / stdout.length;
+}
 
 describe("Generative render", () => {
   it("renders a MINIMAL sparse spec (no background/particles/camera/enter) to a non-blank MP4 — premium-by-construction defaults must kick in", async () => {
@@ -277,5 +341,86 @@ describe("Generative render", () => {
     const res = await renderRemotion("Generative", { spec: v.spec }, out, remotionDir);
     expect(res.width).toBe(1920);
     expect(statSync(out).size).toBeGreaterThan(10000);
+  }, 240000);
+
+  // REGRESSION TEST — task-5 review FINDING 1 (Critical): `animate.position` authored ALONE must
+  // NOT silently kill the layer's own entrance-driven OPACITY fade-in. The bug: Generative.tsx's
+  // `BeatLayer` used to compute `animateNeutralizesEnter = !!(layer.animate?.opacity ||
+  // layer.animate?.position)` — a single combined OR flag — so authoring `animate.position` alone
+  // wrongly neutralized the ENTIRE entrance (opacity included), pinning opacity to instant-full at
+  // frame 0 instead of letting it fade in via the default spring entrance. This spec is legal and
+  // must reach the interpreter: no `enter` is authored at all (so `resolveEnter` fills in the
+  // default spring entrance) and `animate` covers ONLY `position` — the validator's
+  // `checkAnimateConflicts` only rejects an explicitly-authored `enter.from` alongside
+  // `animate.position` (see src/gen/sceneSpec.ts), and there is no `enter` here whatsoever, so this
+  // spec validates fine and is exactly the shape the review calls out as reaching the interpreter.
+  it("renders animate.position ALONE (no animate.opacity, no enter authored) and the entrance-driven opacity fade survives — FINDING 1 regression", async () => {
+    const v = validateSceneSpec({
+      meta: { aspect: "16:9", fps: 30 },
+      beats: [
+        {
+          durationInFrames: 60,
+          background: { kind: "solid", accent: "#0b0a0d" }, // solid black backdrop, no grid/glow/particles — isolates the text's own luma
+          layers: [
+            {
+              element: "text",
+              props: { text: "GLOW", color: "greenLight" },
+              // No `enter` authored at all -> default spring entrance fills in (resolveEnter),
+              // which is NOT rejected by checkAnimateConflicts since no `enter.from` was authored.
+              position: { x: 0.5, y: 0.5, snap: false },
+              style: { role: "display", size: 0.16 },
+              animate: {
+                // position ALONE — no animate.opacity. A short tween so both its start and end sit
+                // well inside a single generous crop box below.
+                position: {
+                  from: { x: 0.46, y: 0.5 },
+                  to: { x: 0.54, y: 0.5 },
+                  startFrame: 0,
+                  durationFrames: 45,
+                  easing: "linear",
+                },
+              },
+            },
+          ],
+        },
+      ],
+    });
+    expect(v.ok).toBe(true);
+    if (!v.ok) return;
+    const out = join(remotionDir, ".test-out", "gen-animate-position-only.mp4");
+    const res = await renderRemotion("Generative", { spec: v.spec }, out, remotionDir);
+    expect(res.width).toBe(1920);
+    expect(res.height).toBe(1080);
+    // Baseline "actually rendered, not blank" proxy, matching every other test in this file.
+    expect(statSync(out).size).toBeGreaterThan(8000);
+
+    // Pixel-level proof (ffmpeg, present in this environment): the default spring entrance settles
+    // to ~99% opacity by frame ~28-32 at 30fps (see ASSUMED_ENTRANCE_SETTLE_FRAMES in
+    // remotion/src/primitives/pacing.ts) — frame 2 is deep inside the entrance's fade-in (spring
+    // barely started), frame 35 is comfortably settled AND still well before this beat's own
+    // OUT_FADE_FRAMES content resolve (Generative.tsx's BeatSequence fades the whole beat's content
+    // out over its final 18 frames — [42,60) on this 60-frame beat — so frame 35 avoids that
+    // confound entirely). If the CRITICAL bug were still present, opacity would be pinned to fully
+    // opaque at BOTH frames (the entrance neutralized wholesale by animate.position's mere presence)
+    // and this luma comparison would fail — this was verified by deliberately reproducing the bug
+    // (stale pre-fix bundle) during development of this test, which DID fail this exact assertion
+    // with the text already fully bright at frame 0. Crop box covers the full x=[0.42,0.58] range
+    // the text sweeps across (its animate.position tween), so the crop reliably contains the text
+    // at every frame regardless of the horizontal drift.
+    const ffmpegAvailable = await checkFfmpegAvailable();
+    if (!ffmpegAvailable) {
+      // Environment without ffmpeg: the render assertions above already prove the spec is legal and
+      // renders successfully; the opacity-fade claim itself is verified by code trace in this case
+      // (see BeatLayer's per-property neutralizeOpacity/neutralizePosition split and Text.tsx's
+      // post-hoc pin — animate.position alone sets neutralizePosition=true, neutralizeOpacity stays
+      // false, so animOpacity keeps playing the branch's own spring value un-pinned).
+      return;
+    }
+    const earlyLuma = await meanLumaOfCrop(out, 2, { x: 1920 * 0.42, y: 1080 * 0.4, w: 1920 * 0.16, h: 1080 * 0.2 });
+    const settledLuma = await meanLumaOfCrop(out, 35, { x: 1920 * 0.42, y: 1080 * 0.4, w: 1920 * 0.16, h: 1080 * 0.2 });
+    // Early frame (deep in the entrance fade-in) must be visibly DIMMER than the settled frame — proof
+    // the opacity entrance actually animated from low to high, i.e. was NOT pinned to full opacity at
+    // frame 0 by animate.position's mere presence.
+    expect(earlyLuma).toBeLessThan(settledLuma - 5);
   }, 240000);
 });

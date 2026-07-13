@@ -26,7 +26,10 @@ export const Waveform: React.FC<PrimitiveProps> = ({ props, frame, fps, width, h
   const local = frame - delay;
 
   // Bars reveal left -> right, spring-settled group entrance (never a hard pop-in).
-  const groupIn = spring({ frame: local, fps, config: { damping: 16, mass: 0.7 } });
+  const rawGroupIn = spring({ frame: local, fps, config: { damping: 16, mass: 0.7 } });
+  // TASK 5 FIX (per-property `animate` "sole driver" contract, see Generative.tsx's `BeatLayer`) —
+  // `animate.position` alone must not also kill this primitive's own opacity fade-in.
+  const groupIn = enter?.neutralizeOpacity ? 1 : rawGroupIn;
   const revealBars = interpolate(local, [4, 34], [0, N], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",

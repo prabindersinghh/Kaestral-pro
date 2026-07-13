@@ -181,7 +181,13 @@ export interface AnimateField {
 export interface Layer {
   element: string;
   props: Record<string, unknown>;
-  position: { x: number; y: number; snap?: boolean };
+  // TASK 5 FIX (FINDING 3) — `snap` is non-optional here to match the validated shape: `src/gen/
+  // sceneSpec.ts`'s `validatePosition` ALWAYS materializes `snap: boolean` (defaulting to `true`
+  // when the agent didn't author one — see `obj.snap === undefined ? true : Boolean(obj.snap)`), so
+  // a spec that reached this interpreter through `validateSceneSpec` never has an absent `snap`.
+  // `DEFAULT_POSITION` below (the defensive fallback for a layer with no `position` at all, e.g. a
+  // hand-authored spec that bypassed validation) is updated to include `snap: true` accordingly.
+  position: { x: number; y: number; snap: boolean };
   opacity: number;
   blur: number;
   depth?: "foreground" | "mid" | "background";
@@ -342,8 +348,10 @@ const AmbientParticles: React.FC<{ background?: Beat["background"]; frame: numbe
 };
 
 /** Structural default so a missing `position`/`opacity`/`blur` (e.g. a hand-authored raw JSON
- * spec that skipped `validateSceneSpec`) never crashes a primitive that reads `position.x`. */
-const DEFAULT_POSITION = { x: 0.5, y: 0.5 };
+ * spec that skipped `validateSceneSpec`) never crashes a primitive that reads `position.x`. Includes
+ * `snap: true` to satisfy `Layer["position"]`'s now-non-optional `snap` (FINDING 3) — matches
+ * `validatePosition`'s own default of `true` when a real spec authors no `snap`. */
+const DEFAULT_POSITION = { x: 0.5, y: 0.5, snap: true };
 
 /**
  * Spring/overshoot is the DEFAULT entrance (critique #5: "everything overshoots, settles, has
@@ -434,23 +442,41 @@ const BeatLayer: React.FC<{
   const opacity0 = layer.opacity ?? 1;
   const blur0 = layer.blur ?? 0;
 
-  // TASK 5 UPGRADE — per-property `layer.animate` must be the SOLE driver of any property it
-  // covers: the validator (`checkAnimateConflicts` in src/gen/sceneSpec.ts) only rejects an
-  // AUTHORED `enter`/`exit` that conflicts with `animate`, but `resolveEnter` below fills in a
-  // default spring entrance whenever `enter` is missing entirely — which WOULD still drive
-  // opacity/position internally (every primitive multiplies its own entrance opacity/offset into
-  // its render) even though no explicit conflict was authored. So: whenever `animate.opacity` or
-  // `animate.position` is present, force the entrance down every primitive's plain-fade path (an
-  // `anim` that matches no special-cased branch + explicit non-"spring" easing — see Text.tsx's
-  // linear-escape-hatch branch and Shape.tsx's `else` branch) and feed it an already-settled
-  // entrance frame (see `entranceFrame` below) so the internal fade has already clamped to fully
-  // opaque with zero directional offset — `animate`'s own externally-computed position/opacity
-  // becomes the only thing actually moving that property.
-  const animateNeutralizesEnter = !!(layer.animate?.opacity || layer.animate?.position);
-  const effectiveAuthoredEnter = animateNeutralizesEnter
-    ? { anim: "fade" as const, easing: "linear" as const, delay: 0, from: layer.enter?.from, snapToBeat: false }
-    : layer.enter;
-  const resolvedEnter = resolveEnter(effectiveAuthoredEnter, durationInFrames);
+  // TASK 5 UPGRADE (FIXED — see FINDING 1 in task-5 review) — per-property `layer.animate` must be
+  // the SOLE driver of any property it covers: the validator (`checkAnimateConflicts` in
+  // src/gen/sceneSpec.ts) only rejects an AUTHORED `enter`/`exit` that conflicts with `animate`, but
+  // `resolveEnter` below fills in a default spring entrance whenever `enter` is missing entirely —
+  // which WOULD still drive opacity/position internally (every primitive multiplies its own
+  // entrance-driven opacity into its render and/or adds its own entrance-driven translate/scale
+  // offset) even though no explicit conflict was authored.
+  //
+  // CRITICAL: this must be PER-PROPERTY, not a single combined flag — a layer authoring
+  // `animate.position` ALONE must keep its normal entrance-driven OPACITY fade-in; only position's
+  // own internal entrance contribution may be suppressed. The previous implementation OR'd
+  // `animate.opacity || animate.position` into one shared flag, which silently killed opacity's
+  // entrance whenever ONLY position was animate-driven (and vice versa) — exactly the "sole driver"
+  // contract violation this fix addresses.
+  //
+  // `neutralizeOpacity`/`neutralizePosition` are threaded through `EnterSpec` (see
+  // `primitives/types.ts`) as two INDEPENDENT booleans. Each primitive that couples an internal
+  // entrance-driven opacity multiplier and/or translate/scale offset into one shared spring/
+  // interpolate curve (Text/Shape/Image/Video/etc.) reads these flags and pins ONLY the
+  // corresponding piece to its settled value (opacity multiplier -> 1, translate/scale offset -> its
+  // rest value) as a final step — the branch selection and the OTHER (non-neutralized) property's
+  // math are completely untouched. This is why `entranceFrame` below no longer needs to be
+  // force-advanced past settle for the animate case at all (contrast the previous implementation) —
+  // neutralization now happens per-property, post-hoc, inside the primitive, regardless of what
+  // frame value it's handed, so `entranceFrame` can uniformly follow the ordinary hold-window clamp
+  // for BOTH properties: whichever one ISN'T animate-owned still needs the real, hold-respecting
+  // frame to render its own untouched entrance/hold behavior correctly.
+  const neutralizeOpacity = !!layer.animate?.opacity;
+  const neutralizePosition = !!layer.animate?.position;
+  const resolvedEnterBase = resolveEnter(layer.enter, durationInFrames);
+  const resolvedEnter: EnterSpec = {
+    ...resolvedEnterBase,
+    neutralizeOpacity,
+    neutralizePosition,
+  };
 
   // TASK 5 UPGRADE — explicit `layer.hold`: during [hold.startFrame, hold.startFrame+durationFrames]
   // the element must render STATIC — settled, no residual entrance motion. Every primitive's
@@ -461,18 +487,12 @@ const BeatLayer: React.FC<{
   // `enter.durationFrames` when present, else the same generic estimate `pacing.ts` uses for
   // delay-clamping), rather than ever letting `frame` keep advancing past that point while inside
   // the hold window — `Math.min` keeps this monotonic so the entrance still animates normally right
-  // up until it settles, then holds flat. When `animate` neutralized the entrance above,
-  // `entranceFrame` is ALWAYS pushed past its settle point regardless of any hold — the neutralized
-  // entrance must never be visible, hold window or not.
+  // up until it settles, then holds flat.
   const hold = layer.hold;
   const inHoldWindow = !!hold && frame >= hold.startFrame && frame <= hold.startFrame + hold.durationFrames;
   const settleFrame = (resolvedEnter.delay ?? 0) + (resolvedEnter.durationFrames ?? ASSUMED_ENTRANCE_SETTLE_FRAMES);
   const holdFreezeFrame = hold ? Math.max(hold.startFrame, settleFrame) : Infinity;
-  const entranceFrame = animateNeutralizesEnter
-    ? Math.max(frame, settleFrame)
-    : inHoldWindow
-      ? Math.min(frame, holdFreezeFrame)
-      : frame;
+  const entranceFrame = inHoldWindow ? Math.min(frame, holdFreezeFrame) : frame;
 
   // TASK 5 UPGRADE — per-property `layer.animate`: each of position/opacity/scale/blur/rotation is
   // independently tweened when `layer.animate.<prop>` is present, and becomes the SOLE driver of
@@ -772,8 +792,26 @@ const BeatSequence: React.FC<{
   let wrapperStyle: React.CSSProperties = {};
   let overlay: (React.CSSProperties & { content?: React.ReactNode }) | undefined;
 
+  // TASK 5 FIX (FINDING 2) — `transitionOut.easing` was added to the mirror type (see the `TransitionOut`
+  // interface above) but was never consumed: the crossfade `progress` below used a plain linear
+  // interpolate regardless of what easing the spec authored. Both the incoming and outgoing overlap
+  // windows are one shared crossfade (see the `outgoingOverlap`/`leadIn` symmetry comment above), so
+  // both progress computations shape through the SAME beat's `transitionOut.easing` when present —
+  // `incomingTransition` here IS the previous beat's `transitionOut` (see `Generative`'s `sequences`
+  // computation), so `incomingTransition.easing` is the correct field to consult for the incoming
+  // side too. `bezierFromSpec(undefined)` resolves to the `ease-out` tuple (see its own doc comment)
+  // when no easing was authored — the SAME "no easing specified -> ease-out" convention every other
+  // easing call site in this file already follows (`enter.easing`, `exit.easing`, `animate.<prop>.
+  // easing` via `tweenEasing` below all route `undefined` through the identical `bezierFromSpec`
+  // path), so an un-authored transition now gets the same gentle ease-out shaping as everything
+  // else in this "spring/overshoot, never linear" design system, rather than being the one
+  // remaining hard-linear code path.
   if (inOverlap) {
-    const progress = interpolate(seqFrame, [0, leadIn], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+    const progress = interpolate(seqFrame, [0, leadIn], [0, 1], {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.bezier(...bezierFromSpec(incomingTransition!.easing)),
+    });
     const styles = applyTransition(incomingTransition!.kind, progress, incomingTransition!.accent);
     wrapperStyle = styles.incoming;
     overlay = styles.overlay;
@@ -781,6 +819,7 @@ const BeatSequence: React.FC<{
     const progress = interpolate(localFrame, [tailStart, beat.durationInFrames], [0, 1], {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
+      easing: Easing.bezier(...bezierFromSpec(outgoingTransition!.easing)),
     });
     const styles = applyTransition(outgoingTransition!.kind, progress, outgoingTransition!.accent);
     wrapperStyle = styles.outgoing;

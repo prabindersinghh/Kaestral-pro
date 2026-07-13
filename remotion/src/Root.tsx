@@ -32,7 +32,7 @@ const MINIMAL_SPEC: GenerativeProps["spec"] = {
         {
           element: "text",
           props: { text: "Kaestral" },
-          position: { x: 0.5, y: 0.5 },
+          position: { x: 0.5, y: 0.5, snap: true },
           opacity: 1,
           blur: 0,
           style: { role: "display", size: 0.1 },

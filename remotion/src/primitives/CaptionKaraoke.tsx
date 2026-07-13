@@ -18,7 +18,10 @@ export const CaptionKaraoke: React.FC<PrimitiveProps> = ({ props, frame, fps, wi
   const delay = enter?.delay ?? 0;
   const local = frame - delay;
 
-  const groupIn = spring({ frame: local, fps, config: { damping: 15 } });
+  const rawGroupIn = spring({ frame: local, fps, config: { damping: 15 } });
+  // TASK 5 FIX (per-property `animate` "sole driver" contract, see Generative.tsx's `BeatLayer`) —
+  // `animate.position` alone must not also kill this primitive's own opacity fade-in.
+  const groupIn = enter?.neutralizeOpacity ? 1 : rawGroupIn;
 
   const pinnedIndex = typeof props.highlightIndex === "number" ? Math.round(props.highlightIndex) : undefined;
   // Sweeping highlight: advances one word roughly every 10 frames after the group has settled in,

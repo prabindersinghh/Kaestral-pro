@@ -33,6 +33,16 @@ export const Shape: React.FC<PrimitiveProps> = ({ props, frame, fps, width, heig
     animOpacity = interpolate(local, [0, 12], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   }
 
+  // TASK 5 FIX (per-property `animate` "sole driver" contract, see Generative.tsx's `BeatLayer`) —
+  // pin ONLY the piece `layer.animate.<prop>` actually owns to its settled/rest value, independent
+  // of the other — `animate.position` alone must not also kill this primitive's own opacity fade.
+  if (enter?.neutralizeOpacity) animOpacity = 1;
+  if (enter?.neutralizePosition) {
+    scaleX = 1;
+    scaleY = 1;
+    translateY = 0;
+  }
+
   const radius = shape === "circle" ? "50%" : shape === "pill" ? h : shape === "line" ? h / 2 : 8;
   const boxW = shape === "circle" ? h : w;
   const boxH = shape === "line" ? Math.max(2, h * 0.1) : h;

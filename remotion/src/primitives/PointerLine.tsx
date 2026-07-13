@@ -26,6 +26,9 @@ export const PointerLine: React.FC<PrimitiveProps> = ({ props, frame, fps, width
   const delay = enter?.delay ?? 0;
   const local = frame - delay;
   const p = spring({ frame: local, fps, config: { damping: 18, mass: 0.6 } });
+  // TASK 5 FIX (per-property `animate` "sole driver" contract, see Generative.tsx's `BeatLayer`) —
+  // `animate.position` alone must not also kill this primitive's own opacity fade-in.
+  const groupOpacity = enter?.neutralizeOpacity ? 1 : interpolate(p, [0, 1], [0, 1]);
   const draw = interpolate(local, [0, 18], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: ease });
 
   const dx = to.x - from.x;
@@ -44,7 +47,7 @@ export const PointerLine: React.FC<PrimitiveProps> = ({ props, frame, fps, width
           position: "absolute",
           left: 0,
           top: 0,
-          opacity: opacity * interpolate(p, [0, 1], [0, 1]),
+          opacity: opacity * groupOpacity,
           filter: blur > 0 ? `blur(${blur}px)` : undefined,
           overflow: "visible",
         }}

@@ -21,6 +21,21 @@ export interface EnterSpec {
   snapToBeat?: boolean;
   durationFrames?: number;
   spring?: SpringConfig;
+  /**
+   * TASK 5 FIX — per-property `animate` "sole driver" contract (see `Generative.tsx`'s
+   * `BeatLayer`): when `layer.animate.opacity`/`layer.animate.position` is present, that property
+   * must be driven SOLELY by the tween, and the entrance must not ALSO drive it internally (every
+   * primitive bakes its own entrance-driven opacity multiplier and/or translate/scale offset from
+   * one shared spring/interpolate curve). These two flags are independent — one may be true while
+   * the other is false/undefined — so a layer authoring `animate.position` ALONE continues to get
+   * its normal entrance-driven opacity fade-in, and vice versa. A primitive that reads these should
+   * pin its OWN internal opacity multiplier to 1 (when `neutralizeOpacity`) and/or its own internal
+   * translate/scale offset to its settled value — 0 offset / scale 1 (when `neutralizePosition`) —
+   * as a final step, without altering which `anim` branch it takes or how that branch computes its
+   * *other* (non-neutralized) property.
+   */
+  neutralizeOpacity?: boolean;
+  neutralizePosition?: boolean;
 }
 
 export interface StyleSpec {

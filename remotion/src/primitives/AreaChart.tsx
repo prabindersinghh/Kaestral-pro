@@ -35,7 +35,10 @@ export const AreaChart: React.FC<PrimitiveProps> = ({ props, frame, width, heigh
   const pathD = coords.map((c, i) => `${i === 0 ? "M" : "L"} ${c.x.toFixed(2)} ${c.y.toFixed(2)}`).join(" ");
   const areaD = `${pathD} L ${plotW} ${plotH} L 0 ${plotH} Z`;
 
-  const groupIn = interpolate(local, [0, 12], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const rawGroupIn = interpolate(local, [0, 12], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  // TASK 5 FIX (per-property `animate` "sole driver" contract, see Generative.tsx's `BeatLayer`) —
+  // `animate.position` alone must not also kill this primitive's own opacity fade-in.
+  const groupIn = enter?.neutralizeOpacity ? 1 : rawGroupIn;
   const sweep = interpolate(local, [4, 58], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: ease });
 
   // Leading-edge point for the traveling glow marker that rides the sweep.

@@ -50,7 +50,10 @@ export const TextOnPath: React.FC<PrimitiveProps> = ({ props, frame, fps, width,
   const fontSize = Math.round(Math.min(width, height) * size); // min() keeps portrait (9:16) titles inside the narrow frame
   const amplitude = fontSize * 0.7;
 
-  const groupIn = spring({ frame: local, fps, config: { damping: 16, mass: 0.7 } });
+  const rawGroupIn = spring({ frame: local, fps, config: { damping: 16, mass: 0.7 } });
+  // TASK 5 FIX (per-property `animate` "sole driver" contract, see Generative.tsx's `BeatLayer`) —
+  // `animate.position` alone must not also kill this primitive's own opacity fade-in.
+  const groupIn = enter?.neutralizeOpacity ? 1 : rawGroupIn;
   const trackWidth = Math.min(width * 0.86, fontSize * text.length * 0.62);
   // TASK 10 UPGRADE — optical baseline finish (ENGINE-DEFECTS.md root cause D): same upward
   // correction as Text.tsx/Counter.tsx, computed as a PIXEL offset (0.08 * this element's own

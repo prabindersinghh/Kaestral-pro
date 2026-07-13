@@ -94,6 +94,19 @@ export const Text: React.FC<PrimitiveProps> = ({ props, frame, fps, width, heigh
     translateY = interpolate(p, [0, 1], [22, 0]);
   }
 
+  // TASK 5 FIX (per-property `animate` "sole driver" contract, see Generative.tsx's `BeatLayer`) —
+  // `enter.neutralizeOpacity`/`enter.neutralizePosition` are independent: pin ONLY the specific
+  // piece `layer.animate.<prop>` actually owns to its settled/rest value, as a final step AFTER the
+  // branch above has computed its natural entrance — the branch selection and the OTHER (non-
+  // neutralized) property's motion are completely untouched, so e.g. `animate.position` alone still
+  // lets `animOpacity` play its normal entrance fade-in.
+  if (enter?.neutralizeOpacity) animOpacity = 1;
+  if (enter?.neutralizePosition) {
+    translateX = 0;
+    translateY = 0;
+    scale = 1;
+  }
+
   return (
     <div
       style={{
