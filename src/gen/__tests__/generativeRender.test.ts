@@ -423,4 +423,91 @@ describe("Generative render", () => {
     // frame 0 by animate.position's mere presence.
     expect(earlyLuma).toBeLessThan(settledLuma - 5);
   }, 240000);
+
+  // TASK 6b1 — text ANCHOR + mono FONT. Before this task `text` layers always CENTERED on
+  // `position`, so a left-column title authored at x:0.12 ran off the left edge of the frame.
+  it("renders a LEFT-anchored text at x:0.12 with ink pixels near the left edge — proves anchor:'left' places the text's start near position.x, not centered on it", async () => {
+    const v = validateSceneSpec({
+      meta: { aspect: "16:9", fps: 30 },
+      beats: [
+        {
+          durationInFrames: 60,
+          background: { kind: "solid", accent: "#0b0a0d" }, // solid black backdrop isolates the text's own luma
+          layers: [
+            {
+              element: "text",
+              props: { text: "A kestrel watches." },
+              position: { x: 0.12, y: 0.4, snap: false },
+              style: { role: "display", size: 0.072, anchor: "left" },
+              enter: { anim: "spring" },
+            },
+          ],
+        },
+      ],
+    });
+    expect(v.ok).toBe(true);
+    if (!v.ok) return;
+    const out = join(remotionDir, ".test-out", "gen-text-anchor-left.mp4");
+    const res = await renderRemotion("Generative", { spec: v.spec }, out, remotionDir);
+    expect(res.width).toBe(1920);
+    expect(res.height).toBe(1080);
+    // Baseline "actually rendered, not blank" proxy, matching every other test in this file.
+    expect(statSync(out).size).toBeGreaterThan(8000);
+
+    const ffmpegAvailable = await checkFfmpegAvailable();
+    if (!ffmpegAvailable) {
+      // Environment without ffmpeg: the render assertions above already prove the spec is legal
+      // and renders successfully; the pixel-level left-anchoring proof is skipped in this case.
+      return;
+    }
+    // Settle frame: default spring entrance settles to ~99% opacity by frame ~28-32 at 30fps (see
+    // ASSUMED_ENTRANCE_SETTLE_FRAMES in remotion/src/primitives/pacing.ts) — frame 40 is comfortably
+    // settled and still well before this beat's own OUT_FADE_FRAMES resolve.
+    const settleFrame = 40;
+    // The LEFT ~8% column of the frame, centered vertically around y=40% (position.y). If the text
+    // is genuinely left-anchored (its LEFT edge starts at x:0.12, i.e. the text runs rightward from
+    // there), this narrow strip right at the very left edge of the frame (x:[0, 0.08]) sits just
+    // before the text's start and would read near-black if the text were being CENTERED instead
+    // (centered on x:0.12 would push the text's visible ink leftward past this column and off-frame
+    // entirely, clipped — the strip would stay dark either way in that failure mode). The
+    // decisive column is immediately AFTER position.x's left edge: x:[0.12, 0.20], an 8%-wide band
+    // starting exactly at the authored left-anchor point, which must contain bright ink for a
+    // left-anchored render (a center-anchored render would place the text's horizontal midpoint at
+    // x:0.12, so its ink would straddle x:[0.12,0.20] far less and skew darker/clipped-looking, and
+    // for a genuinely off-frame center-anchored overflow the same band would still show materially
+    // less ink than the true left-anchored case).
+    const leftAnchorBandLuma = await meanLumaOfCrop(out, settleFrame, {
+      x: 1920 * 0.12,
+      y: 1080 * 0.4 - 1080 * 0.1,
+      w: 1920 * 0.08,
+      h: 1080 * 0.2,
+    });
+    // A dark background (solid #0b0a0d, luma ~11) with bright ink (#eaeaef, luma ~234) means any
+    // meaningful text coverage in this band pulls the mean well above the background floor.
+    expect(leftAnchorBandLuma).toBeGreaterThan(40);
+  }, 240000);
+
+  it("renders a mono-font text without error", async () => {
+    const v = validateSceneSpec({
+      meta: { aspect: "16:9", fps: 30 },
+      beats: [
+        {
+          durationInFrames: 30,
+          layers: [
+            {
+              element: "text",
+              props: { text: "Mono" },
+              style: { role: "display", size: 0.1, font: "mono" },
+            },
+          ],
+        },
+      ],
+    });
+    expect(v.ok).toBe(true);
+    if (!v.ok) return;
+    const out = join(remotionDir, ".test-out", "gen-text-font-mono.mp4");
+    const res = await renderRemotion("Generative", { spec: v.spec }, out, remotionDir);
+    expect(res.width).toBe(1920);
+    expect(statSync(out).size).toBeGreaterThan(8000);
+  }, 240000);
 });

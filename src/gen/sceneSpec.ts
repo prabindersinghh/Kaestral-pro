@@ -33,6 +33,11 @@ export const MASK_SHAPES = ["circle", "pill", "rect", "logo", "wipe"] as const;
 
 export const STYLE_ROLES = ["display", "accent", "muted"] as const;
 
+// Task 6b1: text anchor (horizontal placement relative to `position.x`) and mono font opt-in.
+export const STYLE_ANCHORS = ["left", "center", "right"] as const;
+
+export const STYLE_FONTS = ["sans", "mono"] as const;
+
 export const ASPECTS = ["16:9", "9:16", "1:1"] as const;
 
 // Additional closed enums used by nested modifier fields (per the SceneSpec block in the design spec).
@@ -101,6 +106,8 @@ export interface Exit {
 export interface LayerStyle {
   role: (typeof STYLE_ROLES)[number];
   size: number;
+  anchor: (typeof STYLE_ANCHORS)[number];
+  font: (typeof STYLE_FONTS)[number];
 }
 
 export interface Camera {
@@ -288,7 +295,7 @@ const LIGHTING_SWEEP_KEYS = ["on", "angle", "speed"] as const;
 const ENTER_KEYS = ["anim", "easing", "delay", "from", "snapToBeat", "durationFrames", "spring"] as const;
 const EXIT_KEYS = ["anim", "at", "easing", "durationFrames"] as const;
 const SPRING_CONFIG_KEYS = ["damping", "mass", "stiffness"] as const;
-const STYLE_KEYS = ["role", "size"] as const;
+const STYLE_KEYS = ["role", "size", "anchor", "font"] as const;
 const HOLD_KEYS = ["startFrame", "durationFrames"] as const;
 const ANIMATE_KEYS = ["position", "opacity", "scale", "blur", "rotation"] as const;
 const TWEEN_KEYS = ["from", "to", "startFrame", "durationFrames", "easing"] as const;
@@ -441,7 +448,12 @@ function validateStyle(value: unknown, path: string): LayerStyle | undefined {
   checkUnknownKeys(obj, STYLE_KEYS, path);
   const role = checkEnum(obj.role, STYLE_ROLES, `${path}.role`);
   const size = clamp(obj.size, 0.01, 0.4, 0.09);
-  return { role, size };
+  // Present-but-invalid must fail loud (checkEnum throws); absent must yield a materialized
+  // default, never undefined — checkEnum itself would fail loud on `undefined` too (it's not a
+  // string in the allowed set), so absence is special-cased before reaching checkEnum.
+  const anchor = obj.anchor === undefined ? "center" : checkEnum(obj.anchor, STYLE_ANCHORS, `${path}.anchor`);
+  const font = obj.font === undefined ? "sans" : checkEnum(obj.font, STYLE_FONTS, `${path}.font`);
+  return { role, size, anchor, font };
 }
 
 function validateHold(value: unknown, path: string): Hold | undefined {

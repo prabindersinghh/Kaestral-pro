@@ -35,6 +35,44 @@ describe("validateSceneSpec", () => {
     }
   });
 
+  describe("style.anchor / style.font", () => {
+    it("accepts anchor:left + font:mono and returns them", () => {
+      const spec = {
+        ...minimal,
+        beats: [{ durationInFrames: 60, layers: [{ element: "text", props: { text: "Hi" }, style: { role: "display", size: 0.072, anchor: "left", font: "mono" } }] }],
+      };
+      const r = validateSceneSpec(spec);
+      expect(r.ok).toBe(true);
+      if (r.ok) {
+        expect(r.spec.beats[0].layers[0].style?.anchor).toBe("left");
+        expect(r.spec.beats[0].layers[0].style?.font).toBe("mono");
+      }
+    });
+
+    it("rejects a bad anchor enum value with a clear message", () => {
+      const spec = {
+        ...minimal,
+        beats: [{ durationInFrames: 60, layers: [{ element: "text", props: { text: "Hi" }, style: { role: "display", size: 0.072, anchor: "middle" } }] }],
+      };
+      const r = validateSceneSpec(spec);
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.error).toMatch(/beats\[0\]\.layers\[0\]\.style\.anchor/);
+    });
+
+    it("defaults anchor to center and font to sans when style is present but partial", () => {
+      const spec = {
+        ...minimal,
+        beats: [{ durationInFrames: 60, layers: [{ element: "text", props: { text: "Hi" }, style: { role: "display", size: 0.05 } }] }],
+      };
+      const r = validateSceneSpec(spec);
+      expect(r.ok).toBe(true);
+      if (r.ok) {
+        expect(r.spec.beats[0].layers[0].style?.anchor).toBe("center");
+        expect(r.spec.beats[0].layers[0].style?.font).toBe("sans");
+      }
+    });
+  });
+
   it("rejects a non-brand, non-hex color with the path", () => {
     const bad = { ...minimal, beats: [{ durationInFrames: 60, background: { kind: "solid", accent: "javascript:alert(1)" }, layers: [{ element: "text", props: { text: "x" } }] }] };
     const r = validateSceneSpec(bad);

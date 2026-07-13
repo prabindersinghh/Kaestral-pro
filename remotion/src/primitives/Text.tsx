@@ -107,6 +107,19 @@ export const Text: React.FC<PrimitiveProps> = ({ props, frame, fps, width, heigh
     scale = 1;
   }
 
+  // TASK 6b1 — text ANCHOR: `text` layers used to unconditionally CENTER on `position` (translate
+  // -50%,-50%), which runs a left-column title authored at e.g. x:0.12 off the left edge of the
+  // frame. Anchor picks the horizontal placement relative to `position.x`:
+  //   left   -> position.x is the text's LEFT edge   (base translateX 0)
+  //   right  -> position.x is the text's RIGHT edge  (base translateX -100%)
+  //   center -> position.x is the text's CENTER      (base translateX -50%, unchanged default)
+  // The vertical half (`calc(-50% - 0.08em)`, the optical-baseline nudge from TASK 10) is identical
+  // across anchors. The entrance-driven translateX/translateY/scale must COMPOSE with this base
+  // transform (appended, not overwritten) so spring/kinetic/etc. entrances still work per-anchor.
+  const anchor = style?.anchor ?? "center";
+  const baseTranslateX = anchor === "left" ? "0" : anchor === "right" ? "-100%" : "-50%";
+  const textAlign = anchor === "left" ? "left" : anchor === "right" ? "right" : "center";
+
   return (
     <div
       style={{
@@ -120,15 +133,15 @@ export const Text: React.FC<PrimitiveProps> = ({ props, frame, fps, width, heigh
         // element's own computed fontSize, so it stays proportionally correct at any `style.size`)
         // to match how HeroDemo's thesis line sits — HeroDemo achieves the same effect implicitly
         // via its specific line-height/margin combination; this makes it explicit and universal.
-        transform: `translate(-50%, calc(-50% - 0.08em)) translate(${translateX}px, ${translateY}px) scale(${scale})`,
+        transform: `translate(${baseTranslateX}, calc(-50% - 0.08em)) translate(${translateX}px, ${translateY}px) scale(${scale})`,
         opacity: opacity * animOpacity,
         filter: blur > 0 ? `blur(${blur}px)` : undefined,
-        fontFamily: TOKENS.fontSans,
+        fontFamily: style?.font === "mono" ? TOKENS.fontMono : TOKENS.fontSans,
         fontWeight: 800,
         fontSize,
         color,
         letterSpacing: -1.5,
-        textAlign: "center",
+        textAlign,
         whiteSpace: "pre",
       }}
     >

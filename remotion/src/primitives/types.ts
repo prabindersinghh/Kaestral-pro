@@ -41,6 +41,8 @@ export interface EnterSpec {
 export interface StyleSpec {
   role?: "display" | "accent" | "muted";
   size?: number;
+  anchor?: "left" | "center" | "right";
+  font?: "sans" | "mono";
 }
 
 export interface PrimitiveProps {
