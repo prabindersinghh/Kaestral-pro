@@ -175,6 +175,40 @@
   .card .prompt{margin-top:16px;font-family:var(--mono);font-size:12.5px;color:var(--ink);background:var(--bg);border:1px solid var(--white-line);border-left:2px solid var(--green);border-radius:0 8px 8px 0;padding:11px 13px;line-height:1.55}
   @media(max-width:820px){.cards{grid-template-columns:1fr}}
 
+  /* ---- use cases: grouped panels ---- */
+  .ugrid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;margin-top:42px}
+  .upanel{background:linear-gradient(180deg,var(--panel),var(--bg-2));border:1px solid var(--white-line);border-radius:13px;padding:24px 26px;transition:.18s ease;position:relative}
+  .upanel:hover{border-color:var(--white-line-2)}
+  .upanel .uh{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+  .upanel .uh .emoji{font-size:19px;line-height:1}
+  .upanel .uh h4{font-size:16.5px;font-weight:650;letter-spacing:-.01em}
+  .upanel .coming{margin-left:auto;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);border:1px solid var(--gold-line);background:var(--gold-dim);border-radius:999px;padding:3px 9px;white-space:nowrap}
+  .upanel ul{list-style:none;display:flex;flex-direction:column;gap:8px}
+  .upanel li{color:var(--ink-2);font-size:13.5px;line-height:1.55;padding-left:15px;position:relative}
+  .upanel li::before{content:"";position:absolute;left:0;top:8px;width:5px;height:5px;border-radius:50%;background:var(--slate)}
+  .upanel.pro{border-style:dashed;border-color:var(--gold-line);opacity:.88}
+  .upanel.pro li::before{background:var(--gold)}
+  .upanel.pro ul{color:var(--ink-3)}
+  .upanel code{font-family:var(--mono);font-size:12px;background:var(--panel-2);padding:1.5px 5px;border-radius:4px;border:1px solid var(--white-line);color:var(--ink)}
+  @media(max-width:820px){.ugrid{grid-template-columns:1fr}}
+
+  /* ---- capabilities: tool tables + name lists ---- */
+  .cap-cat{margin-top:52px}
+  .cap-cat:first-of-type{margin-top:44px}
+  .cap-cat .ch{display:flex;align-items:center;gap:11px;margin-bottom:8px;flex-wrap:wrap}
+  .cap-cat .ch .emoji{font-size:19px}
+  .cap-cat .ch h3{font-size:19px;font-weight:700;letter-spacing:-.015em}
+  .cap-cat .ch .coming{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);border:1px solid var(--gold-line);background:var(--gold-dim);border-radius:999px;padding:3px 9px;white-space:nowrap}
+  .cap-cat .cdesc{color:var(--ink-2);font-size:14.5px;line-height:1.65;max-width:70ch;margin-bottom:18px}
+  .toolnames{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 4px}
+  .toolnames span{font-family:var(--mono);font-size:12.5px;color:var(--ink);background:var(--panel-2);border:1px solid var(--white-line);border-radius:6px;padding:5px 10px}
+  .cap-list{list-style:none;display:grid;grid-template-columns:repeat(2,1fr);gap:6px 24px;margin-top:14px}
+  .cap-list li{color:var(--ink-2);font-size:14px;line-height:1.6;padding-left:15px;position:relative}
+  .cap-list li::before{content:"";position:absolute;left:0;top:9px;width:5px;height:5px;border-radius:50%;background:var(--slate)}
+  @media(max-width:820px){.cap-list{grid-template-columns:1fr}}
+  .cap-cat.pro .cdesc,.cap-cat.pro .toolnames span{opacity:.8}
+  .cap-cat.pro .toolnames span{border-color:var(--gold-line);color:var(--ink-2)}
+
   /* ---- comparison ---- */
   .cmp{margin-top:40px;border:1px solid var(--white-line);border-radius:13px;overflow:hidden;background:var(--panel)}
   .cmp-scroll{overflow-x:auto}
@@ -270,8 +304,10 @@
       <a href="#features">Features</a>
       <a href="#how-it-works">How it works</a>
       <a href="#usecases">Use cases</a>
+      <a href="#capabilities">Capabilities</a>
       <a href="#compare">Compare</a>
       <a href="#developers">Developers</a>
+      <a href="pricing.html">Pricing</a>
       <a href="https://github.com/prabindersinghh/Kaestral-pro">GitHub</a>
     </div>
     <a class="btn btn-primary" href="https://github.com/prabindersinghh/Kaestral-pro/releases/latest" onclick="trackDownload()">Download</a>
@@ -386,26 +422,265 @@
   <div class="wrap">
     <span class="kicker">Jobs to be done</span>
     <h2>What people <span class="draw">make with it.</span></h2>
-    <div class="cards">
-      <div class="card rev">
-        <div class="n">SAAS · DEMO</div>
-        <h4>Make a SaaS demo video</h4>
-        <p>Screen recording in, launch-ready demo out — intro, captions, punch-ins, an outro CTA.</p>
-        <div class="prompt">“Add an animated intro titled Acme 2.0, caption the walkthrough, and end with ‘Try free → acme.com’.”</div>
+    <p class="lead">Real, shipped capabilities across eight kinds of work — grouped by who's using them. Everything here runs today, except the last group.</p>
+    <div class="ugrid">
+
+      <div class="upanel rev">
+        <div class="uh"><span class="emoji">🎬</span><h4>Short-form / Creator</h4></div>
+        <ul>
+          <li>Turn a 20-minute recording into a tight 60-second reel — auto-removes filler words, dead air, and false starts</li>
+          <li>Cut a podcast into viral clips — finds the hook, trims to the payoff</li>
+          <li>Word-synced karaoke captions — every word highlighted on the syllable, not near it</li>
+          <li>Cut on the beat — automatically syncs cuts and animations to the music's BPM</li>
+          <li>Reframe landscape → 9:16 vertical for Reels, Shorts, TikTok</li>
+          <li>Punch-in zooms on key moments</li>
+          <li>Generate a viral-style reel from raw footage with one prompt</li>
+          <li>Platform-specific delivery — Reels / Shorts / TikTok / YouTube / feed</li>
+        </ul>
       </div>
-      <div class="card rev">
-        <div class="n">PODCAST · REELS</div>
-        <h4>Turn a podcast into reels</h4>
-        <p>One long recording becomes several vertical, captioned, beat-cut shorts for every platform.</p>
-        <div class="prompt">“Find the 3 best 30-second moments, make each a 9:16 reel with karaoke captions.”</div>
+
+      <div class="upanel rev">
+        <div class="uh"><span class="emoji">📊</span><h4>SaaS / Product / Startup</h4></div>
+        <ul>
+          <li>Make a product demo without an editor — browser chrome, arrows, highlight boxes, spotlight-dim</li>
+          <li>Launch films — cinematic intros with logo reveals and specular sweeps</li>
+          <li>Animated data-stories — bar/line/area charts that grow, numbers that count up</li>
+          <li>Feature walkthroughs — annotated screen recordings</li>
+          <li>Sales &amp; pitch videos</li>
+          <li>Investor update videos</li>
+          <li>Changelog / release videos</li>
+          <li>Onboarding &amp; tutorial videos</li>
+          <li>Ad creative — hook → beats → CTA structure</li>
+        </ul>
       </div>
-      <div class="card rev">
-        <div class="n">TALKING-HEAD · SHORT</div>
-        <h4>Cut a talking-head into a viral short</h4>
-        <p>Filler removed, hook up front, captioned on the word, punched in on the punchline.</p>
-        <div class="prompt">“Cut the ums and pauses, open on the strongest line, add bold captions and a zoom punch.”</div>
+
+      <div class="upanel rev">
+        <div class="uh"><span class="emoji">✂️</span><h4>Editing (the classic NLE)</h4></div>
+        <ul>
+          <li>Multi-track timeline (video, audio, image, text, Lottie)</li>
+          <li>Trim, split, ripple delete, drag, snap, razor</li>
+          <li>Speed / retime, keyframe animation with easing lanes</li>
+          <li>Transforms, crop, opacity, blend modes</li>
+          <li>Transitions — cross-dissolve, wipe, push, glitch, RGB-split</li>
+          <li>Layouts — picture-in-picture, split-screen, grid</li>
+          <li>Color grading — exposure, contrast, saturation, temperature, palette-matched grades</li>
+          <li>Audio — waveforms, volume, fades, mixing</li>
+          <li>Export — H.264 / H.265 / ProRes, 1080p or 4K</li>
+        </ul>
+      </div>
+
+      <div class="upanel rev">
+        <div class="uh"><span class="emoji">🧠</span><h4>AI-Operated (the differentiator)</h4></div>
+        <ul>
+          <li>“Cut the boring parts” — silence and pause detection</li>
+          <li>“Remove every ‘um’” — word-level surgical cutting</li>
+          <li>“Caption this” — word-accurate, styled, animated</li>
+          <li>“Make this a viral reel” — reframe → hook → cut → caption → grade</li>
+          <li>“Pull my brand colors from this clip” — palette extraction → auto-grade</li>
+          <li>“Animate an intro that says [X]” — bespoke motion graphics from a sentence</li>
+          <li>“Find the best moment” — it watches your frames and picks</li>
+          <li>Claude designs the whole film — art-directed compositions, not templates</li>
+        </ul>
+      </div>
+
+      <div class="upanel rev">
+        <div class="uh"><span class="emoji">🔌</span><h4>Developer / MCP</h4></div>
+        <ul>
+          <li><code>claude mcp add kaestral -- npx kaestral</code> — one-line install</li>
+          <li>50 tools exposed to any LLM (Claude Code, Cursor, Codex, ChatGPT)</li>
+          <li>Drive video editing from your terminal — scriptable, agentic</li>
+          <li>Automate video pipelines — batch, CI, repeatable renders</li>
+          <li>Build on it — open source, GPLv3</li>
+        </ul>
+      </div>
+
+      <div class="upanel rev">
+        <div class="uh"><span class="emoji">📥</span><h4>Import / Interop</h4></div>
+        <ul>
+          <li>Import from URL (paste a link, it pulls the video)</li>
+          <li>Drag-and-drop any video / image / audio</li>
+          <li>Open .kaestral projects</li>
+          <li>Export XMEML → Premiere Pro</li>
+          <li>Export FCPXML → DaVinci Resolve / Final Cut</li>
+          <li>SRT caption export</li>
+        </ul>
+      </div>
+
+      <div class="upanel rev">
+        <div class="uh"><span class="emoji">🔒</span><h4>Privacy</h4></div>
+        <ul>
+          <li>Everything stays local. Your video never leaves your machine.</li>
+          <li>Local transcription (whisper), local rendering, local projects</li>
+          <li>No cloud upload, no account required</li>
+        </ul>
+      </div>
+
+      <div class="upanel pro rev">
+        <div class="uh"><span class="emoji">🔮</span><h4>Pro</h4><span class="coming">Coming — join the waitlist</span></div>
+        <ul>
+          <li>AI video &amp; image generation — prompt → new footage on your timeline</li>
+          <li>Translation &amp; dubbing — Hindi + regional Indian languages, and beyond</li>
+          <li>AI upscaling — temporally consistent, no flicker</li>
+          <li>Advanced generative motion — PixiJS particles, shaders</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<section id="capabilities">
+  <div class="wrap">
+    <span class="kicker">Full capability surface</span>
+    <h2>50 MCP tools. <span class="draw">Any LLM can drive them.</span></h2>
+    <p class="lead">Claude Code, Cursor, Codex, ChatGPT — any client that speaks MCP can call every tool below. This is the complete surface, not a marketing sample.</p>
+
+    <div class="cap-cat rev">
+      <div class="ch"><span class="emoji">👁️</span><h3>Perception — it sees, hears, and feels rhythm</h3></div>
+      <p class="cdesc">The tools that give the AI eyes and ears before it ever touches your timeline.</p>
+      <div class="cmp">
+        <div class="cmp-scroll">
+        <table>
+          <thead><tr><th>Tool</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td>see_video</td><td>Extracts and returns real frames — the LLM watches your footage</td></tr>
+            <tr><td>get_transcript</td><td>Word-level transcription (local whisper), exact timestamps</td></tr>
+            <tr><td>analyze_audio</td><td>Beats, BPM, onsets, silence and pause detection</td></tr>
+            <tr><td>extract_palette</td><td>Dominant colors → brand-matched grading</td></tr>
+            <tr><td>inspect_media</td><td>Real ffprobe metadata — dimensions, fps, duration, audio</td></tr>
+            <tr><td>inspect_timeline</td><td>Structured read of the live timeline state</td></tr>
+            <tr><td>search_media</td><td>Semantic search across your library</td></tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
+      <p class="honest">Traditional NLEs have none of this. <b>This is why Kaestral edits with judgment instead of guessing.</b></p>
+    </div>
+
+    <div class="cap-cat rev">
+      <div class="ch"><span class="emoji">✂️</span><h3>Timeline editing</h3></div>
+      <div class="toolnames">
+        <span>get_timeline</span><span>add_clips</span><span>insert_clips</span><span>remove_clips</span><span>move_clips</span><span>split_clips</span><span>ripple_delete_ranges</span><span>set_clip_properties</span><span>set_keyframes</span><span>remove_tracks</span><span>sync_audio</span><span>undo</span>
+      </div>
+      <ul class="cap-list">
+        <li>Multi-track (video/audio/image/text/Lottie)</li>
+        <li>Trim, split, ripple, razor, drag, snap</li>
+        <li>Speed/retime, transforms, crop, opacity, blend modes</li>
+        <li>Keyframe animation with easing lanes</li>
+        <li>Linked A/V, sync-lock, full undo history</li>
+      </ul>
+    </div>
+
+    <div class="cap-cat rev">
+      <div class="ch"><span class="emoji">🗣️</span><h3>Word-level editing (the killer feature)</h3></div>
+      <div class="cmp">
+        <div class="cmp-scroll">
+        <table>
+          <thead><tr><th>Tool</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td>remove_words</td><td>Surgically cut specific words — “remove every ‘um’”</td></tr>
+            <tr><td>add_captions</td><td>Word-synced karaoke captions, styled and animated</td></tr>
+            <tr><td>add_texts / update_text</td><td>Full typography: font, size, weight, color, outline, background, alignment, animation presets</td></tr>
+          </tbody>
+        </table>
+        </div>
       </div>
     </div>
+
+    <div class="cap-cat rev">
+      <div class="ch"><span class="emoji">🎨</span><h3>Motion graphics — traditional NLEs have zero of this</h3></div>
+      <div class="cmp">
+        <div class="cmp-scroll">
+        <table>
+          <thead><tr><th>Tool</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td>compose_motion</td><td>The art-direction surface. LLM authors bespoke films — beats, layers, per-property animation, bezier easing, hold-and-settle, optical placement, camera moves, transitions</td></tr>
+            <tr><td>generate_title</td><td>Fast animated title cards (canvas engine)</td></tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
+      <p class="lead" style="margin-top:20px;font-size:14.5px">Primitives available to the LLM:</p>
+      <div class="toolnames">
+        <span>text (spring/typewriter/word-reveal/kinetic/karaoke)</span><span>shapes</span><span>hairlines</span><span>waveforms</span><span>animated timelines</span><span>logo marks</span><span>bar/line/area charts</span><span>counters</span><span>particles</span><span>glow fields</span><span>grids</span><span>masks &amp; reveals</span><span>split/grid layouts</span><span>depth-of-field</span><span>motion blur</span><span>text-on-path</span><span>lighting sweeps</span><span>Ken Burns</span><span>countdown &amp; glitch stingers</span><span>ScreenMock (browser chrome)</span><span>callouts (arrow, highlight box, pointer, spotlight-dim)</span><span>Video/Image compositing</span>
+      </div>
+      <ul class="cap-list" style="margin-top:18px">
+        <li><b style="color:var(--ink)">Camera:</b> push-in · pan · rack-focus · parallax</li>
+        <li><b style="color:var(--ink)">Transitions:</b> wipe · dissolve · push · glitch · RGB-split · cut</li>
+        <li><b style="color:var(--ink)">Brand tokens:</b> automatic on-palette output</li>
+      </ul>
+      <p class="honest">Traditional NLEs have none of this. <b>Motion graphics from a sentence, art-directed — not a template picker.</b></p>
+    </div>
+
+    <div class="cap-cat rev">
+      <div class="ch"><span class="emoji">🎛️</span><h3>Color &amp; effects</h3></div>
+      <div class="toolnames"><span>apply_color</span><span>apply_effect</span><span>inspect_color</span></div>
+      <ul class="cap-list">
+        <li>Exposure · contrast · saturation · temperature · tint</li>
+        <li>Lift / gamma / gain · curves · LUTs</li>
+        <li>Blur · sharpen · stylize · blend modes</li>
+      </ul>
+    </div>
+
+    <div class="cap-cat rev">
+      <div class="ch"><span class="emoji">📐</span><h3>Layout</h3></div>
+      <div class="toolnames"><span>apply_layout</span></div>
+      <p class="cdesc" style="margin-top:12px">Picture-in-picture · split-screen · grid · side-by-side, auto-composed.</p>
+    </div>
+
+    <div class="cap-cat rev">
+      <div class="ch"><span class="emoji">📁</span><h3>Media library</h3></div>
+      <div class="toolnames">
+        <span>import_media</span><span>import_from_url</span><span>list_folders</span><span>create_folder</span><span>move_to_folder</span><span>rename_media</span><span>rename_folder</span><span>delete_media</span><span>delete_folder</span>
+      </div>
+      <p class="cdesc" style="margin-top:12px"><code>import_from_url</code> — paste a link → it pulls the video.</p>
+    </div>
+
+    <div class="cap-cat rev">
+      <div class="ch"><span class="emoji">📤</span><h3>Export</h3></div>
+      <div class="toolnames"><span>export_project</span></div>
+      <ul class="cap-list" style="margin-top:14px">
+        <li><b style="color:var(--ink)">video</b> → H.264 / H.265 / ProRes, 1080p or 4K</li>
+        <li><b style="color:var(--ink)">xml</b> → XMEML → Premiere Pro</li>
+        <li><b style="color:var(--ink)">fcpxml</b> → DaVinci Resolve / Final Cut</li>
+        <li><b style="color:var(--ink)">kaestral</b> → project package</li>
+      </ul>
+      <p class="cdesc" style="margin-top:10px">Plus: SRT caption export.</p>
+    </div>
+
+    <div class="cap-cat rev">
+      <div class="ch"><span class="emoji">🧠</span><h3>Skills — the craft layer</h3></div>
+      <div class="toolnames"><span>list_skills</span><span>read_skill</span></div>
+      <p class="cdesc" style="margin-top:12px">Bundled playbooks the LLM auto-loads:</p>
+      <ul class="cap-list">
+        <li><b style="color:var(--ink)">art-direction</b> — the master motion-designer playbook: decision process, optical composition, rhythm, restraint, trade-offs, worked examples, failure modes</li>
+        <li><b style="color:var(--ink)">viral-reel</b> — hook → cut → punch-in → caption → grade</li>
+        <li><b style="color:var(--ink)">beat-sync-cutting</b> — cut to the music</li>
+        <li><b style="color:var(--ink)">creative-director</b> — palette, brand, typography</li>
+        <li><b style="color:var(--ink)">caption-styles</b> — word-pop, karaoke, bold-boxed, typewriter</li>
+        <li><b style="color:var(--ink)">broll-planner</b> — B-roll placement</li>
+        <li><b style="color:var(--ink)">promo-ad</b> — hook → beats → CTA</li>
+        <li><b style="color:var(--ink)">platform-delivery</b> — Reels / TikTok / Shorts / YouTube specs</li>
+      </ul>
+    </div>
+
+    <div class="cap-cat rev">
+      <div class="ch"><span class="emoji">⚙️</span><h3>Project</h3></div>
+      <div class="toolnames"><span>set_project_settings</span><span>export_project</span><span>list_models</span><span>send_feedback</span></div>
+      <p class="cdesc" style="margin-top:12px">Local <code>.kaestral</code> projects.</p>
+    </div>
+
+    <div class="cap-cat pro rev">
+      <div class="ch"><span class="emoji">🔮</span><h3>Pro</h3><span class="coming">Stubbed — waitlist open</span></div>
+      <div class="toolnames"><span>generate_video</span><span>generate_image</span><span>generate_audio</span><span>upscale_media</span></div>
+      <p class="cdesc" style="margin-top:12px">Translation &amp; dubbing (Hindi + regional Indian languages) · temporally-consistent upscaling · PixiJS shaders.</p>
+    </div>
+
+    <div class="cap-cat rev">
+      <div class="ch"><span class="emoji">🔒</span><h3>Everything runs local</h3></div>
+      <p class="cdesc">Local whisper · local rendering · local projects · your video never leaves your machine.</p>
+    </div>
+
   </div>
 </section>
 
@@ -502,7 +777,9 @@
         <div class="h">Product</div>
         <a href="#features">Features</a>
         <a href="#usecases">Use cases</a>
+        <a href="#capabilities">Capabilities</a>
         <a href="#compare">Compare</a>
+        <a href="pricing.html">Pricing</a>
         <a href="https://github.com/prabindersinghh/Kaestral-pro/releases/latest" onclick="trackDownload()">Download</a>
       </div>
       <div class="col">
