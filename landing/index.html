@@ -160,6 +160,17 @@
   .chip:hover{border-color:var(--gold-line);color:var(--ink)}
   .chip b{color:var(--ink);font-weight:600}
 
+  /* ---- how it works (3-step onboarding) ---- */
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:44px;counter-reset:step}
+  .step{background:linear-gradient(180deg,var(--panel),var(--bg-2));border:1px solid var(--white-line);border-radius:13px;padding:26px;position:relative}
+  .step .num{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:9px;background:var(--green-wash);border:1px solid var(--green-dim);color:var(--green-hi);font-family:var(--mono);font-weight:700;font-size:15px;margin-bottom:16px}
+  .step h4{font-size:17px;font-weight:650;margin-bottom:9px;letter-spacing:-.01em}
+  .step p{color:var(--ink-2);font-size:14px;line-height:1.65}
+  .step code{display:block;margin-top:14px;font-family:var(--mono);font-size:12px;color:var(--ink);background:var(--bg);border:1px solid var(--white-line);border-left:2px solid var(--green);border-radius:0 8px 8px 0;padding:10px 12px;line-height:1.5;overflow-x:auto;white-space:pre}
+  .step .arrow{display:none}
+  @media(min-width:821px){.steps{position:relative}.step:not(:last-child)::after{content:"";position:absolute;right:-22px;top:50%;width:22px;height:1px;background:var(--white-line-2);z-index:1}}
+  @media(max-width:820px){.steps{grid-template-columns:1fr}}
+
   /* ---- use cases ---- */
   .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:42px}
   .card{background:linear-gradient(180deg,var(--panel),var(--bg-2));border:1px solid var(--white-line);border-radius:13px;padding:26px;transition:.18s ease;position:relative;overflow:hidden}
@@ -186,6 +197,19 @@
   .ok{color:var(--green-hi)}
   .honest{margin-top:22px;font-size:14.5px;color:var(--ink-2);border-left:2px solid var(--gold-line);padding:2px 0 2px 18px;line-height:1.7;max-width:64ch}
   .honest b{color:var(--ink)}
+
+  /* ---- privacy / local-first ---- */
+  .privacy{background:radial-gradient(60% 90% at 50% -10%,var(--green-wash),transparent 70%),linear-gradient(180deg,var(--panel),var(--bg-2));border:1px solid var(--white-line-2);border-radius:18px;padding:52px 44px;position:relative;overflow:hidden}
+  .privacy::before{content:"";position:absolute;inset:0;border-radius:18px;border:1px solid var(--gold-dim);pointer-events:none}
+  .privacy .lead{max-width:64ch}
+  .plist{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:34px}
+  .pitem{background:var(--bg);border:1px solid var(--white-line);border-radius:11px;padding:18px 20px}
+  .pitem .ic{color:var(--green-hi);font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px;display:block}
+  .pitem p{color:var(--ink-2);font-size:14px;line-height:1.6}
+  .pitem b{color:var(--ink)}
+  .exceptions{margin-top:26px;font-size:14.5px;color:var(--ink-2);border-left:2px solid var(--gold-line);padding:2px 0 2px 18px;line-height:1.75;max-width:70ch}
+  .exceptions b{color:var(--ink)}
+  @media(max-width:820px){.plist{grid-template-columns:1fr}.privacy{padding:38px 24px}}
 
   /* ---- developers ---- */
   .devgrid{display:grid;grid-template-columns:1.15fr 1fr;gap:34px;align-items:start;margin-top:42px}
@@ -253,12 +277,13 @@
     <a class="brand" href="#top"><svg class="mark"><use href="#klogo"/></svg>Kaestral</a>
     <div class="links">
       <a href="#features">Features</a>
+      <a href="#how-it-works">How it works</a>
       <a href="#usecases">Use cases</a>
       <a href="#compare">Compare</a>
       <a href="#developers">Developers</a>
-      <a href="https://github.com/prabindersinghh/kaestral">GitHub</a>
+      <a href="https://github.com/prabindersinghh/Kaestral-pro">GitHub</a>
     </div>
-    <a class="btn btn-primary" href="https://github.com/prabindersinghh/kaestral/releases">Download</a>
+    <a class="btn btn-primary" href="https://github.com/prabindersinghh/Kaestral-pro/releases/latest" onclick="trackDownload()">Download</a>
   </div>
 </nav>
 
@@ -270,11 +295,11 @@
     <h1>The <span class="g">AI-operated</span><span class="it">video editor for Windows.</span></h1>
     <p class="sub"><b>You describe the edit. It makes it.</b> Kaestral watches your footage, hears every word, and cuts.</p>
     <div class="cta">
-      <a class="btn btn-primary" href="https://github.com/prabindersinghh/kaestral/releases">
+      <a class="btn btn-primary" href="https://github.com/prabindersinghh/Kaestral-pro/releases/latest" onclick="trackDownload()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3v13m0 0 4-4m-4 4-4-4M5 21h14"/></svg>
         Download for Windows
       </a>
-      <a class="btn btn-ghost" href="https://github.com/prabindersinghh/kaestral">
+      <a class="btn btn-ghost" href="https://github.com/prabindersinghh/Kaestral-pro">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.58 2 12.25c0 4.53 2.87 8.37 6.84 9.73.5.1.68-.22.68-.49v-1.7c-2.78.62-3.37-1.37-3.37-1.37-.45-1.18-1.11-1.5-1.11-1.5-.91-.63.07-.62.07-.62 1 .07 1.53 1.06 1.53 1.06.89 1.56 2.34 1.11 2.91.85.09-.66.35-1.11.63-1.37-2.22-.26-4.55-1.14-4.55-5.07 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.71 0 0 .84-.28 2.75 1.05a9.4 9.4 0 0 1 5 0c1.91-1.33 2.75-1.05 2.75-1.05.55 1.41.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.94-2.34 4.81-4.57 5.06.36.32.68.94.68 1.9v2.82c0 .27.18.6.69.49A10.26 10.26 0 0 0 22 12.25C22 6.58 17.52 2 12 2Z"/></svg>
         View on GitHub
       </a>
@@ -335,7 +360,33 @@
       <span class="chip"><b>Motion graphics</b> — Remotion</span>
       <span class="chip"><b>Import from a URL</b></span>
       <span class="chip"><b>Export</b> — H.264 / H.265 / ProRes + Premiere / Resolve</span>
-      <span class="chip"><b>48+ MCP tools</b></span>
+      <span class="chip"><b>50 MCP tools</b></span>
+    </div>
+  </div>
+</section>
+
+<section id="how-it-works">
+  <div class="wrap">
+    <span class="kicker">Getting started</span>
+    <h2>Up and running in <span class="draw">three steps.</span></h2>
+    <p class="lead">No project setup, no timeline tutorial. Install, connect, and start describing the edit you want.</p>
+    <div class="steps">
+      <div class="step rev">
+        <div class="num">1</div>
+        <h4>Install Kaestral</h4>
+        <p>Download the Windows installer and run it. The editor and its engine start together — nothing else to configure.</p>
+      </div>
+      <div class="step rev">
+        <div class="num">2</div>
+        <h4>Connect Claude</h4>
+        <p>One command connects the Claude Code you already have. Requires Node/npm and FFmpeg on your PATH.</p>
+        <code>claude mcp add kaestral -- npx kaestral</code>
+      </div>
+      <div class="step rev">
+        <div class="num">3</div>
+        <h4>Describe your edit</h4>
+        <p>Type what you want in plain language — “cut the dead air and add captions” — and watch the timeline do it.</p>
+      </div>
     </div>
   </div>
 </section>
@@ -391,28 +442,44 @@
   </div>
 </section>
 
+<section id="privacy">
+  <div class="wrap">
+    <div class="privacy rev">
+      <span class="kicker">Privacy</span>
+      <h2>Your footage <span class="draw">never leaves your device.</span></h2>
+      <p class="lead">Kaestral is local-first. Your video, audio, and project files are processed and stored on your machine — never uploaded to a server. Transcription, vision, and beat detection all run on-device.</p>
+      <div class="plist">
+        <div class="pitem"><span class="ic">On your disk</span><p><b>Footage &amp; projects</b> — read, edited, and rendered locally. Nothing is synced to the cloud.</p></div>
+        <div class="pitem"><span class="ic">On your CPU/GPU</span><p><b>Transcription, vision, beat &amp; silence detection</b> — all run on-device, not through a remote API.</p></div>
+        <div class="pitem"><span class="ic">Open source</span><p><b>GPLv3</b> — the code doing this is auditable. See exactly what runs and where.</p></div>
+      </div>
+      <p class="exceptions">Two things — and only two — leave your device: <b>your AI prompts</b>, sent to Anthropic’s API if you use in-app chat with your own key; and <b>your email</b>, sent to our form provider only if you join the Pro waitlist below. Everything else — your video, audio, and project files — stays on your machine.</p>
+    </div>
+  </div>
+</section>
+
 <section id="developers">
   <div class="wrap">
     <span class="kicker">For developers</span>
     <h2>MCP-first. <span class="draw">One line in.</span></h2>
     <p class="lead">Kaestral is an MCP server. Point the Claude Code you already have at it and start editing by prompt — no new app to learn.</p>
     <div class="devgrid">
-      <pre class="rev"><span class="c"># 1 · start the editor engine (MCP server)</span>
-<span class="k">npx</span> kaestral
-
-<span class="c"># 2 · connect Claude Code</span>
-<span class="k">claude</span> mcp add --transport http kaestral <span class="s">\</span>
-  http://127.0.0.1:19789/mcp
+      <pre class="rev"><span class="c"># one command — connects Claude Code over stdio</span>
+<span class="k">claude</span> mcp add kaestral -- npx kaestral
 <span class="k">claude</span>
 
-<span class="c"># 3 · just ask</span>
+<span class="c"># then just ask</span>
 <span class="c"># “cut the silent parts of demo.mp4,</span>
-<span class="c">#  add captions, and export it.”</span></pre>
+<span class="c">#  add captions, and export it.”</span>
+
+<span class="c"># prefer HTTP? the editor app also exposes:</span>
+<span class="c"># claude mcp add --transport http kaestral \</span>
+<span class="c">#   http://127.0.0.1:19789/mcp</span></pre>
       <div class="devnote rev">
-        <div class="item"><h4>MCP server — the fast path</h4><p><code>npx kaestral</code>, then point Claude Code at it. Nothing to install and learn.</p></div>
+        <div class="item"><h4>MCP server — the fast path</h4><p><code>claude mcp add kaestral -- npx kaestral</code> — one command, no server to run manually. Requires Node/npm and FFmpeg on PATH.</p></div>
         <div class="item"><h4>Windows installer</h4><p>Double-click; the editor and engine start internally — no terminal.</p></div>
         <div class="item"><h4>In-app chat</h4><p>Bring your own Anthropic key and edit from the app window.</p></div>
-        <div class="item"><h4>Compatibility</h4><p>Standard MCP over HTTP with a stable tool contract. Exports <b>Premiere (XMEML)</b> and <b>Resolve / FCP (FCPXML)</b>.</p></div>
+        <div class="item"><h4>Compatibility</h4><p>Standard MCP over stdio or HTTP with a stable tool contract. Exports <b>Premiere (XMEML)</b> and <b>Resolve / FCP (FCPXML)</b>.</p></div>
       </div>
     </div>
   </div>
@@ -445,24 +512,34 @@
         <a href="#features">Features</a>
         <a href="#usecases">Use cases</a>
         <a href="#compare">Compare</a>
-        <a href="https://github.com/prabindersinghh/kaestral/releases">Download</a>
+        <a href="https://github.com/prabindersinghh/Kaestral-pro/releases/latest" onclick="trackDownload()">Download</a>
       </div>
       <div class="col">
         <div class="h">Developers</div>
         <a href="#developers">MCP quickstart</a>
-        <a href="https://github.com/prabindersinghh/kaestral">GitHub</a>
-        <a href="https://github.com/prabindersinghh/kaestral#readme">Docs</a>
+        <a href="https://github.com/prabindersinghh/Kaestral-pro">GitHub</a>
+        <a href="https://github.com/prabindersinghh/Kaestral-pro#readme">Docs</a>
+      </div>
+      <div class="col">
+        <div class="h">Legal</div>
+        <a href="#privacy">Privacy</a>
       </div>
     </div>
     <p class="legal">
       <b style="color:var(--ink-2)">Kaestral</b> — the AI-operated video editor for Windows. Free and open source under <b style="color:var(--ink-2)">GPLv3</b>.
       Third-party components (whisper.cpp, FFmpeg, Remotion) retain their permissive licenses.<br>
-      <span style="color:var(--ink-3);opacity:.75">As required by the GPLv3, Kaestral is a derivative Windows port of the upstream project <a href="https://github.com/palmier-io/palmier-pro" style="color:var(--ink-3)">palmier-io/palmier-pro</a> © Palmier Inc.; not affiliated with or endorsed by them. See <a href="https://github.com/prabindersinghh/kaestral/blob/main/NOTICE.md" style="color:var(--ink-3)">NOTICE.md</a> for full attributions.</span>
+      <span style="color:var(--ink-3);opacity:.75">As required by the GPLv3, Kaestral is a derivative Windows port of the upstream project <a href="https://github.com/palmier-io/palmier-pro" style="color:var(--ink-3)">palmier-io/palmier-pro</a> © Palmier Inc.; not affiliated with or endorsed by them. See <a href="https://github.com/prabindersinghh/Kaestral-pro/blob/main/NOTICE.md" style="color:var(--ink-3)">NOTICE.md</a> for full attributions.</span>
     </p>
   </div>
 </footer>
 
 <script>
+  // ---- Vercel Web Analytics: queue shim so events fire even before /_vercel/insights/script.js loads ----
+  window.va = window.va || function(){ (window.vaq = window.vaq || []).push(arguments); };
+
+  // Download click → custom analytics event. Called via onclick on every Download CTA.
+  function trackDownload(){ try{ window.va('event', { name: 'download_click' }); }catch{} }
+
   // ---- hero constellation mesh: drifting nodes joined by thin gold/white geometric lines ----
   (function(){
     const cv=document.getElementById('mesh'); if(!cv) return;
@@ -547,9 +624,9 @@
   }
   addEventListener('scroll',onScroll,{passive:true}); addEventListener('resize',onScroll); onScroll();
 
-  // waitlist: POSTs { email, source } to WAITLIST_ENDPOINT. Paste your own free Formspree form URL
-  // (https://formspree.io/f/xxxx) to collect submissions in a dashboard. Empty = mail-client fallback (still works).
-  const WAITLIST_ENDPOINT = "";
+  // waitlist: POSTs { email, source } to WAITLIST_ENDPOINT (Formspree). Falls back to a mailto: link
+  // if the request fails for any reason, so the signup never dead-ends.
+  const WAITLIST_ENDPOINT = "https://formspree.io/f/xrenbavp";
   const OWNER_EMAIL = "prabindersinghh@gmail.com";
   async function joinWaitlist(e){
     e.preventDefault();
@@ -558,8 +635,16 @@
     if(WAITLIST_ENDPOINT){
       try{
         const r=await fetch(WAITLIST_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({email,source:'kaestral-landing'})});
-        msg.textContent=r.ok?"✓ You’re on the list — we’ll be in touch.":"Something went wrong. Try again.";
-      }catch{ msg.textContent="Network error — try again."; }
+        if(r.ok){
+          msg.textContent="✓ You’re on the list — we’ll be in touch.";
+          try{ window.va('event', { name: 'pro_waitlist_submit' }); }catch{}
+        }else{
+          msg.textContent="Something went wrong. Try again.";
+        }
+      }catch{
+        window.location.href=`mailto:${OWNER_EMAIL}?subject=${encodeURIComponent('Kaestral Pro — waitlist')}&body=${encodeURIComponent('Add me to the Kaestral Pro waitlist.\n\nEmail: '+email)}`;
+        msg.textContent="✓ Opening your email app — hit send and you’re on the list.";
+      }
     }else{
       window.location.href=`mailto:${OWNER_EMAIL}?subject=${encodeURIComponent('Kaestral Pro — waitlist')}&body=${encodeURIComponent('Add me to the Kaestral Pro waitlist.\n\nEmail: '+email)}`;
       msg.textContent="✓ Opening your email app — hit send and you’re on the list.";
@@ -567,5 +652,6 @@
     return false;
   }
 </script>
+<script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>

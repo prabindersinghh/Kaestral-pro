@@ -310,6 +310,13 @@ function AboutTab() {
         <div style={{ fontSize: theme.fontSize.xs, color: theme.color.textMuted }}>Updates are available in the desktop app.</div>
       )}
       {status && <div style={{ marginTop: theme.space.sm, fontSize: theme.fontSize.xs, color: theme.color.textSecondary, lineHeight: 1.5 }}>{status}</div>}
+
+      <div style={{ marginTop: theme.space.xl, paddingTop: theme.space.lg, borderTop: `1px solid ${theme.color.borderPrimary}` }}>
+        <div style={{ ...sectionLabelStyle, marginBottom: theme.space.smMd }}>Privacy</div>
+        <div style={{ fontSize: theme.fontSize.smMd, color: theme.color.textSecondary, lineHeight: 1.6 }}>
+          Your video and project files stay on your device — Kaestral never uploads them. Transcription, vision, and beat/silence detection all run locally. In-app AI chat sends your prompts to Anthropic using your own API key; the Pro waitlist form sends only your email.
+        </div>
+      </div>
     </div>
   );
 }
