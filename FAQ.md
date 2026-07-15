@@ -54,6 +54,19 @@ API key.
 (~142 MB) downloads on first use. The Windows installer bundles all of this, so the desktop app needs
 none of it.
 
+### Which AI clients can drive Kaestral?
+Any MCP client that runs a **local** server. Three work today, all using the same `npx kaestral`
+command: **Claude Code** (`claude mcp add kaestral -- npx kaestral`), **Cursor** (`~/.cursor/mcp.json`),
+and **Claude Desktop** (`claude_desktop_config.json`; a one-click `kaestral.mcpb` is on the releases
+page). Or skip MCP entirely and use the app's built-in chat with your own Anthropic key. See the
+README's *Connect an AI* section for exact snippets.
+
+### Can I use ChatGPT?
+Not yet. **ChatGPT's connectors require a hosted/remote MCP server, and Kaestral is local-first** — your
+footage never leaves your machine — so there's no cloud endpoint for ChatGPT to reach. Use **Claude
+Code, Cursor, or Claude Desktop** instead (they run the server locally). **Cloud / ChatGPT support is on
+the roadmap.** We won't fake it before it genuinely works.
+
 ### Do I need an API key or a paid plan to use it?
 No, not for Basic editing itself. You connect an AI to *drive* it — either **Claude Code** (free with a
 Claude plan) or **in-app chat** (your own Anthropic API key, small per-use cost). The editor and all its

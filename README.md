@@ -113,26 +113,71 @@ timeline · **H.264/H.265/ProRes** render + **Premiere/Resolve** interchange exp
 
 ## Connect an AI
 
-### Option A — Claude Code (free, one command)
+Kaestral is a **local** MCP server (`npx kaestral`, stdio). Any MCP client that runs a local server can
+drive it. The three that work today:
+
+> **Prerequisites (for `npx kaestral`):** Node.js / npm and **FFmpeg + ffprobe** on your PATH. The
+> whisper model (~142 MB) downloads on first transcription. *(The Windows installer bundles all of this,
+> so the desktop app itself needs none of it.)*
+
+### 1. Claude Code — one command
 ```bash
 claude mcp add kaestral -- npx kaestral
 claude
 ```
-Prefer running the engine yourself (e.g. to keep it up across multiple `claude` sessions)? Use the
-HTTP transport instead:
+Claude Code spawns `npx kaestral` itself over stdio — no separate process, no port. Then just ask, e.g.
+*"cut the silent parts of demo.mp4, add captions, and export it."*
+
+### 2. Cursor
+Add Kaestral to your MCP config — global at **`~/.cursor/mcp.json`** (or per-project at
+`.cursor/mcp.json`):
+```json
+{
+  "mcpServers": {
+    "kaestral": {
+      "command": "npx",
+      "args": ["kaestral"]
+    }
+  }
+}
+```
+Restart Cursor (or toggle the server in **Settings → MCP**). Kaestral's ~50 tools appear in the tool
+list.
+
+### 3. Claude Desktop
+Open **Settings → Developer → Edit Config** (this opens `claude_desktop_config.json`). On Windows it
+lives at **`%APPDATA%\Claude\claude_desktop_config.json`**. Add:
+```json
+{
+  "mcpServers": {
+    "kaestral": {
+      "command": "npx",
+      "args": ["kaestral"]
+    }
+  }
+}
+```
+Save and **fully restart Claude Desktop**. Kaestral appears under the connectors/tools menu.
+
+> 🖱️ **One-click install:** grab **[`kaestral.mcpb`](https://github.com/prabindersinghh/Kaestral-pro/releases/latest)**
+> from the latest release and double-click it — Claude Desktop installs Kaestral as a connector with no
+> JSON editing. (See [`mcpb/`](./mcpb/) for how it's built.)
+
+### Or: in-app chat (no MCP client needed)
+Open the desktop app → **Connect AI** → paste your **Anthropic API key**. Chat right inside Kaestral;
+edits happen live in the window.
+
+### Prefer the HTTP transport?
+`npx kaestral` defaults to stdio (recommended). To run the engine yourself over HTTP (e.g. to keep it up
+across sessions):
 ```bash
-npx kaestral --http     # starts the local editor engine on http://127.0.0.1:19789/mcp
+npx kaestral --http     # local editor engine on http://127.0.0.1:19789/mcp
 claude mcp add --transport http kaestral http://127.0.0.1:19789/mcp
-claude
 ```
 
-### Option B — In-app chat (your own Anthropic key)
-Open the desktop app → **Connect AI** → paste your key. Chat right inside Kaestral; edits happen live
-in the window.
-
-> **Prerequisites:** Node/npm (for `npx kaestral`) and **FFmpeg + ffprobe** on your PATH. The whisper
-> transcription model (~142 MB) downloads on first use. The Windows installer bundles everything, so
-> the app itself needs none of this.
+> **ChatGPT?** ChatGPT's connectors require a **hosted/remote** MCP server, and Kaestral is local-first
+> by design — so use **Claude Code, Cursor, or Claude Desktop**. Cloud/ChatGPT support is on the
+> roadmap. See the [FAQ](./FAQ.md).
 
 ---
 

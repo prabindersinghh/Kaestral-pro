@@ -11,6 +11,7 @@ import { WaitlistModal } from "./WaitlistModal";
 import { ChatPanel } from "./ChatPanel";
 import { Onboarding } from "./Onboarding";
 import { ShortcutsModal } from "./ShortcutsModal";
+import { ConnectHelp } from "./ConnectHelp";
 import { CloseConfirm } from "./CloseConfirm";
 import { exportVideoFromUI } from "./exportVideo";
 import { previewAudio } from "../audio/previewAudio";
@@ -230,6 +231,12 @@ export function Editor() {
           </span>
         )}
         <button
+          onClick={() => store.openConnectHelp(true)} title="Connect your AI (Claude Code · Cursor · Claude Desktop)"
+          style={{ background: "transparent", color: theme.color.textSecondary, border: "none", borderRadius: theme.radius.sm, padding: "6px 9px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}
+        >
+          ?
+        </button>
+        <button
           onClick={() => store.openShortcuts(true)} title="Keyboard shortcuts (?)"
           style={{ background: "transparent", color: theme.color.textSecondary, border: "none", borderRadius: theme.radius.sm, padding: "6px 8px", fontSize: 15, cursor: "pointer" }}
         >
@@ -338,6 +345,7 @@ export function Editor() {
       <WaitlistModal />
       <Onboarding />
       <ShortcutsModal />
+      <ConnectHelp />
       {closeConfirmOpen && (
         <CloseConfirm
           onCancel={() => setCloseConfirmOpen(false)}

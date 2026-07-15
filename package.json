@@ -19,6 +19,7 @@
     "tauri": "tauri",
     "mcp": "tsx src/mcp/main.ts",
     "bundle:server": "node scripts/bundle-server.mjs",
+    "mcpb:pack": "cd mcpb && npx -y @anthropic-ai/mcpb pack . kaestral.mcpb",
     "prepublishOnly": "npm run bundle:server"
   },
   "dependencies": {

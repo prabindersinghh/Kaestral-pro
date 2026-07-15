@@ -1,0 +1,32 @@
+{
+  "manifest_version": "0.3",
+  "name": "kaestral",
+  "display_name": "Kaestral",
+  "version": "1.0.0",
+  "description": "The AI-operated video editor for Windows. Drive a real, local, multi-track editor by prompt — cut, caption, art-direct motion, grade, and export.",
+  "long_description": "Kaestral is a local, MCP-native video editor. It exposes ~50 tools an LLM can drive: on-device perception (frame vision, word-level transcription, beat/silence detection, palette extraction), a real multi-track timeline, word-level editing, bespoke art-directed motion graphics, color grading, and export to H.264/H.265/ProRes plus Premiere (XMEML) and Resolve/FCP (FCPXML). Everything runs locally — your video never leaves your machine.",
+  "author": {
+    "name": "Prabinder Singh",
+    "url": "https://github.com/prabindersinghh/Kaestral-pro"
+  },
+  "homepage": "https://kaestral.com",
+  "documentation": "https://github.com/prabindersinghh/Kaestral-pro#readme",
+  "support": "https://github.com/prabindersinghh/Kaestral-pro/issues",
+  "icon": "icon.png",
+  "license": "GPL-3.0-or-later",
+  "keywords": ["video", "editor", "mcp", "ffmpeg", "windows", "captions", "transcription", "motion-graphics"],
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/server/index.js"]
+    }
+  },
+  "compatibility": {
+    "platforms": ["win32"],
+    "runtimes": {
+      "node": ">=18.0.0"
+    }
+  }
+}

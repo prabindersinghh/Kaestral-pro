@@ -761,10 +761,12 @@
 <span class="c"># claude mcp add --transport http kaestral \</span>
 <span class="c">#   http://127.0.0.1:19789/mcp</span></pre>
       <div class="devnote rev">
-        <div class="item"><h4>MCP server — the fast path</h4><p><code>claude mcp add kaestral -- npx kaestral</code> — one command, no server to run manually. Requires Node/npm and FFmpeg on PATH.</p></div>
-        <div class="item"><h4>Windows installer</h4><p>Double-click; the editor and engine start internally — no terminal.</p></div>
-        <div class="item"><h4>In-app chat</h4><p>Bring your own Anthropic key and edit from the app window.</p></div>
-        <div class="item"><h4>Compatibility</h4><p>Standard MCP over stdio or HTTP with a stable tool contract. Exports <b>Premiere (XMEML)</b> and <b>Resolve / FCP (FCPXML)</b>.</p></div>
+        <div class="item"><h4>Claude Code</h4><p><code>claude mcp add kaestral -- npx kaestral</code> — one command, no server to run manually.</p></div>
+        <div class="item"><h4>Cursor</h4><p>Add to <code>~/.cursor/mcp.json</code>: <code>"kaestral": { "command": "npx", "args": ["kaestral"] }</code> under <code>mcpServers</code>.</p></div>
+        <div class="item"><h4>Claude Desktop</h4><p>Settings → Developer → Edit Config (<code>%APPDATA%\Claude\claude_desktop_config.json</code>), same <code>npx kaestral</code> entry — or double-click the <b>one-click <code>.mcpb</code></b> from Releases.</p></div>
+        <div class="item"><h4>In-app chat</h4><p>No MCP client needed — bring your own Anthropic key and edit from the app window.</p></div>
+        <div class="item"><h4>ChatGPT?</h4><p>ChatGPT connectors need a <b>hosted/remote</b> server; Kaestral is local-first. Use Claude Code, Cursor, or Claude Desktop — cloud support is on the roadmap.</p></div>
+        <div class="item"><h4>Compatibility</h4><p>Standard MCP over stdio (or HTTP) with a stable ~50-tool contract. Requires Node/npm + FFmpeg on PATH. Exports <b>Premiere (XMEML)</b> and <b>Resolve / FCP (FCPXML)</b>.</p></div>
       </div>
     </div>
   </div>
@@ -911,26 +913,35 @@
   // if the request fails for any reason, so the signup never dead-ends.
   const WAITLIST_ENDPOINT = "https://formspree.io/f/xrenbavp";
   const OWNER_EMAIL = "prabindersinghh@gmail.com";
+  // On a successful signup, replace the whole form with a clear confirmation so the user KNOWS it worked.
+  function waitlistConfirmed(form, msg, text){
+    if(form) form.style.display='none';
+    msg.textContent = text;
+    msg.style.color = 'var(--green-hi)';
+    msg.style.fontWeight = '600';
+    msg.style.marginTop = '18px';
+  }
   async function joinWaitlist(e){
     e.preventDefault();
+    const form=document.getElementById('waitlist');
     const email=document.getElementById('wemail').value.trim();
     const msg=document.getElementById('wmsg');
     if(WAITLIST_ENDPOINT){
       try{
         const r=await fetch(WAITLIST_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({email,source:'kaestral-landing'})});
         if(r.ok){
-          msg.textContent="✓ You’re on the list — we’ll be in touch.";
+          waitlistConfirmed(form, msg, "✓ You’re on the waitlist! We’ll email "+email+" the moment Pro opens.");
           try{ window.va('event', { name: 'pro_waitlist_submit' }); }catch{}
         }else{
-          msg.textContent="Something went wrong. Try again.";
+          msg.textContent="Hmm, that didn’t go through. Please try again.";
         }
       }catch{
         window.location.href=`mailto:${OWNER_EMAIL}?subject=${encodeURIComponent('Kaestral Pro — waitlist')}&body=${encodeURIComponent('Add me to the Kaestral Pro waitlist.\n\nEmail: '+email)}`;
-        msg.textContent="✓ Opening your email app — hit send and you’re on the list.";
+        waitlistConfirmed(form, msg, "✓ Opening your email app — hit send and you’re on the waitlist.");
       }
     }else{
       window.location.href=`mailto:${OWNER_EMAIL}?subject=${encodeURIComponent('Kaestral Pro — waitlist')}&body=${encodeURIComponent('Add me to the Kaestral Pro waitlist.\n\nEmail: '+email)}`;
-      msg.textContent="✓ Opening your email app — hit send and you’re on the list.";
+      waitlistConfirmed(form, msg, "✓ Opening your email app — hit send and you’re on the waitlist.");
     }
     return false;
   }

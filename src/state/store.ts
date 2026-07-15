@@ -66,6 +66,8 @@ export class EditorStore {
     model: lsGet("kaestral.model") ?? "claude-sonnet-5",
     connectMode: (lsGet("kaestral.connectMode") as "choose" | "inapp" | "claudecode") ?? "choose",
     showChat: false,
+    /** Help → "Connect your AI" screen (Claude Code / Cursor / Claude Desktop snippets). */
+    showConnectHelp: false,
     // Hosted-generation BYOK (Fal/Replicate/gcp-ltx). The key persists locally and is pushed to the server.
     genProvider: (lsGet("kaestral.genProvider") as "fal" | "replicate" | "gcp-ltx") ?? "fal",
     genKey: lsGet("kaestral.genKey") ?? "",
@@ -202,6 +204,7 @@ export class EditorStore {
   openSettings(open: boolean): void { this.settings.showSettings = open; this.emit(); }
   openWaitlist(open: boolean): void { this.settings.showWaitlist = open; this.emit(); }
   openShortcuts(open: boolean): void { this.settings.showShortcuts = open; this.emit(); }
+  openConnectHelp(open: boolean): void { this.settings.showConnectHelp = open; this.emit(); }
   /** Mark first-run onboarding as complete so it never shows again. Safe to call more than once. */
   completeOnboarding(): void {
     if (this.settings.onboarded) return;

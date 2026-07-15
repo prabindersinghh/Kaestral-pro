@@ -27,3 +27,6 @@ remotion/.bundle-cache/
 # local session working notes (not part of the product)
 .superpowers/
 .sdd-briefs/
+
+# Built .mcpb bundle (rebuilt per release via npm run mcpb:pack)
+mcpb/*.mcpb

@@ -371,22 +371,25 @@
     const body = tier === 'max'
       ? 'Request early access to Kaestral Max.\n\nEmail: '+email
       : 'Add me to the Kaestral Pro waitlist.\n\nEmail: '+email;
+    const form=document.getElementById('waitlist-'+tier);
+    const confirmed=(text)=>{ if(form) form.style.display='none'; msg.textContent=text; msg.style.fontWeight='600'; msg.style.marginTop='16px'; };
+    const label = tier==='max' ? 'Max early access' : 'the Pro waitlist';
     if(WAITLIST_ENDPOINT){
       try{
         const r=await fetch(WAITLIST_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({email,source})});
         if(r.ok){
-          msg.textContent="✓ You're on the list — we'll be in touch.";
+          confirmed("✓ You're on "+label+"! We'll email "+email+" the moment it opens.");
           try{ window.va('event', { name: tier==='max' ? 'max_waitlist_submit' : 'pro_waitlist_submit' }); }catch{}
         }else{
-          msg.textContent="Something went wrong. Try again.";
+          msg.textContent="Hmm, that didn't go through. Please try again.";
         }
       }catch{
         window.location.href=`mailto:${OWNER_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-        msg.textContent="✓ Opening your email app — hit send and you're on the list.";
+        confirmed("✓ Opening your email app — hit send and you're on "+label+".");
       }
     }else{
       window.location.href=`mailto:${OWNER_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-      msg.textContent="✓ Opening your email app — hit send and you're on the list.";
+      confirmed("✓ Opening your email app — hit send and you're on "+label+".");
     }
     return false;
   }
