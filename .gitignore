@@ -17,3 +17,13 @@ vendor/whisper/*.bin
 # Rendered MP4s from generativeRender.test.ts / other Remotion render tests
 remotion/.test-out/
 remotion/.bundle-cache/
+
+# Scratch render outputs from gate/cold-launch authoring (not source)
+/*.mp4
+/*.mts
+/cold-launch*.mp4
+/gate*-beat1*.mp4
+/film-Film*.mp4
+# local session working notes (not part of the product)
+.superpowers/
+.sdd-briefs/

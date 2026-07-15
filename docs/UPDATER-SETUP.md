@@ -20,7 +20,7 @@ verify or install updates until you replace it with a real public key (step 1 be
 
 ## 1. One-time key setup
 
-Run this once, from the `palmier-win` project root:
+Run this once, from the project root:
 
 ```bash
 npm run tauri signer generate -- -w ~/.tauri/kaestral-updater.key

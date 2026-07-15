@@ -1,7 +1,11 @@
-# Kaestral (Palmier Pro port) → Windows Port — PROGRESS LOG
+# Kaestral — Windows Port — PROGRESS LOG (historical)
 
-> Living context file. Append a new dated entry every work session and at each gate.
-> Read this first when resuming — it is the running memory of the port.
+> **Historical development log.** This is the chronological running memory from building Kaestral as a
+> GPLv3 Windows port of the upstream macOS editor. Entries, path names (`palmier-win/`), and test
+> counts reflect the state *at the time each entry was written* and are preserved verbatim as a record —
+> they are NOT current. For current architecture and context start with [ARCHITECTURE.md](./ARCHITECTURE.md);
+> for the running product state see the top-level [README.md](../README.md). References to the upstream
+> project by name are the required GPLv3 provenance (see [NOTICE.md](../NOTICE.md)).
 
 ---
 

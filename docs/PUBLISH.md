@@ -10,7 +10,7 @@ The package is publish-ready: `name: kaestral`, a `bin`, a `files` allowlist, an
 that bundles the server. Verified locally — `node bin/kaestral.mjs` starts the MCP server (kaestral).
 
 ```bash
-cd palmier-win
+cd Kaestral-pro
 npm run build && npm run bundle:server   # produces dist-server/ (prepublishOnly also does this)
 npm login                                # your npmjs.com account
 npm publish --access public
