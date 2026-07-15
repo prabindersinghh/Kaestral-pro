@@ -119,6 +119,7 @@ claude
 ## सहायता और समुदाय
 
 - 💬 [GitHub Discussions](https://github.com/prabindersinghh/Kaestral-pro/discussions) — सवाल, विचार, मदद।
+- 🎮 [Discord](https://discord.gg/xwDuQTY6Y) — समुदाय और टीम के साथ बातचीत।
 - 🐛 [Issues](https://github.com/prabindersinghh/Kaestral-pro/issues) — बग और फ़ीचर रिक्वेस्ट।
 - 🙌 [Contributing](../../CONTRIBUTING.md) — योगदान का स्वागत है।
 - ❓ [FAQ](../../FAQ.md) — आम सवालों के जवाब।

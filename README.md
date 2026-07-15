@@ -217,7 +217,7 @@ local, how do I connect Claude — are in **[FAQ.md](./FAQ.md)**.
 - 💬 **[GitHub Discussions](https://github.com/prabindersinghh/Kaestral-pro/discussions)** — questions,
   ideas, show-and-tell, and help. (Enable it under **Settings → Features → Discussions** if the link
   404s.)
-- 🎮 **Discord** — `<!-- TODO: paste your Discord invite link here -->` *(coming — invite link to be added)*
+- 🎮 **[Discord](https://discord.gg/xwDuQTY6Y)** — chat with the community and the team.
 - 🐛 **[Issues](https://github.com/prabindersinghh/Kaestral-pro/issues)** — bugs and feature requests.
 - 🙌 **[Contributing](./CONTRIBUTING.md)** — PRs welcome.
 

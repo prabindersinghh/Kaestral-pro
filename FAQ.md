@@ -61,5 +61,6 @@ tools are free.
 
 ### Where do I get help or report a bug?
 [GitHub Discussions](https://github.com/prabindersinghh/Kaestral-pro/discussions) for questions and
-ideas, [Issues](https://github.com/prabindersinghh/Kaestral-pro/issues) for bugs, and Discord (invite
-coming). See the README's *Community & support* section.
+ideas, [Issues](https://github.com/prabindersinghh/Kaestral-pro/issues) for bugs, and
+[Discord](https://discord.gg/xwDuQTY6Y) to chat with the community. See the README's
+*Community & support* section.
