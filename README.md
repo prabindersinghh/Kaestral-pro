@@ -1,16 +1,34 @@
 <p align="center">
-  <img src="./docs/assets/kaestral-banner.png" alt="Kaestral" width="100%">
+  <img src="./docs/assets/kaestral-banner.png" alt="Kaestral" width="440">
 </p>
 
-<h1 align="center">Kaestral</h1>
-
 <p align="center"><strong>The AI-operated video editor for Windows. You describe the edit. It makes it.</strong></p>
+
+<p align="center"><strong>Windows 10 / 11</strong></p>
 
 <p align="center">
   <a href="https://github.com/prabindersinghh/Kaestral-pro/releases/latest"><img src="https://img.shields.io/badge/Download-Windows-16b16a?style=flat-square" alt="Download"></a>
   <img src="https://img.shields.io/badge/license-GPLv3-1fce7e?style=flat-square" alt="GPLv3">
   <img src="https://img.shields.io/badge/MCP-50%20tools-c9a227?style=flat-square" alt="50 MCP tools">
   <img src="https://img.shields.io/badge/local--first-no%20cloud-484852?style=flat-square" alt="Local-first">
+</p>
+
+<p align="center">
+  <b>English</b> ·
+  <a href="./docs/readme/README.es.md">Español</a> ·
+  <a href="./docs/readme/README.zh-CN.md">简体中文</a> ·
+  <a href="./docs/readme/README.zh-TW.md">繁體中文</a> ·
+  <a href="./docs/readme/README.ja.md">日本語</a> ·
+  <a href="./docs/readme/README.ko.md">한국어</a> ·
+  <a href="./docs/readme/README.vi.md">Tiếng Việt</a> ·
+  <a href="./docs/readme/README.hi.md">हिन्दी</a> ·
+  <a href="./docs/readme/README.bn.md">বাংলা</a> ·
+  <a href="./docs/readme/README.ar.md">العربية</a> ·
+  <a href="./docs/readme/README.it.md">Italiano</a> ·
+  <a href="./docs/readme/README.pt-BR.md">Português (Brasil)</a> ·
+  <a href="./docs/readme/README.fr.md">Français</a> ·
+  <a href="./docs/readme/README.ru.md">Русский</a> ·
+  <a href="./docs/readme/README.tr.md">Türkçe</a>
 </p>
 
 ---
@@ -24,7 +42,7 @@ so when the AI is done, you can still touch every frame. **Everything runs local
 leaves your machine.**
 
 <p align="center">
-  <img src="./docs/assets/kaestral-editor.png" alt="The Kaestral editor — media library, composited preview, and a multi-track timeline" width="100%">
+  <img src="./docs/assets/kaestral-editor.png" alt="The Kaestral editor — media library, composited preview, and a multi-track timeline" width="820">
 </p>
 
 ---
@@ -182,7 +200,33 @@ Docs worth reading before you dig in:
 - [docs/MCP-TOOLS.md](./docs/MCP-TOOLS.md) — the 50-tool reference.
 - [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) — how the pieces fit (editor = hands, LLM = brain).
 - [docs/LAUNCH-RUNBOOK.md](./docs/LAUNCH-RUNBOOK.md) — build, publish, and deploy steps.
+- [CONTRIBUTING.md](./CONTRIBUTING.md) — how to build, test, and open a PR.
 - [FUTURE-IDEAS.md](./FUTURE-IDEAS.md) — deferred post-1.0 work.
+
+---
+
+## FAQ
+
+Short answers to the common questions — is it free, what's Pro/Max, which Windows, does my data stay
+local, how do I connect Claude — are in **[FAQ.md](./FAQ.md)**.
+
+---
+
+## Community & support
+
+- 💬 **[GitHub Discussions](https://github.com/prabindersinghh/Kaestral-pro/discussions)** — questions,
+  ideas, show-and-tell, and help. (Enable it under **Settings → Features → Discussions** if the link
+  404s.)
+- 🎮 **Discord** — `<!-- TODO: paste your Discord invite link here -->` *(coming — invite link to be added)*
+- 🐛 **[Issues](https://github.com/prabindersinghh/Kaestral-pro/issues)** — bugs and feature requests.
+- 🙌 **[Contributing](./CONTRIBUTING.md)** — PRs welcome.
+
+---
+
+## Contributing
+
+Kaestral is open source (GPLv3) and contributions are welcome — see **[CONTRIBUTING.md](./CONTRIBUTING.md)**
+for how to set up, run the tests, and open a pull request.
 
 ---
 
