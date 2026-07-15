@@ -1,7 +1,7 @@
 # Kaestral — launch posts (drafts)
 
 Positioning: **Kaestral — the AI-operated video editor for Windows. You describe the edit. It makes it.**
-Honesty first (never overclaim; name where Palmier wins). Generation stays a Pro-waitlist, not a claim.
+Honesty first (never overclaim; name where the upstream editor wins). Generation stays a Pro-waitlist, not a claim.
 
 ---
 
@@ -11,7 +11,7 @@ Honesty first (never overclaim; name where Palmier wins). Generation stays a Pro
 `Show HN: Kaestral – an AI-operated video editor for Windows (GPLv3, Claude-Code-native)`
 
 **Body:**
-The AI-native video editor (Palmier Pro) is macOS-only. I ported it to Windows in two weeks — then
+The upstream AI-native video editor is macOS-only. I ported it to Windows in two weeks — then
 gave it eyes and ears.
 
 Kaestral is a real multi-track video editor where the AI does the work. You point the Claude Code you
@@ -29,9 +29,9 @@ What it actually does today (all on-device, no cloud needed):
 - 48+ MCP tools.
 
 **Honest about the tradeoffs:**
-- It's a GPLv3 port; the upstream project is credited in the repo (NOTICE.md). It reads the `.palmier`
-  project format so existing projects open, but it ships as its own product — Kaestral.
-- **AI *generation* is NOT in the free tier.** That's Palmier's paid cloud, and it's my deferred Pro
+- It's a GPLv3 port; the upstream project is credited in the repo (NOTICE.md). It uses its own
+  `.kaestral` project format, so it ships as its own product — Kaestral.
+- **AI *generation* is NOT in the free tier.** That's the upstream paid cloud, and it's my deferred Pro
   tier (waitlist). I'm not competing on generation. Kaestral's wedge is Windows + real perception + a
   free, open, Claude-Code-native workflow.
 - New and unpolished in places; feedback very welcome.
@@ -72,7 +72,7 @@ It has 48+ tools and genuine perception, all on-device:
 - **Feels** the music: beat/silence detection → rhythmic cuts.
 - Plus motion graphics from a prompt (Remotion), color grading, transitions, and Premiere/Resolve export.
 
-Free + open-source (GPLv3), Windows-first (it's a port of the Mac-only Palmier Pro — full credit in the
+Free + open-source (GPLv3), Windows-first (it's a port of the Mac-only upstream editor — full credit in the
 repo). AI *generation* is a separate Pro waitlist, not part of the free tier.
 
 Would love feedback from folks building with MCP — the tool design is the interesting part.
@@ -113,7 +113,7 @@ Export H.264/H.265/ProRes + Premiere/Resolve.
 
 **5/**
 Honest about it:
-• It's a GPLv3 port of Palmier Pro (Mac-only). Full credit in the repo.
+• It's a GPLv3 port of the upstream Mac-only editor. Full credit in the repo.
 • AI *generation* is a Pro waitlist — not competing with their paid cloud.
 • The wedge: Windows + real perception + free & Claude-Code-native.
 

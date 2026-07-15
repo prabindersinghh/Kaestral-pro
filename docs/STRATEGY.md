@@ -1,11 +1,11 @@
-# Kaestral strategy — beat Palmier by being open
+# Kaestral strategy — beat the upstream editor by being open
 
-**Kaestral = Palmier's open editor (done) + transcript-based smart editing + prompt-to-motion-graphics
+**Kaestral = the upstream open editor (done) + transcript-based smart editing + prompt-to-motion-graphics
 + free open AI generation — all local/free, all Claude-driven over MCP.**
 
-Palmier bet on a **closed paid cloud** for its headline generation, and — per its own FAQ — has **no
-transitions, no motion graphics, and no transcript-based editing**. We don't win by copying Palmier;
-we win by wiring in free, open, Claude-driven tools Palmier structurally can't match, all landing in
+The upstream project bet on a **closed paid cloud** for its headline generation, and — per its own FAQ —
+has **no transitions, no motion graphics, and no transcript-based editing**. We don't win by copying it;
+we win by wiring in free, open, Claude-driven tools it structurally can't match, all landing in
 Kaestral's timeline through the one integration seam that already works: the **`import_media` MCP tool**.
 
 ## The integration seam (non-negotiable)
@@ -38,7 +38,7 @@ skill; outputs `<videos_dir>/edit/final.mp4`.
   → the cleaned clip appears on Kaestral's timeline and exports.
 - **License note:** MIT — compatible; attribute in NOTICE.
 
-### ② Prompt → motion graphics — Remotion + Motion Canvas + Manim (Palmier has none)
+### ② Prompt → motion graphics — Remotion + Motion Canvas + Manim (the upstream editor has none)
 Repos: wilwaldon/Claude-Code-Video-Toolkit (Remotion/Manim skills, transitions), VideoZero/skills
 (Motion Canvas), and the Remotion skill (`npx skills add remotion-dev/skills`). Claude generates
 animated titles/intros/outros/overlays **as code → MP4**, imported onto the timeline.
@@ -47,12 +47,12 @@ animated titles/intros/outros/overlays **as code → MP4**, imported onto the ti
   small companies; **verify before commercial use**); Motion Canvas MIT; Manim MIT. Flag Remotion's
   license to the user before shipping commercially.
 
-### ③ Free open AI generation — un-stub generate_video/generate_image (Palmier's paid part, made free)
+### ③ Free open AI generation — un-stub generate_video/generate_image (the upstream paid part, made free)
 Primary: **LTX-2** (Apache-2.0, open weights, 4K + synced audio, free commercial under $10M rev).
 Alt unified backend: Anil-matcha/Open-Generative-AI (MIT; wraps Flux, Wan 2.2, LTX, Kling).
 Rewire Kaestral's stubbed `generate_video`/`generate_image` to call a real generator: **local LTX-2 if a
 capable NVIDIA GPU is present, else a hosted API (Fal / Replicate)**. Result auto-imports to the
-timeline — reconstructing Palmier's "prompt → media on timeline" loop, open/free.
+timeline — reconstructing the upstream "prompt → media on timeline" loop, open/free.
 - **Needs from you:** GPU check (below) + either GPU VRAM (LTX-2 local) or a Fal/Replicate key (hosted,
   per-generation cost). **Decision gate:** confirm hardware, then local-vs-hosted + cost.
 - **Companion-MCP scope (the seam):** a tiny `kaestral-gen` MCP with `generate(prompt, kind, seconds)`
@@ -60,7 +60,7 @@ timeline — reconstructing Palmier's "prompt → media on timeline" loop, open/
   Kaestral's `import_media`. Keeps generation isolated and swappable. **Not built yet — scoped only.**
 
 ### ④ Skills system — teach Claude to edit like a pro (partly done)
-Palmier's own skills mechanism is **already ported and live over MCP** (`read_skill` + `list_skills`,
+The upstream skills mechanism is **already ported and live over MCP** (`read_skill` + `list_skills`,
 fetching `palmier-io/palmier-skills`; see `src/mcp/skills.ts`). Remaining: author Kaestral-specific
 skills — **"youtube-short"** and **"talking-head-cleanup"** — that chain ①–③ end to end (e.g. video-use
 clean → captions → motion-graphic intro → export).
@@ -73,7 +73,7 @@ clean → captions → motion-graphic intro → export).
 ## License ledger (running)
 | Tool | License | Use |
 |------|---------|-----|
-| Palmier Pro (upstream) | GPLv3 | editor/format/MCP/skills — Kaestral is a GPLv3 derivative |
+| Palmier Pro (upstream, © Palmier Inc) | GPLv3 | editor/format/MCP/skills — Kaestral is a GPLv3 derivative |
 | palmier-io/palmier-skills | (repo license) | skill bodies fetched at runtime |
 | browser-use/video-use | MIT | ① transcript editing |
 | Remotion | custom (free for small orgs) | ② — **verify before commercial** |

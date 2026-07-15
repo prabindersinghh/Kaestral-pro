@@ -16,7 +16,7 @@ import type { McpExecutor } from "./executor";
 
 export const MCP_PORT = 19789;
 export const MCP_HOST = "127.0.0.1";
-// The MCP server identifies as "kaestral". (The on-disk project format is still ".palmier" — that's a
+// The MCP server identifies as "kaestral". (The on-disk project format is now ".kaestral" — that's a
 // data-format contract for opening existing projects, independent of this wire name.)
 const SERVER_INFO = { name: "kaestral", version: "1.0.0" };
 const DEFAULT_PROTOCOL = "2025-06-18";
@@ -176,7 +176,7 @@ export class McpServer {
       try {
         const name = decodeURIComponent(new URL(req.url ?? "/", "http://x").searchParams.get("name") ?? "upload.bin");
         const bytes = await readBodyBuffer(req);
-        const dir = this.executor.projectDir ? join(this.executor.projectDir, "media") : join(tmpdir(), "palmier-media");
+        const dir = this.executor.projectDir ? join(this.executor.projectDir, "media") : join(tmpdir(), "kaestral-media");
         await mkdir(dir, { recursive: true });
         const safe = name.replace(/[^\w.\- ]/g, "_");
         const dest = join(dir, `${Date.now()}-${safe}`);

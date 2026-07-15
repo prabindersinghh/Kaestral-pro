@@ -54,7 +54,7 @@ export class EditorStore {
   engine: EditEngine;
   media: MediaLibrary;
   view: ViewState;
-  /** App preferences (export defaults, AI connection, UI). Not part of the .palmier project. */
+  /** App preferences (export defaults, AI connection, UI). Not part of the .kaestral project. */
   settings = {
     exportCodec: "H.264", exportResolution: "1080p", showSettings: false, showGenerate: false,
     /** Hidden dev flag: when false (default) there is NO generation UI anywhere in the app. */

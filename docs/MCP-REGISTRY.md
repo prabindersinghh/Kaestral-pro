@@ -27,7 +27,7 @@ directly: read the timeline and media library, cut and arrange clips, transcribe
 and cut by word, detect beats and silences, apply color grades and effects, generate titles and
 motion graphics, and export to H.264/H.265/ProRes or interchange formats (Premiere XMEML, Resolve
 FCPXML). Every action lands on a real, still-editable multi-track project — not a black-box
-render. It is a GPLv3 Windows port of Palmier Pro (macOS).
+render. It is a GPLv3 Windows port of the upstream macOS editor.
 
 ## Install / run / connect
 
@@ -59,7 +59,7 @@ registry submission should list **stdio** as the primary/default transport since
 - The bundled whisper.cpp transcription model (~142 MB) downloads on first use of a
   transcription-dependent tool (`get_transcript`, `add_captions`, `remove_words`).
 - Windows is the primary target platform for this build (macOS is on the roadmap for the upstream
-  Palmier Pro project, not yet for this port).
+  editor project, not yet for this port).
 
 ## Tool count and categories
 

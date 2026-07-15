@@ -1,6 +1,6 @@
-// Design tokens — ported verbatim from Palmier's Sources/PalmierPro/UI/AppTheme.swift so Kaestral
-// matches the real app. Backgrounds/borders/text/track-colors/radii/spacing/font-sizes are the exact
-// Palmier values; timeline layout constants come from Utilities/Constants.swift.
+// Design tokens — ported verbatim from the upstream editor's Sources/PalmierPro/UI/AppTheme.swift so
+// Kaestral matches the real app. Backgrounds/borders/text/track-colors/radii/spacing/font-sizes are the
+// exact upstream values; timeline layout constants come from Utilities/Constants.swift.
 
 import type { CSSProperties } from "react";
 import type { ClipType } from "../model/enums";
@@ -12,7 +12,7 @@ const text = { primary: "rgba(255,255,255,1)", secondary: "rgba(255,255,255,0.80
 
 export const theme = {
   color: {
-    // Palmier names (preferred going forward)
+    // Upstream names (preferred going forward)
     base: bg.base,
     surface: bg.surface,
     raised: bg.raised,

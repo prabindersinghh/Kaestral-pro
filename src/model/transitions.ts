@@ -1,7 +1,7 @@
 // Transitions between adjacent clips. A transition of `d` timeline frames INTO the incoming clip
 // from the outgoing one is expressed purely with the fade + overlap machinery the compositor and
 // exporter already honor (opacityAt applies fades to video/image; composeFrame renders overlapping
-// same-track clips; audioMix emits afade) — so NO new serialized field is needed and the .palmier
+// same-track clips; audioMix emits afade) — so NO new serialized field is needed and the .kaestral
 // format stays unchanged.
 //
 //   cross dissolve — needs the incoming clip's LEFT handle (trimmed-in footage). Slide the incoming

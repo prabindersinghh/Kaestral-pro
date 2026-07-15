@@ -1,6 +1,6 @@
-// CLI: run the Kaestral MCP server. Optionally load a .palmier project directory.
-//   npm run mcp -- "C:/path/to/My Project.palmier"          (stdio transport — default)
-//   npm run mcp -- --http "C:/path/to/My Project.palmier"   (HTTP transport)
+// CLI: run the Kaestral MCP server. Optionally load a .kaestral project directory.
+//   npm run mcp -- "C:/path/to/My Project.kaestral"          (stdio transport — default)
+//   npm run mcp -- --http "C:/path/to/My Project.kaestral"   (HTTP transport)
 //
 // Stdio (default): claude mcp add kaestral -- npx kaestral
 // HTTP (--http):   claude mcp add --transport http kaestral http://127.0.0.1:19789/mcp

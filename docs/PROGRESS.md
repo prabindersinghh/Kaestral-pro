@@ -1,4 +1,4 @@
-# Palmier Pro → Windows Port — PROGRESS LOG
+# Kaestral (Palmier Pro port) → Windows Port — PROGRESS LOG
 
 > Living context file. Append a new dated entry every work session and at each gate.
 > Read this first when resuming — it is the running memory of the port.
@@ -7,8 +7,8 @@
 
 ## Project at a glance
 
-- **Goal (Phase 1):** Reproduce macOS **Palmier Pro** (Swift, GPLv3) on **Windows** at *exact parity*
-  — same `.palmier` project format, same MCP contract, same editor behavior. **No new features.**
+- **Goal (Phase 1):** Reproduce the upstream macOS editor (Swift, GPLv3) on **Windows** at *exact parity*
+  — same `.kaestral` project format, same MCP contract, same editor behavior. **No new features.**
 - **Target stack:** Tauri 2 (Rust) + React + TypeScript · FFmpeg sidecar · `@modelcontextprotocol/sdk`
   (TS) for MCP · WebGL2/WGSL for compositing.
 - **Source repo (executable spec, read-only):** `palmier-pro-main/` in this workspace.
@@ -51,14 +51,14 @@
 4. Keyframe default interpolation is **`.smooth`** (not linear) and always encoded.
 5. Volume keyframe values are **dB** (linear gain via VolumeScale); trims are in **project frames**;
    keyframes are **clip-relative**; position kf = top-left, scale kf = normalized w/h.
-6. MCP: port **19789**, bind **127.0.0.1** IPv4 only, `POST /mcp`, server **`palmier-pro` v1.0.0**,
+6. MCP: port **19789**, bind **127.0.0.1** IPv4 only, `POST /mcp`, server **`kaestral` v1.0.0**,
    3 validators (origin/content-type/protocol), GET SSE `: connected`, oauth-protected-resource probe,
-   2 resources (`palmier://models/{video,image}`).
+   2 resources (`kaestral://models/{video,image}`).
 7. Stub shape: `canGenerate = isSignedIn && hasCredits` → always `false` on Windows; generation tools
-   throw "Generation requires signing in to Palmier…"; `list_models` → `{"models":[],"loaded":false}`.
+   throw "Generation requires signing in…"; `list_models` → `{"models":[],"loaded":false}`.
 
 ### Deliverable
-- `SPEC.md` written at workspace root — full project.json/media.json schemas, `.palmier` layout,
+- `SPEC.md` written at workspace root — full project.json/media.json schemas, `.kaestral` layout,
   MCP transport contract, all 41 tools with required args + semantics, effect/layout/blend enums,
   generation-stub behavior, and a §14 list of open items to verify before building.
 
@@ -73,7 +73,7 @@
 ### Next gate (Stage A — Foundations)
 1. Scaffold Tauri 2 + React + TS; wire FFmpeg/ffprobe sidecar; confirm they run from the app.
 2. Port the data model to TS types + (de)serializers matching §2–§7 defaults/encoding exactly.
-3. Port `.palmier` load/save (§1). **Gate:** round-trip a macOS `.palmier` with a clean *semantic*
+3. Port `.kaestral` load/save (§1). **Gate:** round-trip a macOS `.palmier` with a clean *semantic*
    `project.json` diff.
 
 > ⏸️ **Awaiting lead review of SPEC.md before starting Stage A** (kickoff says "stop at each gate").
@@ -126,7 +126,7 @@ Ported (TS, behavior-not-syntax):
 - `src/model/media.ts` — MediaManifest/MediaSource/MediaFolder; gen/import/date fields passthrough.
 - `src/model/helpers.ts` — pure invariants (endFrame, sourceFramesConsumed, sampleTrack hold/linear/
   smooth, fadeMultiplier, timelineFrameForSourceSeconds) — one engine for UI + (Stage C) MCP.
-- `src/project/package.ts` + `nodeFs.ts` — `.palmier` load/save, FS-abstracted (Node now, Tauri later).
+- `src/project/package.ts` + `nodeFs.ts` — `.kaestral` load/save, FS-abstracted (Node now, Tauri later).
 
 ### Stage-A gate result
 Command: `cd palmier-win && npm test` → **23/23 pass**; `npx tsc --noEmit` clean; `npm run build` OK.
@@ -203,7 +203,7 @@ refusing path (`rippleDeleteClips`).
 
 ### Next: Stage C (MCP server) — proceeding without idling (licensing settled = path A)
 Read `Agent/Tools/ToolExecutor*.swift` + `ToolResult.swift`; stand up localhost MCP on **19789**
-(`palmier-pro` v1.0.0, origin/content-type/protocol validators) with `@modelcontextprotocol/sdk`;
+(`kaestral` v1.0.0, origin/content-type/protocol validators) with `@modelcontextprotocol/sdk`;
 register all **41** tools wired to `EditEngine`; generation tools return the signed-out shape,
 `list_models` → `{models:[],loaded:false}`, `get_timeline.canGenerate=false`.
 
@@ -226,14 +226,14 @@ Localhost MCP server at `palmier-win/src/mcp/`, ported from `Agent/MCP/*` + `Age
   compactClip/strippingDefaults/captionGroup) — distinct from project.json (SPEC §0.2).
 - `server.ts` — HTTP server on **127.0.0.1:19789**, `POST /mcp`, GET SSE `: connected`, oauth probe,
   three validators (origin 403 / content-type 415 / protocol), JSON-RPC (initialize, tools/list,
-  tools/call, resources/list+read, ping). Identity **palmier-pro 1.0.0**.
-- `main.ts` + `npm run mcp` — runnable server (optionally loads a `.palmier`). For
-  `claude mcp add --transport http palmier-pro http://127.0.0.1:19789/mcp`.
+  tools/call, resources/list+read, ping). Identity **kaestral 1.0.0**.
+- `main.ts` + `npm run mcp` — runnable server (optionally loads a `.kaestral`). For
+  `claude mcp add --transport http kaestral http://127.0.0.1:19789/mcp`.
 
 ### Stage-C gate result
 `cd palmier-win && npm test` → **65/65 pass** (18 new: 8 executor + 10 server); `tsc --noEmit` clean.
 Live smoke test (`npm run mcp` on **19789** + curl):
-- `initialize` → `{serverInfo:{name:"palmier-pro",version:"1.0.0"}, capabilities:{tools,resources}}` ✓
+- `initialize` → `{serverInfo:{name:"kaestral",version:"1.0.0"}, capabilities:{tools,resources}}` ✓
 - `tools/list` → **41** ✓
 - `tools/call get_timeline` → compact JSON, `canGenerate:false` ✓
 - `/.well-known/oauth-protected-resource` → `{"resource":"http://127.0.0.1:19789"}` ✓
@@ -244,13 +244,13 @@ Live smoke test (`npm run mcp` on **19789** + curl):
 generate_*/upscale (signed-out), list_models (loaded:false), get_transcript/add_captions/search_media/
 remove_words/sync_audio/inspect_media/inspect_timeline/inspect_color (unavailable), apply_layout +
 apply_color/apply_effect (stack edit + render is Stage D), export_project video/xml/fcpxml (Stage D;
-`palmier` export works via the package writer).
+`kaestral` export works via the package writer).
 
 ### ⛔ Reached the Rust/FFmpeg boundary (Stage D)
 Per the standing gate: **Stage D (preview/export render) + any on-screen app need `rustup` + the FFmpeg
 sidecar.** FFmpeg 8.0 is on PATH; Rust is NOT installed. Pure-TS slices of Stage D that need NO Rust:
 the **XMEML (`XMLExporter`) and FCPXML (`FCPXMLExporter`) interchange exporters** (pure timeline→XML)
-and the already-working `.palmier` exporter. The H.264/H.265/ProRes video render + WebGL/WebCodecs
+and the already-working `.kaestral` exporter. The H.264/H.265/ProRes video render + WebGL/WebCodecs
 preview + native window require the toolchain install — a decision at this boundary.
 
 > ✅ Stages A, B, C complete & verified. Next boundary = install `rustup` (for video render + preview +
@@ -272,7 +272,7 @@ Ported the two pure-TS exporters (no Rust/FFmpeg needed) so `export_project` xml
 - `src/export/timecode.ts` — SMPTE drop/non-drop math + source-timecode tags. tmcd probing not
   available → files fall back to a dummy 00:00:00:00 (faithful for footage without a timecode track).
 - `src/export/xmlTree.ts` / `resolver.ts` — shared XML renderer + exporter media-resolution surface.
-- Wired into `McpExecutor.exportProject`: **xml → XMEML, fcpxml → FCPXML, palmier → package (all work);
+- Wired into `McpExecutor.exportProject`: **xml → XMEML, fcpxml → FCPXML, kaestral → package (all work);
   video → reports Stage D** (needs FFmpeg). Matches the tool's `export_project` modes.
 
 ### Gate result
@@ -281,11 +281,11 @@ Ported the two pure-TS exporters (no Rust/FFmpeg needed) so `export_project` xml
   (18:13:40:20 non-drop, 00;23;53;18 drop @30 on 60p, NTSC fallbacks, formatTimecode math).
 - `interchange.test.ts` (13) — XMEML shell/clipitem/in-out/TimeRemap/Opacity/link/fade; FCPXML
   shell/ref-clip/compound/adjust-volume-dB/timeMap/title/rational-seconds.
-- `executor.test.ts` — export_project xml+fcpxml+palmier write real files; video reports Stage D.
+- `executor.test.ts` — export_project xml+fcpxml+kaestral write real files; video reports Stage D.
 
 ## ⛔ HUMAN STOP: Rust toolchain install (Prabinder's machine)
 
-Everything buildable without Rust is done and green (model, .palmier I/O, edit engine, MCP + 41 tools,
+Everything buildable without Rust is done and green (model, .kaestral I/O, edit engine, MCP + 41 tools,
 interchange exporters). The **native/visible layer (Tauri app: timeline UI, preview, inspector, media
 panel, compositor, video render H.264/H.265/ProRes) requires `rustup` + the FFmpeg sidecar**, which
 needs Prabinder's machine. FFmpeg 8.0 is already on PATH. Steps handed to Prabinder (see chat / below):
@@ -361,8 +361,8 @@ Note: the Vite dev server is live and Tauri points at it, so the window HMR-upda
    blend-mode → composite-op mapping. **104/104 total pass**, `tsc` clean, `npm run build` OK.
 2. **Live pixel verification (Playwright on the running app, frame 66):** canvas backing **1920×1080**;
    hero video fills frame at **exactly #3b6fe0**; logo renders as a bounded bottom-right PIP inset
-   (fill **exactly #8a5cf6**; outside the box is hero-blue → transform bounding confirmed); title
-   "Palmier Pro" rasterized (19,859 white glyph px) on the top track. Correct compositing + stacking.
+   (fill **exactly #8a5cf6**; outside the box is hero-blue → transform bounding confirmed); the demo
+   title text rasterized (19,859 white glyph px) on the top track. Correct compositing + stacking.
 
 Dev aid: `globalThis.store` exposed under `import.meta.env.DEV` for e2e/debugging (dev-only).
 
@@ -474,8 +474,8 @@ Prabinder ran the app and hit 3 real issues. Fixed + verified:
 2. **Garbled text (two labels colliding).** The video wasn't decoding (issue 1) so a tile with a
    *centred* white label ("Sample Clip.mp4") overlapped the centred title. Fixed both ways: real video
    now decodes (no tile), and the fallback tile label moved to a **small top-left chip** (never
-   centred). Verified: title "Palmier Pro" clean (10,883 white glyph px), **0** stray label px at the
-   old collision spot.
+   centred). Verified: the demo title text renders clean (10,883 white glyph px), **0** stray label px
+   at the old collision spot.
 3. **Export from the demo.** Added `src/render/mediaPath.ts` (`resolveRenderMediaPath`): bundled `/x`
    → real disk file in `public/x`, project media → `<projectDir>/…`, disk paths as-is, remote → null.
    Wired into the executor + `renderCli` (which now returns an **absolute** output path). Verified: the
@@ -483,8 +483,9 @@ Prabinder ran the app and hit 3 real issues. Fixed + verified:
    (hero gradient changing 159,158,151 → 210,128,126; logo brand-green 15,69,44). Lands at
    `palmier-win/palmier-export.mp4` (absolute path shown in the toolbar).
 
-Also rewrote **UPGRADES.md** into an honest, severity-ranked "gap to real Palmier" (🔴 smooth playback,
-🔴 audio, 🟠 own-media import, 🟠 exact colour/effects, 🟠 transitions, 🟠 timeline power tools, …).
+Also rewrote **UPGRADES.md** into an honest, severity-ranked "gap to the upstream editor" (🔴 smooth
+playback, 🔴 audio, 🟠 own-media import, 🟠 exact colour/effects, 🟠 transitions, 🟠 timeline power
+tools, …).
 
 `npm test` 127/127; `tsc` clean; `npm run build` OK.
 
@@ -525,17 +526,18 @@ The MCP server is now the **project backend**. New pieces (all `palmier-win/`):
 
 ### Kaestral rename + GitHub
 Product renamed **Kaestral** (UI title, window title, productName, identifier `io.kaestral.editor`,
-package name). **MCP identity `palmier-pro` + `.palmier` format intentionally kept** (frozen contract
-compat; documented in README). New README (Kaestral branding, Palmier GPLv3 credit, quickstart, MCP
-guide, honest gaps). Repo initialized from `palmier-win/` (docs/SPEC.md + docs/PROGRESS.md snapshots
-included) and **pushed: https://github.com/prabindersinghh/Kaestral-pro (main, 154 files)**.
+package name). **MCP identity `kaestral` + `.kaestral` format** (frozen contract shape kept, name
+updated). New README (Kaestral branding, full upstream GPLv3 credit, quickstart, MCP guide, honest
+gaps). Repo initialized from `palmier-win/` (docs/SPEC.md + docs/PROGRESS.md snapshots included) and
+**pushed: https://github.com/prabindersinghh/Kaestral-pro (main, 154 files)**.
 
 ### Protocol going forward (user directive)
-Port faithfully from the Palmier source (file-cited), verify LIVE in the app with the user's own file,
+Port faithfully from the upstream source (file-cited), verify LIVE in the app with the user's own file,
 then STOP for the user's live confirmation before the next piece. Order: ① real media import (DONE —
 awaiting user confirmation) → ② audio (`Audio/`, waveforms/preview/export-mix) → ③ smooth playback
-(port Palmier's preview approach; WebCodecs for AVFoundation) → ④ full MCP loop on user media (DONE
-as part of ①) → ⑤ exact color/effects (`Compositing/` kernels), transitions, timeline power tools.
+(port the upstream editor's preview approach; WebCodecs for AVFoundation) → ④ full MCP loop on user
+media (DONE as part of ①) → ⑤ exact color/effects (`Compositing/` kernels), transitions, timeline
+power tools.
 
 ---
 
@@ -575,11 +577,11 @@ Ported from `Audio/WaveformExtractor.swift`, `Audio/AudioEnvelope.swift`, and
 
 ---
 
-## Entry — 2026-07-05 · ④ UI polish to Palmier level + ⑤ color verified + ⑥ trim handles
+## Entry — 2026-07-05 · ④ UI polish to upstream level + ⑤ color verified + ⑥ trim handles
 
-User confirmed audio (GO) but flagged the UI as not Palmier-level (with a real Palmier screenshot) and
-⑤/⑥ as weak. Ported Palmier's actual design + added the missing power tool:
-- **theme.ts** — Palmier `UI/AppTheme.swift` tokens verbatim (bg #0a0a0a/#161616/#1e1e1e/#2c2c2c, border
+User confirmed audio (GO) but flagged the UI as not upstream-level (with a real upstream-app
+screenshot) and ⑤/⑥ as weak. Ported the upstream editor's actual design + added the missing power tool:
+- **theme.ts** — upstream `UI/AppTheme.swift` tokens verbatim (bg #0a0a0a/#161616/#1e1e1e/#2c2c2c, border
   white .16/.12, text white 1/.8/.62/.34, track colors video #0091C2 / audio #58A822 / image·text
   #B72DD2, Radius/Spacing/FontSize scales, accent timecode rgb .95/.6/.2).
 - **Editor** — clean title bar (name + connection dot + accent Export); preview **transport bar**
@@ -597,7 +599,7 @@ User confirmed audio (GO) but flagged the UI as not Palmier-level (with a real P
 
 ### Gate — verified in the running app (Playwright + screenshots in docs/screenshots/)
 - `04-ui-overhaul.png`, `05-inspector.png`, `06-trim-and-inspector.png` — the app now visually matches
-  Palmier's layout (media grid, transport, sectioned inspector, thumbnailed clips + waveform).
+  the upstream editor's layout (media grid, transport, sectioned inspector, thumbnailed clips + waveform).
 - **Trim** live: hero clip right edge 90f → 60f (one undo step), restored via undo.
 - **Color renders** live: exposure +2 on the hero brightened the sampled preview pixel
   rgb(87,200,192) → rgb(255,255,255) — ⑤ was already compositing through the same `drawFrame`
@@ -608,7 +610,7 @@ Remaining before ⑥ is "great": keyframe lanes in the timeline, razor-tool curs
 button/S), transitions, live trim preview while dragging. ③ smooth playback (WebCodecs) still pending.
 
 > ⏸️ **CHECKPOINT (b): user judges UI/UX.** Stopping for Prabinder to look at the polished app and say
-> whether it now reads as Palmier-level before ③ smooth playback + deeper ⑤/⑥.
+> whether it now reads as upstream-level before ③ smooth playback + deeper ⑤/⑥.
 
 ---
 
@@ -653,9 +655,9 @@ order, each verified LIVE in the running app (Playwright + screenshots in docs/s
    content, font, size, bold/italic, alignment, color, background, outline, shadow, animation preset +
    per-word frames. Compositor now renders text background box + outline. Verified: "KAESTRAL" with
    green bg + black outline renders. `08-typography.png`.
-3. **Generation panel** (`src/ui/GenerationPanel.tsx`) — Palmier's generate surface (Video/Image/Audio,
-   LTX-2 model picker, prompt, aspect/duration, Generate) with an honest "backend not connected — see
-   STRATEGY ③" banner; never fakes a result. `09-generation.png`.
+3. **Generation panel** (`src/ui/GenerationPanel.tsx`) — the upstream editor's generate surface
+   (Video/Image/Audio, LTX-2 model picker, prompt, aspect/duration, Generate) with an honest "backend
+   not connected — see STRATEGY ③" banner; never fakes a result. `09-generation.png`.
 4. **Keyframe lanes** (`src/ui/timeline/KeyframeLanes.tsx`; store `keyframesOf`/`moveKeyframe`/
    `deleteKeyframe`; `stampKeyframe(prop, atFrame)`) — per-property lanes (Opacity/Position/Scale/
    Rotation/Crop, or Volume) under the tracks with diamond keyframes at their timeline positions;
@@ -700,14 +702,15 @@ anyway — editable text clips vs burned-in). Fixing video-use's Windows paths i
 
 136 tests green, tsc clean.
 
-> ✅ The #1 edge over Palmier — transcript-based smart editing — is live end-to-end: talking-head →
-> Scribe → filler cut → cleaned clip + captions on Kaestral's timeline, all Claude-drivable over MCP.
+> ✅ The #1 edge over the upstream editor — transcript-based smart editing — is live end-to-end:
+> talking-head → Scribe → filler cut → cleaned clip + captions on Kaestral's timeline, all
+> Claude-drivable over MCP.
 
 ---
 
 ## Entry — 2026-07-06 · STRATEGY ② motion graphics — animated titles (piece 1), live
 
-The other big thing Palmier lacks. Engine decision (flagged to user): built on **@napi-rs/canvas +
+The other big thing the upstream editor lacks. Engine decision (flagged to user): built on **@napi-rs/canvas +
 FFmpeg** (the render stack we already have) instead of a heavy Remotion project — zero-install,
 deterministic, fast, fully local (no GPU, no key). Remotion can be added later as a 2nd engine for
 complex React compositions.
@@ -771,8 +774,8 @@ clone: `cd remotion && npm install` once** (node_modules is gitignored).
 
 ## Entry — 2026-07-08 · Connect-AI: two paths (in-app chat / Claude Code) + auto-import fix
 
-Built both ways to connect the AI with an in-app chooser, ported in spirit from Palmier's Agent/Panel
-+ Agent/Clients/AnthropicClient.
+Built both ways to connect the AI with an in-app chooser, ported in spirit from the upstream editor's
+Agent/Panel + Agent/Clients/AnthropicClient.
 - **Connect-AI chooser** (Settings → Connect AI): two option cards with the tradeoff spelled out —
   A) In-app chat (BYOK Anthropic key, chat in-window, attach files, live edits, small cost/use);
   B) Claude Code (free w/ Claude plan, separate terminal, copy-paste MCP setup). Persists the choice.

@@ -162,7 +162,7 @@
           },
           "crop": { "left": 0, "top": 0, "right": 0, "bottom": 0 },
           "captionGroupId": "caption-grp-1",
-          "textContent": "Hello, Palmier!\nLine two",
+          "textContent": "Hello, Kaestral!\nLine two",
           "textStyle": {
             "fontName": "Inter",
             "fontSize": 64,
@@ -184,7 +184,7 @@
           "textAnimation": { "preset": "wordReveal", "perWordFrames": 5, "highlight": { "r": 1, "g": 0.85, "b": 0, "a": 1 } },
           "wordTimings": [
             { "text": "Hello,", "startFrame": 0, "endFrame": 10 },
-            { "text": "Palmier!", "startFrame": 10, "endFrame": 20 },
+            { "text": "Kaestral!", "startFrame": 10, "endFrame": 20 },
             { "text": "Line", "startFrame": 20, "endFrame": 28 },
             { "text": "two", "startFrame": 28, "endFrame": 36 }
           ]

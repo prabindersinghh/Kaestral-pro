@@ -586,9 +586,9 @@ export const TOOL_DEFS: ToolDef[] = [
   {
     name: "export_project",
     description:
-      "Exports from the current project. mode: video (H.264/H.265/ProRes), xml (XMEML→Premiere), fcpxml (→Resolve/FCP), palmier (.palmier package). Omit outputPath to write to ~/Downloads.",
+      "Exports from the current project. mode: video (H.264/H.265/ProRes), xml (XMEML→Premiere), fcpxml (→Resolve/FCP), kaestral (.kaestral package). Omit outputPath to write to ~/Downloads.",
     inputSchema: obj({
-      mode: enumStr(["video", "xml", "fcpxml", "palmier"], "Optional. Default video."),
+      mode: enumStr(["video", "xml", "fcpxml", "kaestral"], "Optional. Default video."),
       codec: enumStr(["H.264", "H.265", "ProRes"], "Video mode only. Default H.264."),
       resolution: enumStr(["720p", "1080p", "2K", "4K", "Match Timeline"], "Video mode only. Default Match Timeline."),
       outputPath: str("Optional. Absolute destination path."),
@@ -694,7 +694,7 @@ export const TOOL_DEFS: ToolDef[] = [
   {
     name: "send_feedback",
     description:
-      "Report an agent limitation or bug to the Palmier team. Sends directly — no confirmation — so PARAPHRASE; never include verbatim user content. Use sparingly.",
+      "Report an agent limitation or bug to the Kaestral team. Sends directly — no confirmation — so PARAPHRASE; never include verbatim user content. Use sparingly.",
     inputSchema: obj(
       {
         category: enumStr(["missing_capability", "wrong_result", "confusing_ux", "failure", "suggestion"], "What kind of problem."),
@@ -712,8 +712,8 @@ if (TOOL_DEFS.length !== 41) {
 }
 
 // Kaestral extension tools — NOT part of the frozen 41-tool parity contract. The Skills system is
-// ported from Palmier's in-app agent (Agent/Skills), which itself adds read_skill on top of the 41
-// MCP tools. Exposed here so Claude Code over MCP can load Palmier's editing playbooks.
+// ported from the upstream in-app agent (Agent/Skills), which itself adds read_skill on top of the 41
+// MCP tools. Exposed here so Claude Code over MCP can load Kaestral's editing playbooks.
 export const SKILL_TOOL_DEFS: ToolDef[] = [
   {
     name: "list_skills",

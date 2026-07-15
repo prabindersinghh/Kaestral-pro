@@ -7,7 +7,7 @@
 //   npx kaestral --http
 //   claude mcp add --transport http kaestral http://127.0.0.1:19789/mcp
 // Requires FFmpeg + ffprobe on PATH. The whisper model (~142 MB) downloads on first transcription.
-// Optionally pass a .palmier project path to load it (works with either transport).
+// Optionally pass a .kaestral project path to load it (works with either transport).
 
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";

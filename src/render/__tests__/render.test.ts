@@ -10,7 +10,7 @@ import type { Clip, Timeline } from "../../model/types";
 function smallTimeline(): Timeline {
   const video: Clip = defaultClip({ mediaRef: "m", startFrame: 0, durationFrames: 15, id: "cv" });
   const text: Clip = defaultClip({ mediaRef: "text-1", startFrame: 0, durationFrames: 15, id: "ct", mediaType: "text" });
-  text.textContent = "Palmier";
+  text.textContent = "Kaestral";
   text.textStyle = defaultTextStyle();
   return {
     ...defaultTimeline(), fps: 30, width: 640, height: 360,
@@ -32,7 +32,7 @@ describe("renderSize (ExportOptions.swift)", () => {
 
 describe("renderVideo → real playable file (FFmpeg finish line)", () => {
   it("renders composited frames and encodes an H.264 mp4 ffprobe can read", async () => {
-    const dir = mkdtempSync(join(tmpdir(), "palmier-render-"));
+    const dir = mkdtempSync(join(tmpdir(), "kaestral-render-"));
     const out = join(dir, "out.mp4");
     const res = await renderVideo(smallTimeline(), { outputPath: out, codec: "H.264", resolution: "Match Timeline", mediaName: () => "Clip" });
 

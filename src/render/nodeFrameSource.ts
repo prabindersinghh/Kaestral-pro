@@ -38,7 +38,7 @@ export class NodeFrameSource implements FrameSource {
 
   /** Load still images and extract each video clip's frames. Call once before rendering. */
   async prepare(timeline: Timeline): Promise<void> {
-    this.root = await mkdtemp(join(tmpdir(), "palmier-frames-"));
+    this.root = await mkdtemp(join(tmpdir(), "kaestral-frames-"));
     for (const track of timeline.tracks) {
       if (!isVisual(track.type)) continue;
       for (const clip of track.clips) {

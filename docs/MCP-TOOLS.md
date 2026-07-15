@@ -27,8 +27,8 @@ Use this if you want the engine running independently of any single `claude` ses
 driving it from the in-app chat), or you're integrating a client that only speaks HTTP. The
 desktop app always uses this transport internally, bound to `127.0.0.1:19789`.
 
-Both modes accept an optional `.palmier` project directory as an extra arg
-(`npx kaestral "C:/path/to/My Project.palmier"`) to load an existing project instead of starting
+Both modes accept an optional `.kaestral` project directory as an extra arg
+(`npx kaestral "C:/path/to/My Project.kaestral"`) to load an existing project instead of starting
 empty.
 
 Requires **FFmpeg + ffprobe on PATH**. The whisper transcription model (~142 MB) downloads on
@@ -38,7 +38,7 @@ first use.
 
 What Claude can actually do over MCP right now. Categories: **✅ fully wired**
 (real behavior), **🟡 partial**, **⛔ stubbed** (needs infra not in this build), **🔒 signed-out by
-design** (Palmier's closed cloud). Verified live over the running MCP server unless noted.
+design** (the upstream closed cloud). Verified live over the running MCP server unless noted.
 
 Advertised: **50 tools** = the frozen **41** parity tools + **2** Kaestral Skills extensions
 (`list_skills`, `read_skill`) + **3** motion-graphics extensions (`generate_title`,
@@ -56,7 +56,7 @@ Advertised: **50 tools** = the frozen **41** parity tools + **2** Kaestral Skill
 | Color / effects | `apply_effect`, `apply_color`, `inspect_color` | Grade and apply non-color effects (blur, key, stylize). |
 | Media library | `import_media`, `list_folders`, `create_folder`, `move_to_folder`, `rename_media`, `rename_folder`, `delete_media`, `delete_folder` | Manage the project's media assets and folders. |
 | Project / misc | `export_project`, `set_project_settings`, `list_models` | Export, configure project settings, and list generation models. |
-| Generation (signed-out shape) | `generate_video`, `generate_image`, `generate_audio`, `upscale_media` | AI generation/upscale — return Palmier's signed-out shape in this build. |
+| Generation (signed-out shape) | `generate_video`, `generate_image`, `generate_audio`, `upscale_media` | AI generation/upscale — return the upstream signed-out shape in this build. |
 | Feedback | `send_feedback` | Report an agent limitation or bug. |
 | Skills extension | `list_skills`, `read_skill` | Discover and load Kaestral's editing playbooks (skills). |
 | Motion graphics extension | `generate_title`, `generate_motion`, `compose_motion` | Generate titles, template motion graphics, and bespoke generative scenes. |
@@ -89,7 +89,7 @@ Full input schemas (types, required fields, enums) for every tool above live in
 | import_media | ffprobe metadata (verified: real mp4/png) |
 | list_folders / create_folder / move_to_folder / rename_folder / delete_folder | folder CRUD |
 | rename_media / delete_media | media CRUD |
-| export_project | XMEML / FCPXML / .palmier / **H.264·H.265·ProRes video** (verified real-footage MP4) |
+| export_project | XMEML / FCPXML / .kaestral / **H.264·H.265·ProRes video** (verified real-footage MP4) |
 | set_project_settings | fps/size/etc |
 | send_feedback | records |
 
@@ -106,16 +106,16 @@ Full input schemas (types, required fields, enums) for every tool above live in
 |------|-----------|
 | get_transcript, add_captions, remove_words | word-level transcription (whisper / ElevenLabs Scribe) — **arrives with STRATEGY ①** |
 | search_media | semantic/embedding search |
-| sync_audio | audio cross-correlation (Palmier's AudioSyncCorrelator is portable; not yet) |
+| sync_audio | audio cross-correlation (the upstream AudioSyncCorrelator is portable; not yet) |
 
 Returning `"…not available in this build"` is a deliberate, documented stub — not a failure.
 
-## 🔒 Signed-out by design (Palmier's closed paid cloud)
+## 🔒 Signed-out by design (the upstream closed paid cloud)
 `generate_video`, `generate_image`, `generate_audio`, `upscale_media` — return the signed-out shape.
 **STRATEGY ③** replaces these with a free/open generator (LTX-2 local, or Fal/Replicate hosted).
 
 ## 🧩 Kaestral Skills extensions (beyond the frozen 41)
 | Tool | Notes |
 |------|------|
-| list_skills | **verified live**: lists palmier-skills (color-grading, ugc-editing, ugc-photo-prompts, ugc-video-prompts) |
+| list_skills | **verified live**: lists editing skills (color-grading, ugc-editing, ugc-photo-prompts, ugc-video-prompts) |
 | read_skill | **verified live**: `read_skill('color-grading')` → real 8,474-char body |

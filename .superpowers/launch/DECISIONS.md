@@ -24,3 +24,10 @@ DOWNLOAD BUTTON: point at the always-newest RELEASES PAGE:
 FORMSPREE: user will paste the endpoint. Until then WAITLIST_ENDPOINT stays a clearly-marked
   placeholder with mailto fallback. PENDING: user to provide https://formspree.io/f/xxxxx.
 FORMSPREE (received): https://formspree.io/f/xrenbavp
+
+--- palmier purge (point 7) ---
+1. RENAME format .palmier -> .kaestral EVERYWHERE (extension, export_project mode value 'palmier'->'kaestral',
+   package reader/writer, MAESTRO_ env vars where they reference it, tests, fixtures, golden-project.json).
+   Pre-launch: no existing public .palmier projects, so nothing breaks. MUST keep full suite green.
+2. KEEP GPLv3 attribution (NOTICE.md, README license section, landing footers index.html + pricing.html) —
+   legally required. Purge EVERY OTHER palmier mention: docs prose, code identifiers/comments, env var names.

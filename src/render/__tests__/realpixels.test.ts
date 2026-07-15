@@ -11,7 +11,7 @@ import type { Clip, Timeline } from "../../model/types";
 // A source video that is RED for its first second and GREEN for its second (60 frames @30),
 // plus a solid CYAN still. If the render composites real pixels, the output shows red early,
 // green late (frame-accurate through trim), and cyan where the image PIP sits.
-const dir = mkdtempSync(join(tmpdir(), "palmier-realpx-"));
+const dir = mkdtempSync(join(tmpdir(), "kaestral-realpx-"));
 const videoPath = join(dir, "src.mp4");
 const imagePath = join(dir, "logo.png");
 

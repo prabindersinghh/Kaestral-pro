@@ -1,4 +1,4 @@
-// Generation panel — ports the surface of Palmier's Generation/UI/GenerationView (kind tabs, model
+// Generation panel — ports the surface of the upstream editor's Generation/UI/GenerationView (kind tabs, model
 // picker, prompt box, aspect/duration, Generate). Wired to HOSTED generation (STRATEGY ③): the user
 // brings their own Fal or Replicate key (pay-per-clip on their account), the panel calls
 // generate_video/generate_image over MCP, and the result auto-imports + places on the timeline.

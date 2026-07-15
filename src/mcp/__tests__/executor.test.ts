@@ -132,8 +132,8 @@ describe("Stage-C: stub shapes (SPEC §10/§11)", () => {
 });
 
 describe("Stage-D (pure): export_project interchange modes", () => {
-  it("mode:xml and mode:fcpxml write valid files; palmier works; video reports Stage D", async () => {
-    const root = mkdtempSync(join(tmpdir(), "palmier-exp-"));
+  it("mode:xml and mode:fcpxml write valid files; kaestral works; video reports Stage D", async () => {
+    const root = mkdtempSync(join(tmpdir(), "kaestral-exp-"));
     const ex = new McpExecutor({ fs: nodePackageFS(), projectDir: root });
     ex.media.addAsset({ id: "v", name: "v.mp4", type: "video", duration: 5, source: { kind: "external", absolutePath: "/tmp/v.mp4" }, hasAudio: false });
     ex.engine.timeline.tracks.push(videoTrack());
@@ -147,9 +147,9 @@ describe("Stage-D (pure): export_project interchange modes", () => {
     expect(fcp.isError).toBeFalsy();
     expect(readFileSync(join(root, "o.fcpxml"), "utf8")).toContain('<fcpxml version="1.10">');
 
-    const pal = await ex.execute("export_project", { mode: "palmier", outputPath: join(root, "P.palmier") });
+    const pal = await ex.execute("export_project", { mode: "kaestral", outputPath: join(root, "P.kaestral") });
     expect(pal.isError).toBeFalsy();
-    expect(readFileSync(join(root, "P.palmier", "project.json"), "utf8")).toContain('"fps"');
+    expect(readFileSync(join(root, "P.kaestral", "project.json"), "utf8")).toContain('"fps"');
     // mode:video renders via FFmpeg — covered end-to-end in src/render/__tests__/render.test.ts.
   });
 });

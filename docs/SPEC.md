@@ -1,4 +1,4 @@
-# Palmier Pro — Port Specification (Phase 1)
+# Kaestral — Port Specification (Phase 1)
 
 **Status:** Step 1 deliverable — the persistence + MCP contract, extracted directly from the
 macOS Swift source. Stage A in progress.
@@ -44,15 +44,17 @@ port — not a list of open corrections.
 
 ---
 
-## 1. The `.palmier` project package
+## 1. The `.kaestral` project package
 
 A project is a **directory** (NSDocument package on macOS; a plain folder on Windows).
 Constants from `Utilities/Constants.swift` (`enum Project`) and layout from `Project/VideoProject.swift`.
+Kaestral renames the on-disk extension/UTI from the upstream `.palmier` to `.kaestral` (clean break,
+no existing public `.palmier` projects); the package layout and semantics are otherwise unchanged.
 
 | Constant | Value |
 |---|---|
-| Extension | `palmier` |
-| UTI / type identifier | `io.palmier.project` |
+| Extension | `kaestral` |
+| UTI / type identifier | `io.kaestral.project` |
 | Timeline file | `project.json` |
 | Media manifest file | `media.json` |
 | Generation log file | `generation-log.json` |
@@ -62,7 +64,7 @@ Constants from `Utilities/Constants.swift` (`enum Project`) and layout from `Pro
 | Registry (app-level, outside package) | `project-registry.json` |
 
 ```
-MyProject.palmier/
+MyProject.kaestral/
 ├── project.json          # REQUIRED — JSONEncoder dump of Timeline. Missing ⇒ fileReadCorruptFile.
 ├── media.json            # optional — MediaManifest. Bad/missing ⇒ open with no media (preserved on save).
 ├── generation-log.json   # optional — GenerationLog. Written only if present in the editor.
@@ -94,10 +96,10 @@ MyProject.palmier/
 
 ### 1.1 Golden fixture (Stage-A acceptance source)
 
-No real macOS-saved `.palmier` is reachable: bundled samples are fetched at runtime from a Convex
+No real macOS-saved project package is reachable: bundled samples are fetched at runtime from a Convex
 backend (`SampleProjectService` → `/v1/samples/resolve`) whose URL is the build-private Info.plist
 key `PalmierConvexHttpURL` (`Account/BackendConfig.swift:7,13`), absent from the open-source repo;
-no `.palmier`/`project.json`/`media.json` fixtures are committed. We have no Mac to generate one.
+no `project.json`/`media.json` fixtures are committed. We have no Mac to generate one.
 
 Since `project.json` is deterministic `JSONEncoder` output of the `Timeline` struct — which we have
 exactly — the golden file is **hand-authored from source** and lives at:
@@ -107,8 +109,8 @@ exactly — the golden file is **hand-authored from source** and lives at:
 - `fixtures/golden-fixtures.notes.md` — per-field → source-line/default mapping (JSON has no comments).
 
 **This fixture is provisional-but-spec-authoritative.** It is derived from `Models/*`, not from our
-writer, so it is a *real* gate (not a self-check). If a genuine Palmier-authored `.palmier` is later
-obtained, diff it against the fixture, reconcile any surprise (esp. `MediaSource` shape + `Date`
+writer, so it is a *real* gate (not a self-check). If a genuine upstream-authored project package is
+later obtained, diff it against the fixture, reconcile any surprise (esp. `MediaSource` shape + `Date`
 encoding), and promote it. Dates are intentionally omitted from the fixture until a real file pins
 the reference-date encoding.
 
@@ -118,7 +120,7 @@ the reference-date encoding.
 (b) assert the writer **emits every non-optional field and omits only nil optionals** (the §0.2 rule),
     verified on a default-constructed `Clip`/`Track`/`Timeline`.
 Verify the `MediaSource` `external`/`project` JSON shape against the fixture now, and again against a
-genuine `.palmier` if/when one is obtained.
+genuine upstream-saved project package if/when one is obtained.
 
 ---
 
@@ -333,9 +335,9 @@ aspect tolerance 0.02.
 | Port | **19789** (`MCPService.port`) |
 | Bind | **`127.0.0.1` IPv4 loopback only** (never LAN; `requiredLocalEndpoint`) |
 | Endpoint | `POST /mcp` (also accepts `/`) |
-| Server identity | name **`palmier-pro`**, version **`1.0.0`** |
+| Server identity | name **`kaestral`**, version **`1.0.0`** |
 | Capabilities | `resources{subscribe:false, listChanged:false}`, `tools{listChanged:false}` |
-| Enabled pref key | `io.palmier.pro.mcp.enabled` (default true) |
+| Enabled pref key | `io.kaestral.mcp.enabled` (default true) |
 
 Behaviors to replicate exactly:
 - `GET /mcp` → `200` with `Content-Type: text/event-stream` and body `: connected\n\n` (SSE keep-alive).
@@ -343,10 +345,10 @@ Behaviors to replicate exactly:
 - Unknown path → 404; unparsable → 400.
 - **Validation pipeline (all three, in order):** `OriginValidator.localhost(port:)`,
   `ContentTypeValidator`, `ProtocolVersionValidator`. Stateless transport; one Server per connection.
-- **2 MCP resources** also registered: `palmier://models/video`, `palmier://models/image`
+- **2 MCP resources** also registered: `kaestral://models/video`, `kaestral://models/image`
   (`application/json`). For the stub these return `[]`.
 - Client config that must keep working:
-  `claude mcp add --transport http palmier-pro http://127.0.0.1:19789/mcp`.
+  `claude mcp add --transport http kaestral http://127.0.0.1:19789/mcp`.
 
 ---
 
@@ -431,9 +433,9 @@ preserved (real external agents depend on the wording).
 33. `delete_folder` — req: `folderIds`. Deletes contents recursively.
 
 **Project / misc (4)**
-34. `export_project` — req: none. Args: `mode?(video|xml|fcpxml|palmier, default video),
+34. `export_project` — req: none. Args: `mode?(video|xml|fcpxml|kaestral, default video),
     codec?(H.264|H.265|ProRes), resolution?(720p|1080p|2K|4K|Match Timeline), outputPath?, overwrite?
-    (default true)`. video renders async (returns `status=started`); xml/fcpxml/palmier finish inline.
+    (default true)`. video renders async (returns `status=started`); xml/fcpxml/kaestral finish inline.
 35. `set_project_settings` — req: none. Args: `fps?, width?, height?, aspectRatio?(16:9|9:16|1:1|4:3|
     2.4:1|9:14), quality?(720p|1080p|2K|4K)`. (aspectRatio ⟂ width/height.) Re-fits clips; rescales on fps change.
 36. `list_models` — req: none. Args: `type?(video|image|audio|upscale)`. Returns `{models, loaded}`.
@@ -480,11 +482,11 @@ canGenerate = AccountService.isSignedIn && AccountService.hasCredits
 The Windows port has no cloud account ⇒ **`canGenerate` is always `false`**. Register the 4 generation
 tools and `list_models`, but:
 - `generate_video` / `generate_image` (`ToolExecutor+Generate.swift:6`) → error
-  **"Generation requires signing in to Palmier. Tell the user to sign in."**
+  **"Generation requires signing in. Tell the user to sign in."**
 - `generate_audio` (`:198`) / `upscale_media` (`:320`) → same signed-out error
-  (upscale: "Upscale requires signing in to Palmier. Tell the user to sign in.").
+  (upscale: "Upscale requires signing in. Tell the user to sign in.").
 - `list_models` → `{"models":[], "loaded":false}` (signed-out shape, `:391`).
-- MCP resources `palmier://models/{video,image}` → `[]`.
+- MCP resources `kaestral://models/{video,image}` → `[]`.
 
 **No fabricated clips, models, or transcripts.** A capability that isn't built returns a clear,
 structured "not available in this build" — never a silent wrong result.
@@ -513,7 +515,7 @@ transcripts.** (Optional: wire `whisper.cpp` if time permits — cleanest single
   - (note: `import_media` accepts a narrower set — no webp, no lottie — and requires transcodes externally.)
 - `Interpolation`: `linear | hold | smooth`. `BlendMode`: §5. `LayoutFit`: `fill | fit`.
 - Export modes: `video` (H.264/H.265/ProRes), `xml` (XMEML→Premiere), `fcpxml` (→Resolve/FCP),
-  `palmier` (package).
+  `kaestral` (package).
 
 ---
 
@@ -532,8 +534,8 @@ transcripts.** (Optional: wire `whisper.cpp` if time permits — cleanest single
 
 ## 14. Open items to verify before/while building (Stage A–B)
 
-1. Get a real macOS-saved `.palmier` to use as the round-trip golden file (none in-repo yet; check
-   `palmier-pro-main/` sample-project resources or generate from a macOS build).
+1. Get a real macOS-saved upstream project package to use as the round-trip golden file (none in-repo
+   yet; check `palmier-pro-main/` sample-project resources or generate from a macOS build).
 2. Confirm exact `get_timeline` output dict shape (the default-omitting representation) by reading
    `ToolExecutor+Timeline.swift` in full — needed for the MCP gate, separate from project.json.
 3. Confirm `ToolResult.toMCPResult()` structure (text content blocks, isError flag) from `ToolResult.swift`.
@@ -543,4 +545,4 @@ transcripts.** (Optional: wire `whisper.cpp` if time permits — cleanest single
 ---
 
 *End of SPEC.md (step 1). Next gate per the brief: scaffold Tauri+React+TS + FFmpeg sidecar, port
-the data model, and round-trip a macOS `.palmier` with a clean semantic `project.json` diff.*
+the data model, and round-trip a macOS-saved project package with a clean semantic `project.json` diff.*

@@ -217,4 +217,4 @@ until they don't. The user judges with their own eyes. **No mediocre output ship
 
 - Sandboxed raw-code generation (the hybrid's second path) — designed for, flag-gated, matured later.
 - PixiJS/shaders/GPU particles — post-launch Pro, drop-in via the registry.
-- No new MCP server; no `.palmier` format change; `generate_motion` templates stay.
+- No new MCP server; no `.kaestral` format change; `generate_motion` templates stay.

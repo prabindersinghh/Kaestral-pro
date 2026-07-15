@@ -375,7 +375,7 @@ const EditorScene: React.FC<{ len: number }> = ({ len }) => {
             <div style={{ marginLeft: 16 }}>
               <LogoMark size={24} />
             </div>
-            <div style={{ marginLeft: 10, fontFamily: MONO, fontSize: 16, color: DIM }}>Kaestral — trip-2026.palmier</div>
+            <div style={{ marginLeft: 10, fontFamily: MONO, fontSize: 16, color: DIM }}>Kaestral — trip-2026.kaestral</div>
           </div>
           {/* main area */}
           <div style={{ display: "flex", height: H - 46 - TL, padding: 14, gap: 14 }}>
@@ -536,7 +536,7 @@ const FeaturesScene: React.FC<{ len: number }> = ({ len }) => {
   const fade = useFade(len, 8, 10);
   const head = spring({ frame: frame - 4, fps, config: { damping: 15, mass: 0.7 } });
   const cards = [
-    { icon: "❯_", title: "41 agent tools", body: "The full Palmier MCP contract. Every cut, keyframe and title — scriptable." },
+    { icon: "❯_", title: "41 agent tools", body: "The full Kaestral MCP contract. Every cut, keyframe and title — scriptable." },
     { icon: "▣", title: "Real render pipeline", body: "H.264 · H.265 · ProRes, straight through FFmpeg. No cloud round-trips." },
     { icon: "⇄", title: "Plays with everyone", body: "Hand off to Premiere, Resolve or Final Cut. Your project, portable." },
   ];

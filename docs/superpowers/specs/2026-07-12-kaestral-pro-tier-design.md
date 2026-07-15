@@ -131,7 +131,7 @@ Things the user can test locally at no cost come first; cloud/key-dependent last
   New `generate_video` model options, `dub_video`, PixiJS templates, temporal upscale, and any Pro
   UI are Pro-only. `add_captions` `style` defaults to current behavior (safe for free tier).
 - **MCP surface:** new/extended tool defs in `toolDefs.ts`, executed in `executor.ts`; keep the
-  frozen `palmier-pro` server identity and `.palmier` format.
+  frozen `kaestral` server identity and `.kaestral` format.
 - **Branch discipline:** all work on `pro-tier-expansion`; main untouched.
 - **NOTICE.md:** add Real-ESRGAN (BSD-3), PixiJS (MIT), Piper (MIT), VideoLingo (Apache-2.0).
   Note GPL projects studied-only: video2x (AGPL), VideoCaptioner (GPL), Graphite (GPL).
@@ -155,11 +155,11 @@ Things the user can test locally at no cost come first; cloud/key-dependent last
   Apache) and attributed in NOTICE.md.
 - Confirm GPL-studied projects (video2x, VideoCaptioner, Graphite) contributed **ideas only** — our
   implementations are clean-room, with a provenance comment in each new module.
-- Confirm the Pro-tier code is separable and permissive-clean (the base being GPLv3 is the Palmier
+- Confirm the Pro-tier code is separable and permissive-clean (the base being GPLv3 is the upstream
   port; the Pro additions must not pull in new copyleft).
 
 ## Out of scope (YAGNI)
 
-- No new MCP server; no change to `.palmier` format or the `palmier-pro` identity.
+- No new MCP server; no change to `.kaestral` format or the `kaestral` identity.
 - No local heavy diffusion generation (GPU gen stays hosted — the user has no local GPU).
 - No auto-reframe/pose tracking, no video RAG, no player rewrites (still parked).

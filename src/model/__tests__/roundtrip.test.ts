@@ -47,10 +47,10 @@ describe("Stage-A gate (a): golden fixture decode→encode is semantically lossl
   });
 });
 
-describe("Stage-A gate: .palmier package load/save round-trip (Node FS)", () => {
+describe("Stage-A gate: .kaestral package load/save round-trip (Node FS)", () => {
   it("writes then reads a package, preserving project.json and media.json semantically", async () => {
     const fs = nodePackageFS();
-    const root = mkdtempSync(join(tmpdir(), "palmier-"));
+    const root = mkdtempSync(join(tmpdir(), "kaestral-"));
     const dirA = join(root, `Golden.${PROJECT.fileExtension}`);
 
     // Seed package A directly from the golden fixtures.
@@ -72,7 +72,7 @@ describe("Stage-A gate: .palmier package load/save round-trip (Node FS)", () => 
 
   it("throws on a package missing project.json", async () => {
     const fs = nodePackageFS();
-    const root = mkdtempSync(join(tmpdir(), "palmier-"));
+    const root = mkdtempSync(join(tmpdir(), "kaestral-"));
     const dir = join(root, `Empty.${PROJECT.fileExtension}`);
     await fs.ensureDir(dir);
     await expect(readProjectPackage(fs, dir)).rejects.toThrow(/project\.json/);

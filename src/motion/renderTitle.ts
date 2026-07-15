@@ -1,4 +1,4 @@
-// Motion graphics — animated title / intro / outro renderer (STRATEGY ② "the other big thing Palmier
+// Motion graphics — animated title / intro / outro renderer (STRATEGY ② "the other big thing Kaestral
 // doesn't have"). Draws each frame with @napi-rs/canvas and pipes to FFmpeg → H.264 MP4. Fully local,
 // no browser, no GPU, no API key — reuses the same render stack as the exporter. Claude maps a natural
 // prompt ("a bold cinematic intro that says Trip 2026") to a TitleSpec; the MP4 imports onto the

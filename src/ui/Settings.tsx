@@ -1,4 +1,4 @@
-// Settings + Connect-AI panel — ported in spirit from Palmier's Settings/ + Agent/Panel. A modal
+// Settings + Connect-AI panel — ported in spirit from the upstream editor's Settings/ + Agent/Panel. A modal
 // with three tabs: Connect AI (MCP endpoint + one-click copy of the Claude Code connect command +
 // live server status), Project (fps / resolution defaults), and Export (default codec / resolution).
 

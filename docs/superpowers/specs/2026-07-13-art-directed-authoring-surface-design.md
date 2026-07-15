@@ -6,7 +6,7 @@
 
 ## Strategic thesis (locked)
 
-Palmier's architecture is correct: **the editor is the hands, the LLM is the brain.** Do NOT build
+The upstream architecture is correct: **the editor is the hands, the LLM is the brain.** Do NOT build
 intelligence into the engine — build the most capable hands any LLM can drive. The race is the
 **capability surface**, not the model. Kaestral already leads (timeline editing + motion-graphics
 rendering + perception: vision/transcript/beats/palette). This work **maximizes** that surface so a
@@ -213,5 +213,5 @@ After Components 1–3:
 
 ## Out of scope (YAGNI)
 - No new render engine, no PixiJS, no new deps.
-- No change to the frozen `.palmier` format or the `kaestral` MCP identity.
+- No change to the frozen `.kaestral` format or the `kaestral` MCP identity.
 - Deep deepenings of non-motion tools are catalogued, not built, this round.

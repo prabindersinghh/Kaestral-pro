@@ -2,7 +2,7 @@
 
 **Status: provisional-but-spec-authoritative.** Hand-authored from the Swift `Models/*` structs
 (not from our writer), so the Stage-A round-trip test against it is a *real* gate, not a self-check.
-If a genuine Palmier-authored `.palmier` is later obtained, diff it against these files, reconcile any
+If a genuine upstream-authored `.kaestral` package is later obtained, diff it against these files, reconcile any
 surprise (especially `MediaSource` shape and `Date` encoding), and promote it.
 
 Every value below is traceable to a line in `palmier-pro-main/Sources/PalmierPro/`. JSON has no

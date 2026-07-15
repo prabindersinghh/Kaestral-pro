@@ -1,7 +1,7 @@
 // Skills — ported from Agent/Skills/{Skill,SkillCatalog,SkillStore}.swift. A skill is a SKILL.md
 // (YAML-ish frontmatter: name, description; + a markdown body of workflow instructions). The
-// catalog + bodies are fetched from the SAME public repo Palmier uses (palmier-io/palmier-skills),
-// overridable via MAESTRO_SKILLS_BASE / PALMIER_SKILLS_BASE (e.g. file:///path for a local clone).
+// catalog + bodies are fetched from the same public repo the upstream editor uses (palmier-io/palmier-skills),
+// overridable via MAESTRO_SKILLS_BASE (e.g. file:///path for a local clone).
 // read_skill(id) returns a skill's body so Claude can follow pro editing workflows step by step.
 
 export interface SkillEntry {
@@ -18,11 +18,11 @@ import { join } from "node:path";
 import { skillsDir } from "./env";
 
 // Skill source, in priority order:
-//  1. MAESTRO_SKILLS_BASE / PALMIER_SKILLS_BASE (explicit override — remote URL or file://)
+//  1. MAESTRO_SKILLS_BASE (explicit override — remote URL or file://)
 //  2. the bundled local skill library (Kaestral's OWN playbooks — works offline / in the installer)
-//  3. the upstream Palmier skills repo (remote fallback)
+//  3. the upstream skills repo (remote fallback)
 function skillsBase(): string {
-  const override = process.env.MAESTRO_SKILLS_BASE ?? process.env.PALMIER_SKILLS_BASE;
+  const override = process.env.MAESTRO_SKILLS_BASE;
   if (override) return override;
   const local = skillsDir();
   if (existsSync(join(local, "catalog.json"))) return pathToFileURL(local + "/").toString().replace(/\/$/, "");

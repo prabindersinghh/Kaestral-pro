@@ -1,4 +1,4 @@
-// .palmier package load/save (Project/VideoProject.swift, Utilities/Constants.swift).
+// .kaestral package load/save (Project/VideoProject.swift, Utilities/Constants.swift).
 // FS-abstracted so the same logic runs over Node (tests/CLI) and Tauri (app).
 
 import { parseTimeline, stringifyTimeline } from "../model/codec";
@@ -7,8 +7,8 @@ import { parseManifest, stringifyManifest, type MediaManifest } from "../model/m
 
 /** enum Project (Constants.swift:105). */
 export const PROJECT = {
-  fileExtension: "palmier",
-  typeIdentifier: "io.palmier.project",
+  fileExtension: "kaestral",
+  typeIdentifier: "io.kaestral.project",
   timelineFilename: "project.json",
   manifestFilename: "media.json",
   generationLogFilename: "generation-log.json",
@@ -16,7 +16,7 @@ export const PROJECT = {
   mediaDirectoryName: "media",
 } as const;
 
-/** Minimal FS surface a `.palmier` package needs. `readText` returns null when absent. */
+/** Minimal FS surface a `.kaestral` package needs. `readText` returns null when absent. */
 export interface PackageFS {
   readText(path: string): Promise<string | null>;
   writeText(path: string, content: string): Promise<void>;

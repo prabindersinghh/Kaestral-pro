@@ -615,7 +615,7 @@ export class McpExecutor {
 
   private async run(name: string, a: Args): Promise<ToolResult> {
     switch (name) {
-      // Skills (Kaestral extension — Palmier Agent/Skills over MCP)
+      // Skills (Kaestral extension — Agent/Skills over MCP)
       case "list_skills": return okJson({ skills: (await this.skills.catalog()).map((s) => ({ id: s.id, name: s.name, description: s.description })) });
       case "read_skill": {
         const id = requireStr(a, "id");
@@ -1297,10 +1297,10 @@ export class McpExecutor {
   private async exportProject(a: Args): Promise<ToolResult> {
     const mode = aStr(a, "mode") ?? "video";
     const codec = (aStr(a, "codec") ?? "H.264") as VideoCodec;
-    const ext = mode === "palmier" ? "palmier" : mode === "xml" ? "xml" : mode === "fcpxml" ? "fcpxml" : codec === "ProRes" ? "mov" : "mp4";
+    const ext = mode === "kaestral" ? "kaestral" : mode === "xml" ? "xml" : mode === "fcpxml" ? "fcpxml" : codec === "ProRes" ? "mov" : "mp4";
     const outPath = aStr(a, "outputPath") ?? `${this.projectDir ?? "."}/export.${ext}`;
 
-    if (mode === "palmier") {
+    if (mode === "kaestral") {
       if (!this.fs) return err("export_project: no filesystem bound in this context.");
       await writeProjectPackage(this.fs, outPath, {
         timeline: this.timeline,

@@ -1,4 +1,4 @@
-// Inspector — ported to Palmier's InspectorView structure: uppercase section headers (LEVELS,
+// Inspector — ported to the upstream editor's InspectorView structure: uppercase section headers (LEVELS,
 // PLAYBACK, TRANSFORM, COLOR) with `[icon] Label ........ value` rows and a right-aligned trailing
 // control. Volume is shown in dB (VolumeScale), fades in seconds, speed in ×.
 
