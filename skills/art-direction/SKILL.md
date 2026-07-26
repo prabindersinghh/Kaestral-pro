@@ -15,6 +15,14 @@ The engine gives you unusual power: custom bezier curves, per-property tweens, e
 
 ## 1. The decision process — how to read a brief before you touch a field
 
+> **First, the non-negotiable: a launch/promo/product video is a composed FILM — never a document you
+> pan across.** The most damaging failure is to take a project's README, architecture diagram, spec,
+> or feature list and render it as-is (or slowly zoom/pan across it). That produces an unreadable wall
+> of tiny boxes and text — a screen-recording of a document, not a launch video. A film shows **one
+> idea per beat in huge legible type**, sequenced as a story. If the source material is a dense doc,
+> your job is to *distill* it into 3–5 beats (hook → what it does → 2–3 key features → name + CTA), not
+> to display it. Never put more on screen than a viewer can read in the ~2–4 seconds that beat is up.
+
 Do not open with elements. Open with the film. Answer these five questions, in order, *before* writing any SceneSpec:
 
 1. **What is the emotional arc?** A launch film is not a feature list — it's a small story with a shape: *tension → thesis → proof → name*. A product reel is *problem → the turn → relief*. Name the arc in one line. Every beat must move along it; a beat that doesn't advance the arc is a beat to cut.
@@ -197,6 +205,8 @@ These are real failures from authoring the reference films. Each one *felt* fine
 - **Uniform rhythm.** Every beat held the same length and moved at the same energy. No build, no release, no peak. *Fix:* vary hold length with content; withhold, then release (§5).
 
 - **Pacing you authored but the engine ignored.** You set deliberate staggered delays and the reveal came out synchronized — because the default auto-pacing clamped them. *Fix:* on any beat where the *ordering* of entrances is the composition, set `enter.pacing:"manual"` on those layers (§8, ex. A).
+
+- **The documentation-dump (the worst failure of all).** Asked for a "launch video" for a product, the LLM rendered the project's architecture map / README / feature grid as a dense static layout and slowly panned across it. Result: a 4K wall of tiny unreadable boxes — a screen-recording of a doc, not a film. *Fix:* a launch video is a **composed film**, never a displayed document (§1, top). Distill the source into 3–5 beats — hook → what it does → 2–3 key features (one per beat, in huge type) → name + CTA. If you catch yourself putting a diagram, a full feature list, or more than ~10 words of body text on one beat, stop: that's a doc, not a film.
 
 If your draft has any of these, it is not yet premium. Fix it before you render.
 
