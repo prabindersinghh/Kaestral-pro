@@ -3,6 +3,7 @@ import {
   REGISTRY,
   Grid,
   GlowField,
+  Orbs,
   Particles,
   Camera,
   DEFAULT_CAMERA,
@@ -14,9 +15,14 @@ import {
   applyDepthOfField,
   applyMotionBlur,
   applyLightingSweep,
+  applyHandheldIdle,
+  applyLiveBreathe,
+  applyShineSweep,
+  applyEdgeFlip,
   resolveLayoutPosition,
   resolveEntranceTiming,
   ASSUMED_ENTRANCE_SETTLE_FRAMES,
+  paletteColor,
 } from "../primitives";
 import type { CameraSpec, TransitionKind, MaskShape, MaskReveal } from "../primitives";
 import { TOKENS, tokenColor } from "../primitives/tokens";
@@ -88,11 +94,24 @@ import type { EasingSpec } from "../primitives/easing";
 //       bounded data only, never a free-form component synthesized from a string. ZERO Noop
 //       mappings remain in REGISTRY after this task.
 
+/** Mirrors `src/gen/sceneSpec.ts`'s `Handheld` — the composition-root handheld camera idle toggle
+ * (Cinematic Reel pack effect #1). */
+export interface HandheldField {
+  on: boolean;
+  amount: number;
+}
+
 export interface SceneMeta {
   aspect: "16:9" | "9:16" | "1:1";
   fps: number;
   brand?: string;
   beatMarkers?: number[];
+  /** User-supplied brand palette (Cinematic Reel pack) — see `src/gen/sceneSpec.ts`'s `SceneMeta.
+   * palette` doc comment. Threaded down to every palette-driven effect (orbs, shine sweep,
+   * strikethrough glow) via `paletteColor`, never a hardcoded hex. */
+  palette?: string[];
+  preset?: "cinematic-reel";
+  handheld?: HandheldField;
 }
 
 // Named CameraField (not `Camera`) to avoid colliding with the imported `Camera` component from
@@ -105,7 +124,7 @@ export interface CameraField {
 }
 
 export interface Background {
-  kind: "grid" | "glow" | "parallax" | "solid";
+  kind: "grid" | "glow" | "parallax" | "solid" | "orbs";
   accent: string;
 }
 
@@ -134,7 +153,7 @@ export interface LightingSweepField {
 }
 
 export interface ExitField {
-  anim: "fade" | "collapse" | "glitch" | "none";
+  anim: "fade" | "collapse" | "glitch" | "edgeFlip" | "none";
   at: number;
   easing?: EasingSpec;
   durationFrames?: number;
@@ -201,6 +220,10 @@ export interface Layer {
   style?: StyleSpec;
   hold?: HoldField;
   animate?: AnimateField;
+  /** Cinematic Reel pack effect #4 — see `src/gen/sceneSpec.ts`'s `Layer.liveBreathe`. */
+  liveBreathe?: boolean;
+  /** Cinematic Reel pack effect #8 — see `src/gen/sceneSpec.ts`'s `Layer.shineSweep`. */
+  shineSweep?: boolean;
 }
 
 // TASK 6b4 — authorable content out-fade window, overriding the interpreter's default
@@ -272,12 +295,20 @@ function wantsAmbientParticles(background: Beat["background"] | undefined): bool
  * (critique: "slideshow... dead-still frames, zero atmosphere"), so it defaults to the same
  * animated Grid + breathing GlowField combo HeroDemo composites on every frame.
  */
-const BeatBackground: React.FC<{ background?: Beat["background"]; frame: number; fps: number; width: number; height: number }> = ({
+const BeatBackground: React.FC<{
+  background?: Beat["background"];
+  frame: number;
+  fps: number;
+  width: number;
+  height: number;
+  palette?: string[];
+}> = ({
   background,
   frame,
   fps,
   width,
   height,
+  palette,
 }) => {
   const accent = background?.accent ?? AMBIENT_ACCENT;
   const basePrimitiveProps: PrimitiveProps = {
@@ -290,6 +321,12 @@ const BeatBackground: React.FC<{ background?: Beat["background"]; frame: number;
     blur: 0,
     position: { x: 0.5, y: 0.5 },
   };
+
+  // "orbs" (Cinematic Reel pack effect #7) — 3 blurred, drifting, palette-colored circles. A
+  // distinct atmosphere from the grid/glow combo, so it stands alone rather than layering under it.
+  if (background?.kind === "orbs") {
+    return <Orbs frame={frame} fps={fps} width={width} height={height} opacity={1} palette={palette} />;
+  }
 
   if (!background) {
     // No background authored at all -> baseline ambient atmosphere: drifting grid + breathing
@@ -444,7 +481,8 @@ const BeatLayer: React.FC<{
   camera: CameraSpec;
   durationInFrames: number;
   rackInvert: boolean;
-}> = ({ layer, frame, fps, width, height, camera, durationInFrames, rackInvert }) => {
+  palette?: string[];
+}> = ({ layer, frame, fps, width, height, camera, durationInFrames, rackInvert, palette }) => {
   const Primitive = REGISTRY[layer.element];
   if (!Primitive) return null;
 
@@ -484,9 +522,16 @@ const BeatLayer: React.FC<{
   // frame value it's handed, so `entranceFrame` can uniformly follow the ordinary hold-window clamp
   // for BOTH properties: whichever one ISN'T animate-owned still needs the real, hold-respecting
   // frame to render its own untouched entrance/hold behavior correctly.
-  const neutralizeOpacity = !!layer.animate?.opacity;
-  const neutralizePosition = !!layer.animate?.position;
   const resolvedEnterBase = resolveEnter(layer.enter, durationInFrames);
+  // Cinematic Reel pack effect #3 — "edgeFlip" is entirely wrapper-driven (see `applyEdgeFlip`
+  // below): the primitive itself must render fully settled/opaque/untransformed internally so the
+  // OUTER perspective wrapper is the SOLE driver of the visible motion, exactly the same
+  // "sole driver" contract `animate.<prop>` already uses (every primitive that supports these two
+  // flags — Text/Shape/Image/ScreenMock, the four card-like primitives this effect targets — pins
+  // its own internal opacity/translate/scale to their rest values when set).
+  const isEdgeFlipEnter = resolvedEnterBase.anim === "edgeFlip";
+  const neutralizeOpacity = !!layer.animate?.opacity || isEdgeFlipEnter;
+  const neutralizePosition = !!layer.animate?.position || isEdgeFlipEnter;
   const resolvedEnter: EnterSpec = {
     ...resolvedEnterBase,
     neutralizeOpacity,
@@ -602,7 +647,25 @@ const BeatLayer: React.FC<{
   // should), it's just computed early because that's where the primitive contract requires it.
   const dofBlurPx = applyDepthOfField(layer.depth, camera, frame, durationInFrames, rackInvert);
   const motion = applyMotionBlur(layer.motionBlur, frame, fps);
-  const totalBlur = blur + dofBlurPx + motion.blurPx;
+
+  // Cinematic Reel pack effect #3 — "edgeFlip" (entrance and/or exit). Computed here (before
+  // `totalBlur`/`opacity` are finalized) so its blur/opacity contributions fold into the SAME
+  // combined values every other blur/opacity source already goes through, and its transform
+  // fragment is added to `elementTransform` alongside Ken Burns below.
+  const edgeFlip = applyEdgeFlip(
+    resolvedEnter.anim,
+    layer.exit?.anim,
+    entranceFrame,
+    frame,
+    resolvedEnter.delay ?? 0,
+    resolvedEnter.durationFrames,
+    layer.exit?.at,
+    layer.exit?.durationFrames,
+    fps
+  );
+
+  const totalBlur = blur + dofBlurPx + motion.blurPx + (edgeFlip?.blurPx ?? 0);
+  if (edgeFlip) opacity = opacity * edgeFlip.opacity;
 
   // Route enter/exit through `entranceFrame` (frozen during a hold window) rather than the raw
   // beat-local `frame` — `animate`-driven properties above already use their own `animateFrame`.
@@ -617,6 +680,7 @@ const BeatLayer: React.FC<{
     position,
     enter: resolvedEnter,
     style: layer.style,
+    palette,
   };
 
   // 1) Ken Burns — slow push/drift/zoom transform on the element itself (image/video content
@@ -626,23 +690,39 @@ const BeatLayer: React.FC<{
   // relative to a full-size ancestor, per PrimitiveProps convention).
   const kenBurnsTransform = applyKenBurns(layer.kenBurns, frame, durationInFrames);
 
+  // Cinematic Reel pack effect #4 — "live breathe": loops AFTER the entrance settles (`settleFrame`,
+  // already computed above for the hold-freeze calc — reused here so both concepts agree on what
+  // "settled" means).
+  const liveBreatheTransform = applyLiveBreathe(layer.liveBreathe, frame, fps, settleFrame);
+
   // TASK 5 UPGRADE — `animate.scale`/`animate.rotation` have no existing PrimitiveProps slot (every
   // primitive manages its own internal enter-driven transform), so they're composited here as an
   // outer CSS transform alongside Ken Burns — the one place that already transforms "the element
   // itself" independent of the primitive's own internal motion. Composes with an authored Ken Burns
   // move (both apply; order chosen to match how CSS `transform` reads left-to-right) rather than
-  // silently overriding it.
+  // silently overriding it. `edgeFlip`/`liveBreathe`'s rotateY/rotateX/translateZ fragments compose
+  // into this SAME transform string — the wrapping div below always carries `perspective` (harmless
+  // for a layer with no 3D transform: `perspective` on an ancestor only affects children that
+  // actually use a 3D transform component, so every pre-existing 2D-only render is unaffected) so
+  // whichever of these IS present reads as genuine 3D depth, not a flat rotate.
   const animateTransformParts: string[] = [];
   if (kenBurnsTransform) animateTransformParts.push(kenBurnsTransform);
   if (animateScale !== undefined) animateTransformParts.push(`scale(${animateScale})`);
   if (animateRotation !== undefined) animateTransformParts.push(`rotate(${animateRotation}deg)`);
+  if (edgeFlip) animateTransformParts.push(edgeFlip.transform);
+  if (liveBreatheTransform) animateTransformParts.push(liveBreatheTransform);
   const elementTransform = animateTransformParts.length > 0 ? animateTransformParts.join(" ") : undefined;
 
   // 2) element — the primitive (already rendering with the combined DOF/motion/authored blur
-  // baked in via primitiveProps.blur above), wrapped by its Ken Burns + animate.scale/rotation transform.
+  // baked in via primitiveProps.blur above), wrapped by its Ken Burns + animate.scale/rotation +
+  // edgeFlip/liveBreathe transform. `perspective` lives on the OUTER of these two divs (a genuine
+  // parent wrapper, per the edgeFlip design spec) so any 3D component of `elementTransform` on the
+  // INNER div reads as real 3D depth rather than a flat rotate.
   let content: React.ReactNode = (
-    <div style={{ position: "absolute", inset: 0, transform: elementTransform, transformOrigin: "50% 50%" }}>
-      <Primitive {...primitiveProps} />
+    <div style={{ position: "absolute", inset: 0, perspective: "1200px" }}>
+      <div style={{ position: "absolute", inset: 0, transform: elementTransform, transformOrigin: "50% 50%", transformStyle: "preserve-3d" }}>
+        <Primitive {...primitiveProps} />
+      </div>
     </div>
   );
 
@@ -706,6 +786,19 @@ const BeatLayer: React.FC<{
     );
   }
 
+  // 6b) shine sweep (Cinematic Reel pack effect #8) — a DISTINCT specular sheen band from
+  // lightingSweep (105deg, translateX-driven, 4s loop, tinted from `meta.palette`), CLIPPED to the
+  // layer's own box (`overflow:hidden`) rather than bleeding across the whole frame.
+  const shine = applyShineSweep(layer.shineSweep, frame, fps, paletteColor(palette, 0));
+  if (shine) {
+    content = (
+      <div style={{ position: "absolute", inset: 0, overflow: "hidden" }}>
+        {content}
+        <div style={shine.style} />
+      </div>
+    );
+  }
+
   // 7) opacity/position wrapper — the OUTERMOST wrapper: full-frame so the primitive's own
   // `position`-relative placement resolves correctly, plus the parallax depth offset and (if this
   // layer authored `exit.anim === "glitch"`) the glitch exit burst composited as the final wrapper
@@ -735,23 +828,24 @@ const BeatLayer: React.FC<{
  * component renders correctly whether it's the "incoming" or "outgoing" side of a transition
  * overlap, or playing standalone mid-beat.
  */
-const BeatContent: React.FC<{ beat: Beat; fps: number; width: number; height: number; frame: number; beatIndex: number }> = ({
+const BeatContent: React.FC<{ beat: Beat; fps: number; width: number; height: number; frame: number; beatIndex: number; palette?: string[] }> = ({
   beat,
   fps,
   width,
   height,
   frame,
   beatIndex,
+  palette,
 }) => {
   const camera = resolveCamera(beat.camera);
   const rackInvert = beatIndex % 2 === 1; // alternate rack-focus direction beat to beat for variety
 
   return (
     <AbsoluteFill style={{ backgroundColor: TOKENS.black }}>
-      {/* z-order lowest -> highest: flat black fallback, background (grid/glow/solid/parallax),
+      {/* z-order lowest -> highest: flat black fallback, background (grid/glow/solid/parallax/orbs),
           ambient particles, then authored layers on top (under the Camera transform so they read
           as part of the same shot). Plain DOM order = paint order here, no z-index needed. */}
-      <BeatBackground background={beat.background} frame={frame} fps={fps} width={width} height={height} />
+      <BeatBackground background={beat.background} frame={frame} fps={fps} width={width} height={height} palette={palette} />
       <AmbientParticles background={beat.background} frame={frame} fps={fps} width={width} height={height} />
       <Camera camera={camera} frame={frame} durationInFrames={beat.durationInFrames}>
         {beat.layers.map((layer, i) => (
@@ -765,6 +859,7 @@ const BeatContent: React.FC<{ beat: Beat; fps: number; width: number; height: nu
             camera={camera}
             durationInFrames={beat.durationInFrames}
             rackInvert={rackInvert}
+            palette={palette}
           />
         ))}
       </Camera>
@@ -790,7 +885,8 @@ const BeatSequence: React.FC<{
   incomingTransition?: TransitionOut;
   leadIn: number;
   outgoingOverlap: number;
-}> = ({ beat, fps, width, height, beatIndex, outgoingTransition, incomingTransition, leadIn, outgoingOverlap }) => {
+  palette?: string[];
+}> = ({ beat, fps, width, height, beatIndex, outgoingTransition, incomingTransition, leadIn, outgoingOverlap, palette }) => {
   const seqFrame = useCurrentFrame();
   // seqFrame is local to this Sequence, which starts `leadIn` frames before the beat's "true"
   // start (0 = the moment the previous beat would have hard-cut). Local beat time is therefore
@@ -869,15 +965,34 @@ const BeatSequence: React.FC<{
 
   return (
     <AbsoluteFill style={{ ...wrapperStyle, opacity: (wrapperStyle.opacity as number | undefined ?? 1) * contentFade }}>
-      <BeatContent beat={beat} fps={fps} width={width} height={height} frame={clampedLocal} beatIndex={beatIndex} />
+      <BeatContent beat={beat} fps={fps} width={width} height={height} frame={clampedLocal} beatIndex={beatIndex} palette={palette} />
       {overlay && <div style={overlay}>{overlay.content}</div>}
     </AbsoluteFill>
   );
 };
 
+/**
+ * Resolves `meta.handheld` (Cinematic Reel pack effect #1), including the `meta.preset:
+ * "cinematic-reel"` pack-default hint: when the film opts into the pack but authors no explicit
+ * `handheld` field, the idle defaults ON at the standard amount — a minimal, sensible pack default,
+ * not a bundle of hidden behavior (an explicit `handheld` — including `handheld:false` — always
+ * wins over the preset hint).
+ */
+function resolveHandheld(meta: SceneMeta): HandheldField | undefined {
+  if (meta.handheld !== undefined) return meta.handheld;
+  if (meta.preset === "cinematic-reel") return { on: true, amount: 1 };
+  return undefined;
+}
+
 export const Generative: React.FC<GenerativeProps> = ({ spec }) => {
   const { width, height } = dimsForAspect(spec.meta.aspect);
   const fps = spec.meta.fps;
+  // Cinematic Reel pack effect #1 — global handheld camera idle, a COMPOSITION-ROOT modifier
+  // wrapping every beat. `useCurrentFrame` here (outside any `Sequence`) is the GLOBAL composition
+  // frame, so the idle loop runs continuously across beat boundaries rather than resetting per beat.
+  const rootFrame = useCurrentFrame();
+  const handheld = resolveHandheld(spec.meta);
+  const handheldTransform = handheld?.on ? applyHandheldIdle(rootFrame, fps, handheld.amount) : undefined;
 
   // Compute each beat's "true" start (as if hard-cut back-to-back), then pull each beat's
   // Sequence start earlier by its transition-in overlap (driven by the PREVIOUS beat's
@@ -930,10 +1045,17 @@ export const Generative: React.FC<GenerativeProps> = ({ spec }) => {
           incomingTransition={entry.incomingTransition}
           leadIn={entry.leadIn}
           outgoingOverlap={outgoingOverlap}
+          palette={spec.meta.palette}
         />
       </Sequence>
     );
   });
 
-  return <AbsoluteFill style={{ backgroundColor: TOKENS.black }}>{sequences}</AbsoluteFill>;
+  return (
+    <AbsoluteFill style={{ backgroundColor: TOKENS.black }}>
+      <AbsoluteFill style={{ transform: handheldTransform, transformOrigin: "50% 50%" }}>
+        {sequences}
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
 };

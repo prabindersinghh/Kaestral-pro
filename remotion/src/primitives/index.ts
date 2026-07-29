@@ -24,29 +24,36 @@ import { SplitLayout } from "./SplitLayout";
 import { GridLayout } from "./GridLayout";
 import { TextOnPath } from "./TextOnPath";
 import { Countdown } from "./Countdown";
+import { Strikethrough } from "./Strikethrough";
+import { Orbs } from "./Orbs";
 import { setRegistry } from "./registry";
 
 export { Particles, Hairline };
 export { Waveform, Timeline, CaptionKaraoke, BarChart, LineChart, AreaChart, Counter };
 export { Image, Video, ScreenMock, Arrow, HighlightBox, PointerLine, SpotlightDim };
 export { SplitLayout, GridLayout, TextOnPath, Countdown };
+export { Strikethrough };
 export { Mask } from "./Mask";
 export type { MaskShape, MaskReveal } from "./Mask";
 export { Camera, DEFAULT_CAMERA, cameraTransform, parallaxOffset, rackBlurFor } from "./Camera";
 export type { CameraSpec } from "./Camera";
 export { applyTransition, TRANSITION_FRAMES } from "./Transitions";
 export type { TransitionKind, TransitionStyles } from "./Transitions";
-export { applyKenBurns, applyDepthOfField, applyMotionBlur, applyLightingSweep } from "./modifiers";
-export type { KenBurnsSpec, LightingSweepSpec, MotionBlurResult } from "./modifiers";
+export {
+  applyKenBurns, applyDepthOfField, applyMotionBlur, applyLightingSweep,
+  applyHandheldIdle, applyLiveBreathe, applyShineSweep, applyEdgeFlip,
+} from "./modifiers";
+export type { KenBurnsSpec, LightingSweepSpec, MotionBlurResult, ShineSweepStyle, EdgeFlipResult } from "./modifiers";
 export { resolveLayoutPosition, SAFE_MARGIN } from "./layout";
 export type { ResolvedPosition } from "./layout";
 export { resolveEntranceTiming, ENTRANCE_COMPLETE_BY_FRACTION, ASSUMED_ENTRANCE_SETTLE_FRAMES } from "./pacing";
+export { paletteColor } from "./tokens";
 
-// Re-exported for beat-level background rendering (BG_KINDS "grid"/"glow" in sceneSpec.ts) —
+// Re-exported for beat-level background rendering (BG_KINDS "grid"/"glow"/"orbs" in sceneSpec.ts) —
 // consumed directly by Generative.tsx in a later task, not addressed by a SceneSpec element name
 // themselves. `gridLayout` (a *layout* element that nests child layers, see Task 9's
 // GridLayout.tsx) is unrelated to this `Grid` backdrop primitive and must not be conflated with it.
-export { Grid, GlowField };
+export { Grid, GlowField, Orbs };
 
 // The primitive registry — maps every SceneSpec element name (see `src/gen/sceneSpec.ts`'s
 // `ELEMENTS`) to a renderer component. Real element primitives so far: Text/Shape/LogoMark (the
@@ -99,6 +106,7 @@ export const REGISTRY: Record<string, React.FC<PrimitiveProps>> = {
   splitLayout: SplitLayout,
   gridLayout: GridLayout,
   countdown: Countdown,
+  strikethrough: Strikethrough,
 };
 
 setRegistry(REGISTRY);

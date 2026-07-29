@@ -30,3 +30,6 @@ remotion/.bundle-cache/
 
 # Built .mcpb bundle (rebuilt per release via npm run mcpb:pack)
 mcpb/*.mcpb
+
+# graphify knowledge-graph build output (regenerate with: graphify update .)
+graphify-out/

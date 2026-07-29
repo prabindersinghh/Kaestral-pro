@@ -10,6 +10,14 @@ import { bezierFromSpec } from "./easing";
 
 const ease = Easing.bezier(0.22, 0.61, 0.16, 1);
 
+// Cinematic Reel pack effect #5 — "blur push-up": a springy overshoot curve (translateY 22px->0
+// with a -2px OVERSHOOT at 75% of the entrance, opacity 0->1, blur 10px->0). Own house curve,
+// distinct from the film's default spring — this is authored as an explicit overshoot, not a
+// physical spring sim.
+const BLUR_PUSH_UP_EASE = Easing.bezier(0.34, 1.56, 0.64, 1);
+const BLUR_PUSH_UP_DURATION_S = 0.5; // 450-550ms range, 500ms midpoint
+const BLUR_PUSH_UP_STAGGER_S = 0.12; // 100-140ms range, 120ms midpoint
+
 function roleColor(role: string | undefined): string {
   if (role === "accent") return TOKENS.greenHi;
   if (role === "muted") return TOKENS.ink2;
@@ -32,6 +40,9 @@ export const Text: React.FC<PrimitiveProps> = ({ props, frame, fps, width, heigh
   let translateX = 0;
   let visibleText = text;
   let scale = 1;
+  // Cinematic Reel pack effect #5 — entrance-driven blur (blurPushUp only; every other branch
+  // leaves this at 0, folded additively into the static/DOF/motion `blur` prop below).
+  let entranceBlur = 0;
 
   if (anim === "spring") {
     // TASK 5 UPGRADE — `enter.spring` lets an authored spec tune the entrance's physics
@@ -81,6 +92,25 @@ export const Text: React.FC<PrimitiveProps> = ({ props, frame, fps, width, heigh
     animOpacity = p;
     translateY = interpolate(p, [0, 1], [40, 0]);
     scale = interpolate(p, [0, 1], [1.15, 1]);
+  } else if (anim === "blurPushUp") {
+    // Whole-line curve (used verbatim when the text has no spaces to stagger per-word — the
+    // multi-word case re-derives this SAME curve per-word below, in the `words` render branch).
+    const durFrames = enter?.durationFrames ?? Math.round(fps * BLUR_PUSH_UP_DURATION_S);
+    translateY = interpolate(local, [0, durFrames * 0.75, durFrames], [22, -2, 0], {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: BLUR_PUSH_UP_EASE,
+    });
+    animOpacity = interpolate(local, [0, durFrames], [0, 1], {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: BLUR_PUSH_UP_EASE,
+    });
+    entranceBlur = interpolate(local, [0, durFrames], [10, 0], {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: BLUR_PUSH_UP_EASE,
+    });
   } else if (enter?.easing === "linear" || (enter?.easing !== undefined && enter.easing !== "spring")) {
     // Explicit escape hatch: a spec that sets an explicit easing OTHER than "spring" (the literal
     // preset "linear", OR a custom `{curve:[...]}` bezier) must render a plain fade shaped by that
@@ -147,7 +177,13 @@ export const Text: React.FC<PrimitiveProps> = ({ props, frame, fps, width, heigh
   // own independent spring-driven opacity/translateY. The OUTER div (below) still owns anchor/
   // position/font/color/letterSpacing exactly like every other branch — this only lays the words
   // out in a row inside it, so anchor placement from Task 6b1 keeps working unmodified.
-  const words = anim === "wordStagger" ? text.split(" ") : null;
+  //
+  // Cinematic Reel pack effect #5 — blurPushUp reuses this SAME per-word machinery for its stagger
+  // (per the design spec: "reuse the wordStagger machinery for the stagger if text has multiple
+  // words"), but only when the text actually HAS more than one word — a single word/line renders
+  // through the top-level branch above instead (one curve, no stagger to speak of).
+  const isMultiWordBlurPushUp = anim === "blurPushUp" && text.trim().split(/\s+/).filter(Boolean).length > 1;
+  const words = anim === "wordStagger" || isMultiWordBlurPushUp ? text.split(" ") : null;
 
   return (
     <div
@@ -164,7 +200,7 @@ export const Text: React.FC<PrimitiveProps> = ({ props, frame, fps, width, heigh
         // via its specific line-height/margin combination; this makes it explicit and universal.
         transform: `translate(${baseTranslateX}, calc(-50% - 0.08em)) translate(${translateX}px, ${translateY}px) scale(${scale})`,
         opacity: opacity * animOpacity,
-        filter: blur > 0 ? `blur(${blur}px)` : undefined,
+        filter: blur + entranceBlur > 0 ? `blur(${blur + entranceBlur}px)` : undefined,
         fontFamily: style?.font === "mono" ? TOKENS.fontMono : TOKENS.fontSans,
         fontWeight: 800,
         fontSize,
@@ -180,6 +216,39 @@ export const Text: React.FC<PrimitiveProps> = ({ props, frame, fps, width, heigh
     >
       {words
         ? words.map((word, i) => {
+            if (isMultiWordBlurPushUp) {
+              // Same blurPushUp curve as the top-level branch above, re-derived per word and
+              // offset by a fixed ~120ms stagger per word index (per the design spec: "reuse the
+              // wordStagger machinery for the stagger").
+              const durFrames = enter?.durationFrames ?? Math.round(fps * BLUR_PUSH_UP_DURATION_S);
+              const staggerFrames = Math.round(fps * BLUR_PUSH_UP_STAGGER_S);
+              const wordLocal = local - i * staggerFrames;
+              const wordTranslateY = interpolate(wordLocal, [0, durFrames * 0.75, durFrames], [22, -2, 0], {
+                extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: BLUR_PUSH_UP_EASE,
+              });
+              const wordOpacityRaw = interpolate(wordLocal, [0, durFrames], [0, 1], {
+                extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: BLUR_PUSH_UP_EASE,
+              });
+              const wordBlur = interpolate(wordLocal, [0, durFrames], [10, 0], {
+                extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: BLUR_PUSH_UP_EASE,
+              });
+              const wordOpacity = enter?.neutralizeOpacity ? 1 : wordOpacityRaw;
+              return (
+                <span
+                  key={`${word}-${i}`}
+                  style={{
+                    display: "inline-block",
+                    opacity: wordOpacity,
+                    transform: `translateY(${wordTranslateY}px)`,
+                    filter: wordBlur > 0 ? `blur(${wordBlur}px)` : undefined,
+                    marginRight: i < words.length - 1 ? "0.28em" : 0,
+                    whiteSpace: "pre",
+                  }}
+                >
+                  {word}
+                </span>
+              );
+            }
             // `local` already has `enter.delay` subtracted (see top of component); each word adds
             // its own fixed 4-frame stagger on top of that shared base delay.
             const wp = spring({

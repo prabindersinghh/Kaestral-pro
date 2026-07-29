@@ -1,3 +1,4 @@
+import { Easing } from "remotion";
 import { tokenColor } from "./tokens";
 
 // Beat transitions — the fix for binding critique #1 ("No hard cuts"). Generative.tsx overlaps
@@ -10,7 +11,11 @@ import { tokenColor } from "./tokens";
 
 export const TRANSITION_FRAMES = 20; // overlap window (forensic delta #3: 14 read abrupt vs hero's ~20f languid resolve)
 
-export type TransitionKind = "wipe" | "dissolve" | "push" | "glitch" | "rgbSplit" | "cut";
+export type TransitionKind = "wipe" | "dissolve" | "push" | "glitch" | "rgbSplit" | "cut" | "whip";
+
+// Cinematic Reel pack — the two curves the "whip" transition below shapes each side through.
+const WHIP_OUT_EASE = Easing.bezier(0.55, 0, 1, 0.45);
+const WHIP_IN_EASE = Easing.bezier(0.16, 1, 0.3, 1);
 
 export interface TransitionStyles {
   /** Style applied to the OUTGOING (previous) beat's wrapper during the overlap. */
@@ -121,6 +126,43 @@ export function applyTransition(kind: TransitionKind, progress: number, accent: 
           background: color,
           opacity: Math.sin(p * Math.PI) * 0.06,
           mixBlendMode: "screen",
+        },
+      };
+    }
+
+    case "whip": {
+      // Fast, energetic whip-pan (Cinematic Reel pack effect #2): the outgoing beat slides/skews
+      // hard off-frame and streaks with motion blur on a snappy ease-in curve (450ms), while the
+      // incoming beat whips in from the opposite side and settles on a soft ease-out (600ms) —
+      // each side shaped through its OWN bezier over the shared `p` (0..1 across the overlap
+      // window) so their timings/characters differ even though they share one progress value.
+      // The "crossfade": outgoing's OWN opacity reaches fully transparent by ~30% of `p` (well
+      // before its geometric motion/blur finishes) so the incoming beat visibly takes over the
+      // frame quickly — the outgoing keeps whipping off-screen after that, but it's already
+      // invisible, which is what makes the handoff read as fast and decisive rather than a slow
+      // simultaneous cross-dissolve.
+      const outT = WHIP_OUT_EASE(p);
+      const inT = WHIP_IN_EASE(p);
+      const outTranslateX = interpolate1(outT, 0, 110);
+      const outSkew = interpolate1(outT, 0, 14);
+      const outScaleX = interpolate1(outT, 1, 1.04);
+      const outBlur = interpolate1(outT, 0, 14);
+      const outOpacity = 1 - clamp01(p / 0.3);
+
+      const inTranslateX = interpolate1(inT, -110, 0);
+      const inSkew = interpolate1(inT, -14, 0);
+      const inBlur = interpolate1(inT, 14, 0);
+
+      return {
+        outgoing: {
+          opacity: outOpacity,
+          transform: `translateX(${outTranslateX}%) skewX(${outSkew}deg) scaleX(${outScaleX})`,
+          filter: outBlur > 0.05 ? `blur(${outBlur}px)` : undefined,
+        },
+        incoming: {
+          opacity: 1,
+          transform: `translateX(${inTranslateX}%) skewX(${inSkew}deg)`,
+          filter: inBlur > 0.05 ? `blur(${inBlur}px)` : undefined,
         },
       };
     }

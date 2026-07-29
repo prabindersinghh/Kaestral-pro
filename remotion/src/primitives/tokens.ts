@@ -35,3 +35,22 @@ export function tokenColor(x: string): string {
   if (typeof x === "string" && x in known) return known[x];
   return TOKENS.ink;
 }
+
+// Cinematic Reel pack — "NEVER a hardcoded hex" for palette-driven effects (orbs, shine sweep,
+// strikethrough glow). When the scene authors `meta.palette`, every such effect cycles through
+// those user colors; absent a palette, this falls back to a rotation of the EXISTING brand tokens
+// (never a new invented color) so the effect still reads correctly on a spec that predates the
+// palette field.
+const FALLBACK_PALETTE: readonly string[] = [TOKENS.green, TOKENS.gold, TOKENS.greenHi];
+
+/**
+ * Resolves the `index`-th color of `palette` (wrapping around), or the `index`-th brand-token
+ * fallback when `palette` is absent/empty. Each entry is itself resolved through `tokenColor` so a
+ * palette of brand-token names OR `#rrggbb` hex strings (as validated by `checkColor` in
+ * `src/gen/sceneSpec.ts`) both work identically.
+ */
+export function paletteColor(palette: readonly string[] | undefined, index = 0): string {
+  const list = palette && palette.length > 0 ? palette : FALLBACK_PALETTE;
+  const i = ((index % list.length) + list.length) % list.length;
+  return tokenColor(list[i]);
+}

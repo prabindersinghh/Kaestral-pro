@@ -14,20 +14,34 @@ export const ELEMENTS = [
   "text", "textOnPath", "video", "image", "screenMock", "waveform", "timeline", "logo",
   "shape", "hairline", "barChart", "lineChart", "areaChart", "counter",
   "captionKaraoke", "particles", "arrow", "highlightBox", "pointerLine", "spotlightDim",
-  "splitLayout", "gridLayout", "countdown",
+  "splitLayout", "gridLayout", "countdown", "strikethrough",
 ] as const;
 
 export const ANIMS = [
   "spring", "typewriter", "wordReveal", "wordStagger", "kinetic", "draw", "fade", "collapse", "maskReveal",
+  // Cinematic Reel pack (9:16 preset pack): "edgeFlip" (card perspective edge-flip entrance, also
+  // usable as an exit.anim — see EXIT_ANIMS) and "blurPushUp" (springy blur/translate push-up for
+  // text, see Text.tsx).
+  "edgeFlip", "blurPushUp",
 ] as const;
 
 export const EASINGS = ["ease-out", "spring", "linear"] as const;
 
 export const CAMERA_MOVES = ["push-in", "pan-left", "pan-right", "rack", "parallax", "none"] as const;
 
-export const BG_KINDS = ["grid", "glow", "parallax", "solid"] as const;
+// "orbs" (Cinematic Reel pack) — 3 blurred, drifting, palette-colored circles; see Generative.tsx's
+// BeatBackground + remotion/src/primitives/Orbs.tsx.
+export const BG_KINDS = ["grid", "glow", "parallax", "solid", "orbs"] as const;
 
-export const TRANSITIONS = ["wipe", "dissolve", "push", "glitch", "rgbSplit", "cut"] as const;
+// "whip" (Cinematic Reel pack) — fast whip-pan beat transition; see Transitions.tsx.
+export const TRANSITIONS = ["wipe", "dissolve", "push", "glitch", "rgbSplit", "cut", "whip"] as const;
+
+// Cinematic Reel preset pack hint (meta.preset) — when set to "cinematic-reel" the interpreter may
+// apply minimal, sensible pack defaults (currently: handheld idle on when `meta.handheld` is itself
+// unauthored — see Generative.tsx). The real per-effect controls remain the individual fields
+// documented alongside each effect (meta.handheld, layer.liveBreathe, layer.shineSweep, etc.) —
+// this is a light hint, not a bundle of hidden behavior.
+export const PRESETS = ["cinematic-reel"] as const;
 
 export const MASK_SHAPES = ["circle", "pill", "rect", "logo", "wipe"] as const;
 
@@ -41,7 +55,9 @@ export const STYLE_FONTS = ["sans", "mono"] as const;
 export const ASPECTS = ["16:9", "9:16", "1:1"] as const;
 
 // Additional closed enums used by nested modifier fields (per the SceneSpec block in the design spec).
-const EXIT_ANIMS = ["fade", "collapse", "glitch", "none"] as const;
+// "edgeFlip" (Cinematic Reel pack) — flips the layer out on the OPPOSITE axis from its edgeFlip
+// entrance (or standalone) starting at `exit.at`; see Generative.tsx's `applyEdgeFlip` wiring.
+const EXIT_ANIMS = ["fade", "collapse", "glitch", "edgeFlip", "none"] as const;
 const ENTER_FROM = ["below", "left", "scale"] as const;
 // TASK 6: explicit opt-out of the beat-relative anti-clamp guardrail (resolveEntranceTiming) —
 // "auto" (default) keeps the guardrail; "manual" honors the authored `enter.delay` verbatim.
@@ -76,11 +92,35 @@ export function isAllowedColor(c: string): boolean {
 // Types
 // ---------------------------------------------------------------------------
 
+/**
+ * Global "handheld camera idle" toggle (Cinematic Reel pack effect #1) — a subtle, continuous,
+ * frame-driven sinusoidal drift applied to the WHOLE composition root (every beat, uninterrupted by
+ * beat boundaries), never a per-layer or per-beat effect. Accepts either a plain `boolean` (on/off
+ * at the default amount) or `{amount?}` to scale the whole effect's intensity — `amount` is a
+ * multiplier on the base ±1.5px translate / 0.997–1.003 scale / ±0.15deg rotate ranges, never a
+ * replacement for them, so even `amount:2` stays subtle (see Generative.tsx's `applyHandheldIdle`).
+ */
+export interface Handheld {
+  on: boolean;
+  amount: number;
+}
+
 export interface SceneMeta {
   aspect: (typeof ASPECTS)[number];
   fps: number;
   brand: string;
   beatMarkers?: number[];
+  /**
+   * User-supplied brand palette (Cinematic Reel pack) — each entry validated the same way as any
+   * other color field (brand token or #rrggbb hex), array clamped to at most 6 entries. Every
+   * palette-driven Cinematic Reel effect (orbs, shine sweep, strikethrough glow) reads its color
+   * from HERE, cycling through the array — never a hardcoded hex. Absent -> those effects fall back
+   * to the existing brand tokens (see remotion/src/primitives/tokens.ts's `paletteColor`).
+   */
+  palette?: string[];
+  /** Optional preset-pack hint — see `PRESETS` above. */
+  preset?: (typeof PRESETS)[number];
+  handheld?: Handheld;
 }
 
 export interface SpringConfig {
@@ -213,6 +253,15 @@ export interface Layer {
   style?: LayerStyle;
   hold?: Hold;
   animate?: Animate;
+  /** Cinematic Reel pack effect #4 — after the entrance settles, loop a subtle rotateY/rotateX
+   * "living" breathe on a card-like layer (text/shape/image/screenMock). See modifiers.ts's
+   * `applyLiveBreathe`. */
+  liveBreathe?: boolean;
+  /** Cinematic Reel pack effect #8 — a looping 105deg specular sheen band swept across the layer,
+   * screen-blended and clipped to the layer's own box, tinted from `meta.palette`. Distinct from
+   * `lightingSweep` (which is angle/speed-authorable and diagonal). See modifiers.ts's
+   * `applyShineSweep`. */
+  shineSweep?: boolean;
 }
 
 export interface Beat {
@@ -317,6 +366,7 @@ const HOLD_KEYS = ["startFrame", "durationFrames"] as const;
 const ANIMATE_KEYS = ["position", "opacity", "scale", "blur", "rotation"] as const;
 const TWEEN_KEYS = ["from", "to", "startFrame", "durationFrames", "easing"] as const;
 const POSITION_TWEEN_POINT_KEYS = ["x", "y"] as const;
+const HANDHELD_KEYS = ["on", "amount"] as const;
 
 // Per-property clamp range for each scalar tween kind under `animate` — mirrors the corresponding
 // static field's own range (opacity/blur match `Layer.opacity`/`Layer.blur`; scale/rotation have no
@@ -616,6 +666,7 @@ export function validateEasing(value: unknown, path: string): EasingSpec {
 const LAYER_KEYS = [
   "element", "props", "position", "opacity", "blur", "depth", "mask", "motionBlur",
   "kenBurns", "lightingSweep", "enter", "exit", "style", "hold", "animate",
+  "liveBreathe", "shineSweep",
 ] as const;
 
 // Elements whose `props.src` names a real on-disk media file — these are the ones the media-path
@@ -677,10 +728,12 @@ function checkAnimateConflicts(
   path: string
 ): void {
   if (animate?.opacity !== undefined) {
-    const enterDrivesOpacity = enter?.anim === "fade" || enter?.anim === "spring";
-    const exitDrivesOpacity = exit?.anim === "fade";
+    // "edgeFlip"/"blurPushUp" (Cinematic Reel pack) also drive opacity internally (0->1 fade as
+    // part of their own entrance curve), same "sole driver" conflict class as fade/spring.
+    const enterDrivesOpacity = enter?.anim === "fade" || enter?.anim === "spring" || enter?.anim === "edgeFlip" || enter?.anim === "blurPushUp";
+    const exitDrivesOpacity = exit?.anim === "fade" || exit?.anim === "edgeFlip";
     if (enterDrivesOpacity || exitDrivesOpacity) {
-      const culprit = enterDrivesOpacity ? `enter.anim:"${enter!.anim}"` : `exit.anim:"fade"`;
+      const culprit = enterDrivesOpacity ? `enter.anim:"${enter!.anim}"` : `exit.anim:"${exit!.anim}"`;
       fail(path, `animate.opacity conflicts with ${culprit} — both drive opacity; keep one`);
     }
   }
@@ -690,11 +743,24 @@ function checkAnimateConflicts(
     if (rawFrom !== undefined) {
       fail(path, `animate.position conflicts with enter.from:"${String(rawFrom)}" — both drive position; keep one`);
     }
+    // "blurPushUp" has no `from` (its translateY direction is fixed with a built-in overshoot), so
+    // the rawFrom check above can't see it — check the anim itself instead.
+    if (enter?.anim === "blurPushUp") {
+      fail(path, `animate.position conflicts with enter.anim:"blurPushUp" — both drive position; keep one`);
+    }
   }
 
   if (animate?.scale !== undefined) {
-    if (enter?.anim === "kinetic") {
-      fail(path, `animate.scale conflicts with enter.anim:"kinetic" — both drive scale; keep one`);
+    if (enter?.anim === "kinetic" || enter?.anim === "edgeFlip") {
+      fail(path, `animate.scale conflicts with enter.anim:"${enter!.anim}" — both drive scale; keep one`);
+    }
+  }
+
+  if (animate?.blur !== undefined) {
+    // "blurPushUp"/"edgeFlip" (Cinematic Reel pack) are the first enter anims to drive an entrance
+    // blur ramp — same "sole driver" conflict class as the other properties above.
+    if (enter?.anim === "blurPushUp" || enter?.anim === "edgeFlip") {
+      fail(path, `animate.blur conflicts with enter.anim:"${enter!.anim}" — both drive blur; keep one`);
     }
   }
 }
@@ -724,6 +790,8 @@ function validateLayer(value: unknown, path: string, opts: ValidateOpts | undefi
   const style = validateStyle(obj.style, `${path}.style`);
   const hold = validateHold(obj.hold, `${path}.hold`);
   const animate = validateAnimate(obj.animate, `${path}.animate`);
+  const liveBreathe = obj.liveBreathe === undefined ? undefined : Boolean(obj.liveBreathe);
+  const shineSweep = obj.shineSweep === undefined ? undefined : Boolean(obj.shineSweep);
 
   checkAnimateConflicts(animate, enter, exit, obj.enter, path);
 
@@ -744,6 +812,8 @@ function validateLayer(value: unknown, path: string, opts: ValidateOpts | undefi
   if (style !== undefined) layer.style = style;
   if (hold !== undefined) layer.hold = hold;
   if (animate !== undefined) layer.animate = animate;
+  if (liveBreathe !== undefined) layer.liveBreathe = liveBreathe;
+  if (shineSweep !== undefined) layer.shineSweep = shineSweep;
 
   return layer;
 }
@@ -776,13 +846,37 @@ function validateBeat(value: unknown, path: string, opts: ValidateOpts | undefin
   return beat;
 }
 
-const META_KEYS = ["aspect", "fps", "brand", "beatMarkers"] as const;
+const META_KEYS = ["aspect", "fps", "brand", "beatMarkers", "palette", "preset", "handheld"] as const;
 
 // Upper bound for beatMarkers frame indices: at 120fps (the max meta.fps allowed above) this is
 // ~833s / ~13.9min of runway, comfortably beyond any realistic single generated clip. Ties the
 // clamp to the same "generous but not unbounded" rationale as the other numeric clamps in this
 // file rather than leaving 100000 as a magic number.
 const MAX_BEAT_MARKER_FRAME = 100000;
+
+// Palette array is a tuning knob (like beatMarkers), not a structural requirement — clamp its
+// length rather than fail loud on a longer array. 6 gives every Cinematic Reel effect (orbs' 3
+// circles, shine sweep's single tint, strikethrough's glow) plenty of variety without an unbounded
+// list.
+const MAX_PALETTE_COLORS = 6;
+
+/**
+ * Validates `meta.handheld` (Cinematic Reel pack effect #1) — either a plain `boolean` (on/off at
+ * the default amount) or `{on?, amount?}` for tuning. Mirrors the rest of this file's "boolean OR
+ * object" convention (see `LightingSweep`'s `on` field) rather than introducing a new shape.
+ */
+function validateHandheld(value: unknown, path: string): Handheld | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value === "boolean") return { on: value, amount: 1 };
+  if (!isPlainObject(value)) fail(path, "must be a boolean or an object {on?,amount?}");
+  const obj = value as Record<string, unknown>;
+  checkUnknownKeys(obj, HANDHELD_KEYS, path);
+  const on = obj.on === undefined ? true : Boolean(obj.on);
+  // Clamped generously (0..2) rather than 0..1: even amount:2 keeps the base ranges (±1.5px/
+  // 0.997-1.003 scale/±0.15deg) subtle — see Generative.tsx's `applyHandheldIdle` doc comment.
+  const amount = clamp(obj.amount, 0, 2, 1);
+  return { on, amount };
+}
 
 function validateMeta(value: unknown, path: string): SceneMeta {
   if (!isPlainObject(value)) fail(path, "must be an object");
@@ -812,6 +906,21 @@ function validateMeta(value: unknown, path: string): SceneMeta {
     });
     meta.beatMarkers = rawMarkers.map((v) => clamp(v, 0, MAX_BEAT_MARKER_FRAME, 0));
   }
+
+  if (obj.palette !== undefined) {
+    if (!Array.isArray(obj.palette)) {
+      fail(`${path}.palette`, "must be an array of colors (brand tokens or #rrggbb hex)");
+    }
+    const rawPalette = (obj.palette as unknown[]).slice(0, MAX_PALETTE_COLORS);
+    meta.palette = rawPalette.map((c, i) => checkColor(c, `${path}.palette[${i}]`));
+  }
+
+  if (obj.preset !== undefined) {
+    meta.preset = checkEnum(obj.preset, PRESETS, `${path}.preset`);
+  }
+
+  const handheld = validateHandheld(obj.handheld, `${path}.handheld`);
+  if (handheld !== undefined) meta.handheld = handheld;
 
   return meta;
 }

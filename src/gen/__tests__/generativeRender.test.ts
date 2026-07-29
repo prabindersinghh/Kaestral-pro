@@ -72,6 +72,39 @@ async function meanLumaOfCrop(
   return sum / stdout.length;
 }
 
+/**
+ * Extracts a single frame, downsampled to a small full-frame grayscale grid (cheap but
+ * representative of the WHOLE picture, not just one crop), for the Cinematic Reel pack render
+ * test's "motion is actually happening" proof below — comparing two of these across frames is a
+ * much stronger "did anything change" signal than a single luma average (which can coincidentally
+ * stay flat even while content visibly moves/drifts).
+ */
+async function frameThumbnailBytes(videoPath: string, frameIndex: number): Promise<Buffer> {
+  const { stdout } = await runFfmpeg([
+    "-y",
+    "-i", videoPath,
+    "-vf", `select=eq(n\\,${frameIndex}),scale=48:85,format=gray`,
+    "-frames:v", "1",
+    "-f", "rawvideo",
+    "-pix_fmt", "gray",
+    "pipe:1",
+  ]);
+  if (stdout.length === 0) throw new Error(`ffmpeg produced no pixel data for frame ${frameIndex} of ${videoPath}`);
+  return stdout;
+}
+
+/** True if two same-shaped downsampled grayscale frame buffers differ meaningfully (more than a
+ * handful of pixels beyond a per-pixel noise threshold) — proof of real motion/content-change
+ * between the two sampled frames, not just codec dithering noise on an otherwise-static frame. */
+function framesDiffer(a: Buffer, b: Buffer, minDiffPixels = 30, perPixelThreshold = 6): boolean {
+  const len = Math.min(a.length, b.length);
+  let diffCount = 0;
+  for (let i = 0; i < len; i++) {
+    if (Math.abs(a[i] - b[i]) > perPixelThreshold) diffCount++;
+  }
+  return diffCount >= minDiffPixels;
+}
+
 describe("Generative render", () => {
   it("renders a MINIMAL sparse spec (no background/particles/camera/enter) to a non-blank MP4 — premium-by-construction defaults must kick in", async () => {
     const v = validateSceneSpec({
@@ -799,5 +832,127 @@ describe("Generative render", () => {
     const lumaAt70 = await meanLumaOfCrop(out, 70, cropAtCenter);
     expect(lumaAt20).toBeLessThan(20); // still dark — entrance has not started (delay:34 survived unclamped)
     expect(lumaAt70).toBeGreaterThan(lumaAt20 + 15); // visible later — the entrance did eventually play
+  }, 240000);
+
+  // Cinematic Reel pack — 8 composable 9:16 effects. This spec exercises all of them: a 9:16 beat
+  // with meta.palette + meta.handheld:true, a "blurPushUp" multi-word text entrance, an "edgeFlip"
+  // card (shape) with liveBreathe + shineSweep, a "strikethrough" emphasis element, an "orbs"
+  // background, all resolving through a "whip" transitionOut into a second beat — proving the whole
+  // pack validates and renders together, not just each field in isolation.
+  it("renders the Cinematic Reel pack (9:16): palette + handheld idle, blurPushUp text, edgeFlip+liveBreathe+shineSweep card, strikethrough, orbs background, whip transition — non-blank + real motion", async () => {
+    const v = validateSceneSpec({
+      meta: {
+        aspect: "9:16",
+        fps: 30,
+        palette: ["#16b16a", "#c9a227", "#1fce7e"],
+        preset: "cinematic-reel",
+        handheld: true,
+      },
+      beats: [
+        {
+          durationInFrames: 90,
+          background: { kind: "orbs", accent: "#16b16a" },
+          transitionOut: { kind: "whip", overlapFrames: 24 },
+          layers: [
+            {
+              element: "text",
+              props: { text: "Cinematic Reel" },
+              position: { x: 0.5, y: 0.3, snap: false },
+              style: { role: "display", size: 0.09 },
+              enter: { anim: "blurPushUp" },
+            },
+            {
+              element: "shape",
+              props: { shape: "rect", color: "greenLight", width: 0.55, height: 0.26 },
+              position: { x: 0.5, y: 0.54, snap: false },
+              depth: "foreground",
+              enter: { anim: "edgeFlip", durationFrames: 35 },
+              liveBreathe: true,
+              shineSweep: true,
+            },
+            {
+              element: "strikethrough",
+              props: { length: 0.42, thickness: 4 },
+              position: { x: 0.5, y: 0.78, snap: false },
+              enter: { anim: "draw", delay: 20 },
+            },
+          ],
+        },
+        {
+          durationInFrames: 60,
+          background: { kind: "glow", accent: "#16b16a" },
+          layers: [
+            {
+              element: "text",
+              props: { text: "Kaestral" },
+              style: { role: "accent", size: 0.1 },
+              enter: { anim: "spring" },
+            },
+          ],
+        },
+      ],
+    });
+    expect(v.ok).toBe(true);
+    if (!v.ok) return;
+    // Sanity-check the validator actually carried the new Cinematic Reel fields through.
+    expect(v.spec.meta.palette).toEqual(["#16b16a", "#c9a227", "#1fce7e"]);
+    expect(v.spec.meta.handheld).toEqual({ on: true, amount: 1 });
+    expect(v.spec.beats[0].background!.kind).toBe("orbs");
+    expect(v.spec.beats[0].transitionOut!.kind).toBe("whip");
+    expect(v.spec.beats[0].layers[0].enter!.anim).toBe("blurPushUp");
+    expect(v.spec.beats[0].layers[1].enter!.anim).toBe("edgeFlip");
+    expect(v.spec.beats[0].layers[1].liveBreathe).toBe(true);
+    expect(v.spec.beats[0].layers[1].shineSweep).toBe(true);
+    expect(v.spec.beats[0].layers[2].element).toBe("strikethrough");
+
+    const out = join(remotionDir, ".test-out", "gen-cinematic-reel-pack.mp4");
+    const res = await renderRemotion("Generative", { spec: v.spec }, out, remotionDir);
+    // 9:16 -> 1080x1920 per dimsForAspect.
+    expect(res.width).toBe(1080);
+    expect(res.height).toBe(1920);
+    // Every pack effect compositing together (orbs + card flip/breathe/shine + strikethrough glow +
+    // blurPushUp text + a whip-pan into a second beat) should compress noticeably larger than a
+    // flat background alone — the same coarse-but-effective "actually rendered" proxy every other
+    // test in this file uses.
+    expect(statSync(out).size).toBeGreaterThan(15000);
+
+    const ffmpegAvailable = await checkFfmpegAvailable();
+    if (!ffmpegAvailable) {
+      // Environment without ffmpeg: the render + validation assertions above already prove the
+      // whole pack is legal and renders successfully; the pixel-level non-blank/motion proofs
+      // below are skipped in this case (same degrade-gracefully convention as every other
+      // ffmpeg-driven assertion in this file).
+      return;
+    }
+
+    // NON-BLANK: at frame 50 (well past every entrance in beat 1 — blurPushUp's ~500ms/~15f push-up
+    // plus its ~120ms-per-word stagger, the edgeFlip card's authored 35-frame flip-in, and the
+    // strikethrough's 20-frame delay + ~21-frame draw all settle by frame ~41), the WHOLE frame
+    // (not just one crop) should read well above the near-black `TOKENS.black` (#0b0a0d, luma ~11)
+    // background floor — real content (text, the flip card, the glow strikethrough, the orbs) is
+    // visibly composited, not a blank/near-blank frame.
+    const wholeFrame = { x: 0, y: 0, w: 1080, h: 1920 };
+    const lumaSettled = await meanLumaOfCrop(out, 50, wholeFrame);
+    expect(lumaSettled).toBeGreaterThan(18);
+
+    // MOTION #1 (continuous, within beat 1's own un-faded hold window — BEFORE its whip-out tail
+    // starts at frame 90-24=66, so this isolates ambient/loop motion from the transition itself):
+    // frame 45 and frame 60 are both well past every entrance's settle point (blurPushUp's ~15f
+    // push-up + ~4f-per-word stagger, the edgeFlip card's authored 35-frame flip-in, and the
+    // strikethrough's 20-frame delay + ~21-frame draw all finish by frame ~41) — so any difference
+    // between them is genuinely continuous motion: liveBreathe's rotateY/rotateX loop, the
+    // shineSweep band, the orbs' drift, and the global handheld idle are all still animating.
+    const settledA = await frameThumbnailBytes(out, 45);
+    const settledB = await frameThumbnailBytes(out, 60);
+    expect(framesDiffer(settledA, settledB)).toBe(true);
+
+    // MOTION #2 (the whip-pan transition itself): frame 20 (mid beat 1, its own content) vs frame
+    // 130 (well into beat 2, past the whip-pan handoff — beat 1's durationInFrames:90 plus its
+    // 24-frame overlap means beat 2 is fully in control by frame ~106) must differ substantially —
+    // proof the whip transition actually carried the film into a genuinely different beat, not a
+    // frozen/duplicated frame.
+    const beat1Frame = await frameThumbnailBytes(out, 20);
+    const beat2Frame = await frameThumbnailBytes(out, 130);
+    expect(framesDiffer(beat1Frame, beat2Frame)).toBe(true);
   }, 240000);
 });

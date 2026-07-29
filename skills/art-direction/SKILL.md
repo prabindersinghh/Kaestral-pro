@@ -267,6 +267,25 @@ You express the craft above through these `compose_motion` / `SceneSpec` fields.
 
 ---
 
+## 10.5 The Cinematic Reel pack — 9:16 vertical, composable, use with restraint
+
+Eight composable effects tuned specifically for **9:16 vertical** (Reels/Shorts/TikTok-shaped) films — set `meta.preset:"cinematic-reel"` as a light hint (it currently just defaults `meta.handheld` on), but the real control is each field below, and §6's restraint budget still applies: reach for 2-3 of these per film with intent, not all eight because they exist.
+
+| Effect | Field | What it's for |
+|---|---|---|
+| Global handheld camera idle | `meta.handheld:true` (or `{amount}`) | A barely-perceptible continuous drift/scale/rotate on the WHOLE film — makes a static composition feel like a living camera operator is holding it, not a locked-off render. Always on for the whole film, never per-beat. |
+| Whip-pan transition | `transitionOut.kind:"whip"` | A fast, energetic beat-to-beat cut — use for an energy spike (a punchline, a beat drop), not as your default transition; a film that whip-pans every beat reads frantic. |
+| Card entrance edge-flip | `enter.anim:"edgeFlip"` (text/shape/image/screenMock) | A perspective card flip-in — treat the layer as an OBJECT (like a scale entrance, per §3), never on display type. Pair with `exit:{anim:"edgeFlip",at}` for a matching flip-out. |
+| Card live-breathe | `layer.liveBreathe:true` | A slow rotateY/rotateX idle AFTER a card's entrance settles — the card-scale equivalent of the handheld idle; use on a hero product card you're holding on screen a while, not on something about to cut away. |
+| Text blur push-up | `enter.anim:"blurPushUp"` | A springier, more energetic alternative to the default spring rise (§3) — a translateY+blur push-up with a slight overshoot. Use for punchier/faster-paced copy; the plain spring entrance is still the default house feel for most display type. |
+| Strikethrough emphasis | `element:"strikethrough"` | An angled, glowing line drawn through a word/phrase for emphasis — a rare, single-use accent (like the gold hairline in §2), not something to repeat every beat. |
+| Ambient orbs | `background.kind:"orbs"` | 3 blurred, drifting, palette-colored circles — an alternative atmosphere to grid/glow, softer and more colorful; pick ONE background language per film, don't mix orbs with grid/glow beat to beat. |
+| Card shine sweep | `layer.shineSweep:true` | A looping specular sheen band across a card — distinct from `lightingSweep`'s diagonal (§9's "cut you don't make" applies here too: don't stack both on one layer). |
+
+**`meta.palette`** (`["#rrggbb", ...]`, up to 6, brand tokens also accepted) is what colors every one of these effects that needs a tint (orbs, shineSweep, strikethrough's glow) — always pull the user's actual brand colors into this field rather than leaving it unset; unset falls back to the engine's own green/gold brand tokens, which is a safe default but not *this* film's brand.
+
+---
+
 ## The bar
 
 The three reference launch films were hand-authored. Your job is not to match them — it's to **exceed** them, using this craft plus the engine's full expressiveness. You have more power than the hands that made them did. Read the brief for its arc and its one moment. Starve the setup so the payload can rise. Place by eye, not by grid. Reuse one curve, one entrance language, one accent. Hold the important line; move briskly through the rest. Resolve every beat. And when a draft feels *busy* — remove, don't add.

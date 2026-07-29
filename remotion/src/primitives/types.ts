@@ -14,7 +14,7 @@ export interface SpringConfig {
 }
 
 export interface EnterSpec {
-  anim: "spring" | "typewriter" | "wordReveal" | "wordStagger" | "kinetic" | "draw" | "fade" | "collapse" | "maskReveal";
+  anim: "spring" | "typewriter" | "wordReveal" | "wordStagger" | "kinetic" | "draw" | "fade" | "collapse" | "maskReveal" | "edgeFlip" | "blurPushUp";
   easing?: EasingSpec;
   delay?: number;
   from?: "below" | "left" | "scale";
@@ -62,4 +62,9 @@ export interface PrimitiveProps {
   position: { x: number; y: number };
   enter?: EnterSpec;
   style?: StyleSpec;
+  /** User-supplied brand palette (`meta.palette`), threaded down from the interpreter so any
+   * primitive can tint itself from the SAME user colors instead of a hardcoded hex — see
+   * `tokens.ts`'s `paletteColor` for the resolve-with-fallback helper every Cinematic Reel
+   * palette-driven primitive (Strikethrough, Orbs, shineSweep) uses. */
+  palette?: string[];
 }
