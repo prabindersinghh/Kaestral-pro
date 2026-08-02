@@ -55,4 +55,14 @@ describe("silence gate", () => {
     const env = new Array(200).fill(0.5);
     expect(silencesFromEnvelope(env, 30)).toEqual([]);
   });
+
+  it("handles a very long envelope without RangeError (was Math.max(...env) on a ~50min+ clip)", () => {
+    // ~200k hops ≈ 77 min of audio — well past the ~125k JS argument-count limit that Math.max(...)
+    // would hit. A loud stretch then a silent stretch: must both not throw and still detect the gap.
+    const env = new Array(200_000).fill(0.5);
+    for (let i = 100_000; i < 150_000; i++) env[i] = 0; // a long silent run in the middle
+    let out: ReturnType<typeof silencesFromEnvelope> = [];
+    expect(() => { out = silencesFromEnvelope(env, 30); }).not.toThrow();
+    expect(out.length).toBeGreaterThan(0);
+  });
 });

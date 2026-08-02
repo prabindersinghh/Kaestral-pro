@@ -18,6 +18,12 @@ export interface MediaAssetLite {
   sourceFPS?: number;
   hasAudio?: boolean;
   generationStatus?: string;
+  // Opaque passthrough provenance (media.ts): kept so a .kaestral round-trip through the MediaLibrary
+  // doesn't silently drop AI-generation inputs / import inputs / cached remote URLs on the first save.
+  generationInput?: unknown;
+  importInput?: unknown;
+  cachedRemoteURL?: string;
+  cachedRemoteURLExpiresAt?: unknown;
 }
 
 export class MediaLibrary {
@@ -62,6 +68,10 @@ export class MediaLibrary {
         hasAudio: a.hasAudio,
         folderId: a.folderId,
         generationStatus: a.generationStatus,
+        generationInput: a.generationInput,
+        importInput: a.importInput,
+        cachedRemoteURL: a.cachedRemoteURL,
+        cachedRemoteURLExpiresAt: a.cachedRemoteURLExpiresAt,
       })),
       folders: this.folders,
     };

@@ -4,8 +4,9 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { decodeTimeline, encodeTimeline } from "../codec";
+import { decodeTimeline, encodeTimeline, decodeTransform } from "../codec";
 import { decodeManifest, encodeManifest } from "../media";
+import { MediaLibrary } from "../../mcp/mediaLibrary";
 import { nodePackageFS } from "../../project/nodeFs";
 import { readProjectPackage, writeProjectPackage, PROJECT } from "../../project/package";
 
@@ -76,5 +77,51 @@ describe("Stage-A gate: .kaestral package load/save round-trip (Node FS)", () =>
     const dir = join(root, `Empty.${PROJECT.fileExtension}`);
     await fs.ensureDir(dir);
     await expect(readProjectPackage(fs, dir)).rejects.toThrow(/project\.json/);
+  });
+
+  it("throws a clean 'Corrupt project' error on a present-but-malformed project.json (not a raw SyntaxError)", async () => {
+    const fs = nodePackageFS();
+    const root = mkdtempSync(join(tmpdir(), "kaestral-"));
+    const dir = join(root, `Bad.${PROJECT.fileExtension}`);
+    await fs.writeText(join(dir, PROJECT.timelineFilename), "not json {");
+    await expect(readProjectPackage(fs, dir)).rejects.toThrow(/Corrupt project/);
+  });
+});
+
+describe("Stage-A sweep fixes: legacy transform migration + media provenance passthrough", () => {
+  it("migrates a legacy top-left x/y to a CENTER using +size/2 (was wrong for scaled clips)", () => {
+    // A half-size clip at the top-left origin: its center is (0.25, 0.25), not (0,0).
+    const t = decodeTransform({ x: 0, y: 0, width: 0.5, height: 0.5 });
+    expect(t.centerX).toBeCloseTo(0.25, 6);
+    expect(t.centerY).toBeCloseTo(0.25, 6);
+    // Full-frame legacy clips are unaffected (both formulas agree at width/height === 1).
+    const full = decodeTransform({ x: 0, y: 0, width: 1, height: 1 });
+    expect(full.centerX).toBeCloseTo(0.5, 6);
+  });
+
+  it("MediaLibrary.toManifest preserves opaque provenance (generationInput/importInput/cachedRemoteURL) through load→save", () => {
+    const raw = {
+      version: 2,
+      entries: [{
+        id: "a1", name: "gen.mp4", type: "video", duration: 4,
+        source: { kind: "external", absolutePath: "/g.mp4" },
+        generationInput: { prompt: "a cat", model: "veo" },
+        importInput: { url: "https://x/y" },
+        cachedRemoteURL: "https://cache/z.mp4",
+        cachedRemoteURLExpiresAt: "2030-01-01T00:00:00.000Z",
+      }],
+      folders: [],
+    };
+    // Load into a MediaLibrary the way the server does, then re-encode from toManifest().
+    const media = new MediaLibrary();
+    media.assets = decodeManifest(raw).entries.map((e) => ({
+      id: e.id, name: e.name, type: e.type, duration: e.duration, source: e.source,
+      folderId: e.folderId, sourceWidth: e.sourceWidth, sourceHeight: e.sourceHeight,
+      sourceFPS: e.sourceFPS, hasAudio: e.hasAudio, generationStatus: e.generationStatus,
+      generationInput: e.generationInput, importInput: e.importInput,
+      cachedRemoteURL: e.cachedRemoteURL, cachedRemoteURLExpiresAt: e.cachedRemoteURLExpiresAt,
+    }));
+    const out = encodeManifest(decodeManifest(encodeManifest(media.toManifest())));
+    expect(out).toEqual(encodeManifest(decodeManifest(raw)));
   });
 });

@@ -39,13 +39,15 @@ export function decodeTransform(v: unknown): Transform {
   const o = obj(v);
   const width = asNum(o.width, 1);
   const height = asNum(o.height, 1);
-  // modern keys win; legacy x/y → center (Timeline.swift:443-466)
+  // modern keys win; legacy top-left x/y → center = topLeft + size/2 (Timeline.swift:443-466).
+  // The old form (x + width - 0.5) only equals x + width/2 at width===1, so any scaled/PiP legacy
+  // clip loaded mis-centered by (width/2 - 0.5); full-frame legacy clips are unaffected.
   let centerX = 0.5;
   if (typeof o.centerX === "number") centerX = o.centerX;
-  else if (typeof o.x === "number") centerX = o.x + width - 0.5;
+  else if (typeof o.x === "number") centerX = o.x + width / 2;
   let centerY = 0.5;
   if (typeof o.centerY === "number") centerY = o.centerY;
-  else if (typeof o.y === "number") centerY = o.y + height - 0.5;
+  else if (typeof o.y === "number") centerY = o.y + height / 2;
   return {
     centerX, centerY, width, height,
     rotation: asNum(o.rotation, 0),

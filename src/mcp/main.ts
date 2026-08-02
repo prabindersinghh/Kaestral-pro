@@ -33,6 +33,8 @@ async function main(): Promise<void> {
           id: e.id, name: e.name, type: e.type, duration: e.duration, source: e.source,
           folderId: e.folderId, sourceWidth: e.sourceWidth, sourceHeight: e.sourceHeight,
           sourceFPS: e.sourceFPS, hasAudio: e.hasAudio, generationStatus: e.generationStatus,
+          generationInput: e.generationInput, importInput: e.importInput,
+          cachedRemoteURL: e.cachedRemoteURL, cachedRemoteURLExpiresAt: e.cachedRemoteURLExpiresAt,
         }),
       );
     }

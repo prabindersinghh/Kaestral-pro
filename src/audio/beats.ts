@@ -38,7 +38,10 @@ function decodePcm(path: string, ffmpegPath = ffmpegBin()): Promise<Float32Array
     ff.stderr.on("data", (d: Buffer) => { errBuf += d.toString(); });
     ff.on("error", reject);
     ff.on("close", (code) => {
-      if (code !== 0 && chunks.length === 0) return reject(new Error(`ffmpeg PCM decode failed (${code}): ${errBuf.slice(0, 200)}`));
+      // Reject on ANY non-zero exit: a truncated/corrupt file can emit some frames then error, and
+      // tolerating that silently returned partial/garbage PCM that beat & silence detection then
+      // computed on incomplete audio.
+      if (code !== 0) return reject(new Error(`ffmpeg PCM decode failed (${code}): ${errBuf.slice(0, 200)}`));
       const buf = Buffer.concat(chunks);
       // Float32LE view (guard against a trailing partial sample).
       const n = Math.floor(buf.length / 4);
@@ -114,7 +117,10 @@ export function silencesFromEnvelope(env: number[], fps: number, opts: SilenceOp
   const padSec = opts.padSec ?? 0.08;
   const hopSec = HOP / DECODE_RATE;
 
-  const peak = Math.max(...env, 1e-9);
+  // Loop, NOT Math.max(...env): env grows ~43 entries/sec, so spreading it as call arguments blows
+  // the JS argument-count limit (~125k) and throws RangeError on audio longer than ~48 minutes.
+  let peak = 1e-9;
+  for (let i = 0; i < env.length; i++) if (env[i] > peak) peak = env[i];
   const gate = peak * Math.pow(10, floorDb / 20); // linear threshold relative to the loudest part
   const minHops = Math.max(1, Math.round(minSilenceSec / hopSec));
   const padHops = Math.round(padSec / hopSec);

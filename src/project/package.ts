@@ -42,7 +42,14 @@ export async function readProjectPackage(fs: PackageFS, dir: string): Promise<Pr
   if (timelineText == null) {
     throw new Error(`Corrupt project: missing ${PROJECT.timelineFilename}`);
   }
-  const timeline = parseTimeline(timelineText);
+  // A present-but-malformed project.json must give the same clean "Corrupt project" error as a
+  // missing one, not a raw JSON SyntaxError leaking to the caller/UI.
+  let timeline;
+  try {
+    timeline = parseTimeline(timelineText);
+  } catch {
+    throw new Error(`Corrupt project: ${PROJECT.timelineFilename} is not valid JSON`);
+  }
 
   let manifest: MediaManifest | null = null;
   let manifestUnreadable = false;
