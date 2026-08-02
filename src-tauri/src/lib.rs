@@ -54,6 +54,23 @@ fn copy_dir_if_absent(from: &std::path::Path, to: &std::path::Path) -> std::io::
     Ok(())
 }
 
+/// Recursively copy `from` -> `to`, OVERWRITING existing files (unlike copy_dir_if_absent). Used to
+/// keep the small composition-source subtree fresh across app updates.
+fn copy_dir_overwrite(from: &std::path::Path, to: &std::path::Path) -> std::io::Result<()> {
+    std::fs::create_dir_all(to)?;
+    for entry in std::fs::read_dir(from)? {
+        let entry = entry?;
+        let src = entry.path();
+        let dst = to.join(entry.file_name());
+        if src.is_dir() {
+            copy_dir_overwrite(&src, &dst)?;
+        } else {
+            std::fs::copy(&src, &dst)?;
+        }
+    }
+    Ok(())
+}
+
 /// The Remotion render workspace must live in a WRITABLE dir: rendering writes a webpack bundle
 /// cache and downloads headless Chromium into node_modules/.remotion (Remotion resolves that from
 /// the render cwd). App resources are read-only, so on first launch we mirror the shipped
@@ -66,6 +83,12 @@ fn ensure_writable_remotion(p: &Packaged) -> PathBuf {
     if !dst.join("node_modules").join("remotion").exists() {
         let _ = copy_dir_if_absent(&src, &dst);
     }
+    // Re-mirror the SMALL composition-source subtree on every launch. app_data_dir is stable across
+    // versions, so without this an app update that fixes a Remotion composition would never reach the
+    // writable dir the render runs from — compose_motion would keep rendering the first-install code
+    // forever. node_modules/.remotion (Chromium) and .bundle-cache are untouched; render.mjs keys its
+    // bundle cache on a hash of this src, so it re-bundles exactly when the composition source changes.
+    let _ = copy_dir_overwrite(&src.join("src"), &dst.join("src"));
     dst
 }
 
