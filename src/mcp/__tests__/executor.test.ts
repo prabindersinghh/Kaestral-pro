@@ -152,4 +152,63 @@ describe("Stage-D (pure): export_project interchange modes", () => {
     expect(readFileSync(join(root, "P.kaestral", "project.json"), "utf8")).toContain('"fps"');
     // mode:video renders via FFmpeg — covered end-to-end in src/render/__tests__/render.test.ts.
   });
+
+  it("mcp-8: export_project overwrite:false refuses to clobber an existing destination", async () => {
+    const root = mkdtempSync(join(tmpdir(), "kaestral-ovw-"));
+    const ex = new McpExecutor({ fs: nodePackageFS(), projectDir: root });
+    ex.media.addAsset({ id: "v", name: "v.mp4", type: "video", duration: 5, source: { kind: "external", absolutePath: "/tmp/v.mp4" }, hasAudio: false });
+    ex.engine.timeline.tracks.push(videoTrack());
+    await ex.execute("add_clips", { entries: [{ mediaRef: "v", trackIndex: 0, startFrame: 0, durationFrames: 50 }] });
+    const out = join(root, "o.xml");
+    expect((await ex.execute("export_project", { mode: "xml", outputPath: out })).isError).toBeFalsy();
+    const first = readFileSync(out, "utf8");
+    const blocked = await ex.execute("export_project", { mode: "xml", outputPath: out, overwrite: false });
+    expect(blocked.isError).toBe(true);
+    expect(blocked.content[0].text).toMatch(/already exists/);
+    expect(readFileSync(out, "utf8")).toBe(first); // untouched
+  });
+});
+
+describe("Stage-D: MCP schema<->handler fixes (silent-failure + dropped-field bugs)", () => {
+  it("mcp-4: mutations that changed nothing report an error, not phantom success", async () => {
+    const ex = new McpExecutor();
+    seed(ex); // one video track at index 0
+    // insert onto a track that doesn't exist → nothing inserted (was reported as inserted:N).
+    const ins = await ex.execute("insert_clips", { trackIndex: 9, atFrame: 0, entries: [{ mediaRef: "vid1" }] });
+    expect(ins.isError).toBe(true);
+    // add onto a track that doesn't exist → nothing added.
+    const add = await ex.execute("add_clips", { entries: [{ mediaRef: "vid1", trackIndex: 9, startFrame: 0, durationFrames: 30 }] });
+    expect(add.isError).toBe(true);
+    // property/effect/text edits on clipIds that match nothing → error, not "Updated N".
+    expect((await ex.execute("set_clip_properties", { clipIds: ["nope"], opacity: 0.5 })).isError).toBe(true);
+    expect((await ex.execute("apply_color", { clipIds: ["nope"], exposure: 1 })).isError).toBe(true);
+    expect((await ex.execute("update_text", { clipIds: ["nope"], content: "x" })).isError).toBe(true);
+    expect((await ex.execute("set_keyframes", { clipId: "nope", property: "opacity", keyframes: [[0, 1]] })).isError).toBe(true);
+  });
+
+  it("mcp-2: add_texts applies the per-entry styling/transform/animation the schema advertises", async () => {
+    const ex = new McpExecutor();
+    const r = await ex.execute("add_texts", { entries: [{ startFrame: 0, durationFrames: 30, content: "HOOK", fontSize: 110, isBold: true, color: "#ff0000", animation: "popIn", transform: { centerX: 0.2 } }] });
+    expect(r.isError).toBeFalsy();
+    const clipId = JSON.parse(r.content[0].text).clipIds[0] as string;
+    const c = ex.engine.clipRef(clipId)!;
+    expect(c.textStyle!.fontSize).toBe(110);
+    expect(c.textStyle!.isBold).toBe(true);
+    expect(c.textStyle!.color).toEqual({ r: 1, g: 0, b: 0, a: 1 });
+    expect(c.transform.centerX).toBe(0.2);
+    expect(c.textAnimation!.preset).toBe("popIn");
+  });
+
+  it("mcp-1: update_text resolves captionGroupId to every clip in the group", async () => {
+    const ex = new McpExecutor();
+    const r = await ex.execute("add_texts", { entries: [
+      { startFrame: 0, durationFrames: 20, content: "a" },
+      { startFrame: 20, durationFrames: 20, content: "b" },
+    ] });
+    const ids = JSON.parse(r.content[0].text).clipIds as string[];
+    for (const id of ids) ex.engine.clipRef(id)!.captionGroupId = "grp1";
+    const up = await ex.execute("update_text", { captionGroupId: "grp1", content: "Z" });
+    expect(up.isError).toBeFalsy();
+    for (const id of ids) expect(ex.engine.clipRef(id)!.textContent).toBe("Z");
+  });
 });

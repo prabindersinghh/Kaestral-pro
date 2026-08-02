@@ -22,6 +22,19 @@ describe("apply_color effect stack (ToolExecutor+Color.swift)", () => {
     expect(CANONICAL_ORDER.indexOf("color.exposure")).toBeLessThan(CANONICAL_ORDER.indexOf("color.saturation"));
   });
 
+  it("builds color.hueCurves from the targets knob (previously a silent no-op) in canonical order", () => {
+    const c = clip();
+    applyColorGrade(c, { curves: undefined, hueCurves: { targets: [{ targetHue: 120, hueShift: 15, satScale: 1.1 }] } } as Parameters<typeof applyColorGrade>[1]);
+    const e = c.effects!.find((x) => x.type === "color.hueCurves");
+    expect(e).toBeDefined();
+    expect(JSON.parse(e!.params.targets.string!)[0].targetHue).toBe(120);
+    // ordered after color.curves, before color.lut per CANONICAL_ORDER
+    applyColorGrade(c, { masterCurve: [[0, 0], [1, 1]], lut: { path: "x.cube" } });
+    const order = c.effects!.map((x) => x.type).filter((t) => t.startsWith("color."));
+    expect(order.indexOf("color.curves")).toBeLessThan(order.indexOf("color.hueCurves"));
+    expect(order.indexOf("color.hueCurves")).toBeLessThan(order.indexOf("color.lut"));
+  });
+
   it("merges params of the same effect without clobbering the untouched one", () => {
     const c = clip();
     applyColorGrade(c, { temperature: 5000 });

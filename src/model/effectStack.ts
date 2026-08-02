@@ -59,6 +59,7 @@ export interface ColorArgs {
   midsHue?: number; midsAmount?: number; midsGamma?: number;
   highsHue?: number; highsAmount?: number; highsGain?: number;
   masterCurve?: number[][]; redCurve?: number[][]; greenCurve?: number[][]; blueCurve?: number[][];
+  hueCurves?: { targets?: { targetHue: number; hueShift?: number; satScale?: number; lumShift?: number }[] };
   lut?: { path?: string; strength?: number };
 }
 
@@ -114,6 +115,12 @@ export function applyColorGrade(clip: Clip, a: ColorArgs, reset = false): void {
       green: points(a.greenCurve), blue: points(a.blueCurve),
     };
     upsertEffect(effects, "color.curves", { curve: ps(JSON.stringify(gc)) });
+  }
+  if (a.hueCurves?.targets?.length) {
+    // Per-hue selective adjustments. Persists in the model + exports (FCPXML), and is skipped by the
+    // canvas preview filter like curves/wheels/lut (an UPGRADES item) — but is no longer a silent
+    // no-op: apply_color now actually builds the effect the schema advertises.
+    upsertEffect(effects, "color.hueCurves", { targets: ps(JSON.stringify(a.hueCurves.targets)) });
   }
   if (a.lut) {
     const patch: Record<string, EffectParam> = { intensity: pv(a.lut.strength ?? 1) };

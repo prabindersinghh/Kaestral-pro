@@ -3,9 +3,10 @@
 // return the faithful signed-out / "unavailable in this build" shapes (SPEC §10, §11).
 
 import type { AnimatableProperty, ClipType } from "../model/enums";
-import { isVisual } from "../model/enums";
-import type { AnimPair, Clip, Crop, Keyframe, KeyframeValue, Timeline } from "../model/types";
-import { defaultTrack, defaultClip, defaultTextStyle } from "../model/defaults";
+import { isVisual, TEXT_ANIMATION_PRESETS } from "../model/enums";
+import type { TextAnimationPreset } from "../model/enums";
+import type { AnimPair, Clip, Crop, Keyframe, KeyframeValue, TextAnimation, Timeline } from "../model/types";
+import { defaultTrack, defaultClip, defaultTextStyle, rgba } from "../model/defaults";
 import { LAYOUTS, LAYOUT_NAMES, layoutPlacement, type LayoutFit, type LayoutSlot } from "../model/layout";
 import { EditEngine, type InsertSpec, type MoveSpec, type PlaceSpec } from "../engine/editEngine";
 import { buildGetTimelineOutput } from "./getTimelineOutput";
@@ -67,6 +68,16 @@ const requireStr = (a: Args, k: string): string => {
   const v = aStr(a, k);
   if (v === undefined) throw new ToolFail(`Missing required argument: ${k}`);
   return v;
+};
+
+/** Parse a `#rrggbb` (or `rrggbb`) hex color into the model's 0..1 float RGBA. Returns undefined for
+ * anything that isn't a valid 6-digit hex, so callers only apply a color the user actually specified. */
+const hexToRgba = (hex: string | undefined, alpha = 1) => {
+  if (hex === undefined) return undefined;
+  const m = /^#?([0-9a-fA-F]{6})$/.exec(hex.trim());
+  if (!m) return undefined;
+  const n = parseInt(m[1], 16);
+  return rgba(((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255, alpha);
 };
 
 export class McpExecutor {
@@ -175,12 +186,17 @@ export class McpExecutor {
     );
   }
 
-  /** Transcribe a clip/asset to word-level timestamps (frames are relative to the MEDIA, 0 = its start). */
-  private async transcriptFor(mediaRef: string, path: string): Promise<TranscriptWord[]> {
-    const cached = this.transcriptCache.get(mediaRef);
+  /** Transcribe a clip/asset to word-level timestamps (frames are relative to the MEDIA, 0 = its
+   * start). `language` (BCP-47) is honored: a non-English tag selects the multilingual model (the
+   * default `base.en` is English-only) and gets its own cache entry so it doesn't collide with an
+   * English pass. Omitting `language` keeps the exact previous default (English, cache key = mediaRef). */
+  private async transcriptFor(mediaRef: string, path: string, language?: string): Promise<TranscriptWord[]> {
+    const lang = language && language.toLowerCase() !== "en" ? language.toLowerCase() : undefined;
+    const cacheKey = lang ? `${mediaRef}::${lang}` : mediaRef;
+    const cached = this.transcriptCache.get(cacheKey);
     if (cached) return cached;
-    const t = await transcribe(path, this.fps);
-    this.transcriptCache.set(mediaRef, t.words);
+    const t = await transcribe(path, this.fps, lang ? { model: "base", language: lang } : {});
+    this.transcriptCache.set(cacheKey, t.words);
     return t.words;
   }
 
@@ -189,15 +205,22 @@ export class McpExecutor {
     const path = this.mediaPathFor(a);
     const mediaRef = aStr(a, "mediaRef") ?? (aStr(a, "clipId") ? this.engine.clipRef(aStr(a, "clipId")!)?.mediaRef : undefined);
     if (!path || !mediaRef) throw new ToolFail("get_transcript: provide a resolvable mediaRef or clipId.");
-    const words = await this.transcriptFor(mediaRef, path);
+    const words = await this.transcriptFor(mediaRef, path, aStr(a, "language"));
+    // Keep the FULL word list in lastTranscript so remove_words indices stay stable; only the
+    // RETURNED payload is windowed by startFrame/endFrame, preserving each word's original index.
     this.lastTranscript = { mediaRef, clipId: aStr(a, "clipId"), words };
+    const winStart = aInt(a, "startFrame");
+    const winEnd = aInt(a, "endFrame");
+    const shown = words
+      .map((w, i) => ({ i, w }))
+      .filter(({ w }) => (winStart === undefined || w.endFrame > winStart) && (winEnd === undefined || w.startFrame < winEnd));
     return okJson({
       fps: this.fps,
-      wordCount: words.length,
-      text: words.map((w) => w.text).join(" "),
-      words: words.map((w, i) => ({ index: i, text: w.text, startMs: w.startMs, endMs: w.endMs, startFrame: w.startFrame, endFrame: w.endFrame })),
+      wordCount: shown.length,
+      text: shown.map(({ w }) => w.text).join(" "),
+      words: shown.map(({ i, w }) => ({ index: i, text: w.text, startMs: w.startMs, endMs: w.endMs, startFrame: w.startFrame, endFrame: w.endFrame })),
       source: `whisper.cpp (on-device)`,
-      note: "startFrame/endFrame are relative to the MEDIA (0 = its start). add_captions/remove_words map these onto the clip's timeline placement automatically.",
+      note: "startFrame/endFrame are relative to the MEDIA (0 = its start). add_captions/remove_words map these onto the clip's timeline placement automatically. When a startFrame/endFrame window is passed, index stays the word's original position in the full transcript.",
     });
   }
 
@@ -216,7 +239,7 @@ export class McpExecutor {
     if (!clip) throw new ToolFail(`add_captions: clip ${clipId} not found.`);
     const path = this.mediaPathFor({ clipId });
     if (!path) throw new ToolFail("add_captions: clip media not resolvable.");
-    const words = await this.transcriptFor(clip.mediaRef, path);
+    const words = await this.transcriptFor(clip.mediaRef, path, aStr(a, "language"));
 
     const perCaption = Math.max(1, Math.min(8, aInt(a, "wordsPerCaption") ?? 3));
     const style = (a.textStyle as Args | undefined);
@@ -241,6 +264,9 @@ export class McpExecutor {
       if (maxDur >= 1 && specs[i].durationFrames > maxDur) specs[i].durationFrames = maxDur;
     }
     const changed = this.engine.addClips(specs);
+    // One shared caption-group id across this run, so update_text({captionGroupId}) can restyle the
+    // whole run at once (and get_timeline groups them). Previously unset — update by group was dead.
+    const groupId = cryptoId();
     specs.forEach((s, i) => {
       const c = this.engine.clipRef(s.id!);
       if (!c) return;
@@ -249,9 +275,10 @@ export class McpExecutor {
       if (payload[i].style) Object.assign(c.textStyle, payload[i].style);
       c.textAnimation = { preset: (payload[i].anim.preset as string) ?? "wordReveal", perWordFrames: aInt(payload[i].anim, "perWordFrames") ?? 6, highlight: payload[i].anim.highlight } as Clip["textAnimation"];
       c.transform = { centerX: 0.5, centerY: 0.8, width: 0.9, height: 0.2, rotation: 0, flipHorizontal: false, flipVertical: false };
+      c.captionGroupId = groupId;
     });
     this.track(changed, "Add Captions");
-    return okJson({ captions: specs.length, clipIds: specs.map((s) => s.id), fromWords: words.length });
+    return okJson({ captions: specs.length, clipIds: specs.map((s) => s.id), captionGroupId: groupId, fromWords: words.length });
   }
 
   private async removeWords(a: Args): Promise<ToolResult> {
@@ -274,7 +301,10 @@ export class McpExecutor {
     }
     if (idxSpans.length === 0) throw new ToolFail("remove_words: 'words' must be transcript indices or [start,end] spans.");
 
-    const pad = Math.round(this.fps * 0.04);
+    // cutAggressiveness controls how much surrounding silence is left around each cut word:
+    // tight removes it flush, loose keeps a comfortable breath. (Previously hardcoded to 0.04.)
+    const padMult = { tight: 0, balanced: 0.04, loose: 0.12 }[aStr(a, "cutAggressiveness") ?? "balanced"] ?? 0.04;
+    const pad = Math.round(this.fps * padMult);
     const ranges: [number, number][] = [];
     for (const [s, e] of idxSpans) {
       const first = last.words[Math.max(0, Math.min(last.words.length - 1, s))];
@@ -897,9 +927,14 @@ export class McpExecutor {
         });
       }
     }
+    // Honest placement accounting: engine.addClips silently skips an entry whose trackIndex is out
+    // of range (and pruneEmptyTracks can flip `changed` true even when nothing was placed), so check
+    // placeability against the real track list BEFORE mutating rather than trusting `changed`.
+    const placeable = specs.filter((s) => this.timeline.tracks[s.trackIndex]);
+    if (placeable.length === 0) throw new ToolFail("add_clips: no entry's trackIndex is within range.");
     const changed = this.engine.addClips(specs);
     this.track(changed, "Add Clips");
-    return okJson({ added: specs.length, clips: specs.map((s) => ({ mediaRef: s.mediaRef, startFrame: s.startFrame, durationFrames: s.durationFrames })) });
+    return okJson({ added: placeable.length, clips: placeable.map((s) => ({ mediaRef: s.mediaRef, startFrame: s.startFrame, durationFrames: s.durationFrames })) });
   }
 
   private insertClips(a: Args): ToolResult {
@@ -923,6 +958,7 @@ export class McpExecutor {
     });
     const changed = this.engine.insertClips(specs, trackIndex, atFrame);
     this.track(changed, "Insert Clips");
+    if (!changed) throw new ToolFail(`insert_clips: nothing inserted (trackIndex ${trackIndex} out of range, or no entries).`);
     return okJson({ inserted: specs.length });
   }
 
@@ -973,6 +1009,7 @@ export class McpExecutor {
     const clipIds = aStrArr(a, "clipIds");
     if (clipIds.length === 0) throw new ToolFail("set_clip_properties: clipIds is required");
     const ids = new Set(clipIds);
+    if (clipIds.filter((id) => this.engine.clipRef(id)).length === 0) throw new ToolFail("set_clip_properties: no matching clips for the given clipIds.");
     const partners = this.engine.timingPartners(ids);
     let changed = false;
 
@@ -1018,6 +1055,7 @@ export class McpExecutor {
 
   private setKeyframes(a: Args): ToolResult {
     const clipId = requireStr(a, "clipId");
+    if (!this.engine.clipRef(clipId)) throw new ToolFail(`set_keyframes: clip not found: ${clipId}`);
     const property = requireStr(a, "property") as AnimatableProperty;
     const rows = aArr(a, "keyframes");
     const kfs = rows.map((r) => parseKeyframeRow(property, r as unknown[]));
@@ -1172,12 +1210,52 @@ export class McpExecutor {
     return okJson({ layout: layoutName, fit, slots: summaries });
   }
 
+  /**
+   * Applies the flat per-entry/tool text styling fields the add_texts/update_text schemas advertise
+   * (textStyleProps + animation + highlightColor + transform) onto a text clip. Shared by both tools
+   * so neither silently drops the styling it documents. Only fields the caller actually set are
+   * applied — omitted fields keep the clip's existing/default value.
+   */
+  private applyTextEntryStyle(c: Clip, e: Args): void {
+    c.textStyle ??= defaultTextStyle();
+    const ts = c.textStyle;
+    const fontName = aStr(e, "fontName"); if (fontName !== undefined) ts.fontName = fontName;
+    const fontSize = aNum(e, "fontSize"); if (fontSize !== undefined) ts.fontSize = fontSize;
+    const isBold = aBool(e, "isBold"); if (isBold !== undefined) ts.isBold = isBold;
+    const isItalic = aBool(e, "isItalic"); if (isItalic !== undefined) ts.isItalic = isItalic;
+    const alignment = aStr(e, "alignment");
+    if (alignment === "left" || alignment === "center" || alignment === "right") ts.alignment = alignment;
+    const color = hexToRgba(aStr(e, "color")); if (color) ts.color = color;
+    const border = hexToRgba(aStr(e, "borderColor")); if (border) ts.border = { enabled: true, color: border };
+    const bg = hexToRgba(aStr(e, "backgroundColor")); if (bg) ts.background = { enabled: true, color: bg };
+
+    const animation = aStr(e, "animation");
+    if (animation === "off" || animation === "none") c.textAnimation = undefined;
+    else if (animation !== undefined && (TEXT_ANIMATION_PRESETS as readonly string[]).includes(animation)) {
+      c.textAnimation = { preset: animation as TextAnimationPreset, perWordFrames: c.textAnimation?.perWordFrames ?? 6, highlight: c.textAnimation?.highlight };
+    }
+    const highlight = hexToRgba(aStr(e, "highlightColor"));
+    if (highlight) {
+      c.textAnimation ??= { preset: "wordReveal", perWordFrames: 6 } as TextAnimation;
+      c.textAnimation.highlight = highlight;
+    }
+
+    const t = e.transform as Args | undefined;
+    if (t) {
+      for (const f of ["centerX", "centerY", "width", "height", "rotation"] as const) {
+        const v = aNum(t, f); if (v !== undefined) c.transform[f] = v;
+      }
+      if (aBool(t, "flipHorizontal") !== undefined) c.transform.flipHorizontal = aBool(t, "flipHorizontal")!;
+      if (aBool(t, "flipVertical") !== undefined) c.transform.flipVertical = aBool(t, "flipVertical")!;
+    }
+  }
+
   private addTexts(a: Args): ToolResult {
     const entries = aArr(a, "entries");
     if (entries.length === 0) throw new ToolFail("add_texts: entries is required");
     const allSpecify = entries.every((e) => aInt(e as Args, "trackIndex") !== undefined);
     const specs: PlaceSpec[] = [];
-    const contents: string[] = [];
+    const rows: Args[] = [];
     for (const raw of entries) {
       const e = raw as Args;
       const startFrame = aInt(e, "startFrame");
@@ -1189,28 +1267,42 @@ export class McpExecutor {
       const trackIndex = allSpecify ? aInt(e, "trackIndex")! : this.ensureTextTrack();
       const id = cryptoId();
       specs.push({ mediaRef: `text-${id}`, trackIndex, startFrame, durationFrames, mediaType: "text", sourceClipType: "text", id });
-      contents.push(content);
+      rows.push(e);
+    }
+    if (specs.filter((s) => this.timeline.tracks[s.trackIndex]).length === 0) {
+      throw new ToolFail("add_texts: no entry's trackIndex is within range.");
     }
     const changed = this.engine.addClips(specs);
-    // Attach text content + a default style/placement so it renders (drawText needs both).
+    // Attach text content + styling so it renders (drawText needs content + style).
     specs.forEach((s, i) => {
       const c = this.engine.clipRef(s.id!);
       if (!c) return;
-      c.textContent = contents[i];
-      c.textStyle ??= defaultTextStyle();
-      // Caption-friendly default: lower third, centered.
+      c.textContent = aStr(rows[i], "content")!;
+      // Caption-friendly default placement: lower third, centered — then apply any authored overrides.
       c.transform = { centerX: 0.5, centerY: 0.82, width: 0.9, height: 0.2, rotation: 0, flipHorizontal: false, flipVertical: false };
+      this.applyTextEntryStyle(c, rows[i]);
     });
     this.track(changed, "Add Text");
     return okJson({ added: specs.length, clipIds: specs.map((s) => s.id) });
   }
 
   private updateText(a: Args): ToolResult {
-    const clipIds = aStrArr(a, "clipIds");
-    const content = aStr(a, "content");
+    let clipIds = aStrArr(a, "clipIds");
+    // Resolve captionGroupId → the clips add_captions tagged with it (the documented alternative to
+    // clipIds — e.g. restyle a whole caption run at once).
+    const gid = aStr(a, "captionGroupId");
+    if (clipIds.length === 0 && gid) {
+      clipIds = this.timeline.tracks.flatMap((t) => t.clips).filter((c) => c.captionGroupId === gid).map((c) => c.id);
+    }
     if (clipIds.length === 0) throw new ToolFail("update_text: clipIds (or captionGroupId) required");
-    const changed = this.engine.mutateClips(new Set(clipIds), (c) => {
+    const ids = new Set(clipIds);
+    if (clipIds.filter((id) => this.engine.clipRef(id)).length === 0) {
+      throw new ToolFail("update_text: no matching text clips for the given clipIds/captionGroupId.");
+    }
+    const content = aStr(a, "content");
+    const changed = this.engine.mutateClips(ids, (c) => {
       if (content !== undefined) c.textContent = content;
+      this.applyTextEntryStyle(c, a); // content-only calls leave styling untouched (all fields omitted)
     }, "Update Text");
     this.track(changed, "Update Text");
     return ok(`Updated ${clipIds.length} text clip(s).`);
@@ -1220,6 +1312,7 @@ export class McpExecutor {
     const clipIds = aStrArr(a, "clipIds");
     if (clipIds.length === 0) throw new ToolFail("clipIds is required");
     const ids = new Set(clipIds);
+    if (clipIds.filter((id) => this.engine.clipRef(id)).length === 0) throw new ToolFail(`${isColor ? "apply_color" : "apply_effect"}: no matching clips for the given clipIds.`);
     const specs: EffectSpec[] = aArr(a, "effects").map((raw) => {
       const e = raw as Args;
       return { type: aStr(e, "type") ?? "", params: (e.params as Record<string, number>) ?? {}, enabled: aBool(e, "enabled") };
@@ -1342,6 +1435,19 @@ export class McpExecutor {
     const codec = (aStr(a, "codec") ?? "H.264") as VideoCodec;
     const ext = mode === "kaestral" ? "kaestral" : mode === "xml" ? "xml" : mode === "fcpxml" ? "fcpxml" : codec === "ProRes" ? "mov" : "mp4";
     const outPath = aStr(a, "outputPath") ?? `${this.projectDir ?? "."}/export.${ext}`;
+
+    // overwrite:false — refuse to clobber an existing destination (the flag was previously ignored,
+    // so an export always overwrote). The video path writes to the real FS; the other modes write
+    // through the bound PackageFS (readText returns null when absent).
+    if (aBool(a, "overwrite") === false) {
+      let exists = false;
+      if (mode === "video") {
+        try { const { existsSync } = await import("node:fs"); exists = existsSync(outPath); } catch { exists = false; }
+      } else if (this.fs) {
+        exists = (await this.fs.readText(outPath)) !== null;
+      }
+      if (exists) return err(`export_project: ${outPath} already exists (overwrite:false).`);
+    }
 
     if (mode === "kaestral") {
       if (!this.fs) return err("export_project: no filesystem bound in this context.");
