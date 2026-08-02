@@ -70,6 +70,19 @@ const requireStr = (a: Args, k: string): string => {
   return v;
 };
 
+/**
+ * Clamp each caption's end to the next caption's start so consecutive captions on one text track
+ * never overlap (an overlapping clip would overwrite its neighbor when placed, silently dropping a
+ * caption). Whisper word boundaries can overlap by a frame, so this is load-bearing. Mutates in
+ * place; exported for direct testing (the add_captions path is otherwise whisper-gated).
+ */
+export function clampCaptionsToNextStart(specs: { startFrame: number; durationFrames: number }[]): void {
+  for (let i = 0; i < specs.length - 1; i++) {
+    const maxDur = specs[i + 1].startFrame - specs[i].startFrame;
+    if (maxDur >= 1 && specs[i].durationFrames > maxDur) specs[i].durationFrames = maxDur;
+  }
+}
+
 /** Parse a `#rrggbb` (or `rrggbb`) hex color into the model's 0..1 float RGBA. Returns undefined for
  * anything that isn't a valid 6-digit hex, so callers only apply a color the user actually specified. */
 const hexToRgba = (hex: string | undefined, alpha = 1) => {
@@ -259,10 +272,7 @@ export class McpExecutor {
     if (specs.length === 0) return err("add_captions: no spoken words fell within the clip's range.");
     // Whisper word boundaries can overlap by a frame — clamp each caption's end to the next's start
     // so consecutive captions all survive (overlapping clips on one track would overwrite each other).
-    for (let i = 0; i < specs.length - 1; i++) {
-      const maxDur = specs[i + 1].startFrame - specs[i].startFrame;
-      if (maxDur >= 1 && specs[i].durationFrames > maxDur) specs[i].durationFrames = maxDur;
-    }
+    clampCaptionsToNextStart(specs);
     const changed = this.engine.addClips(specs);
     // One shared caption-group id across this run, so update_text({captionGroupId}) can restyle the
     // whole run at once (and get_timeline groups them). Previously unset — update by group was dead.

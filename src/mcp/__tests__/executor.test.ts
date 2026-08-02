@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { McpExecutor } from "../executor";
+import { McpExecutor, clampCaptionsToNextStart } from "../executor";
 import { TOOL_DEFS } from "../toolDefs";
 import { nodePackageFS } from "../../project/nodeFs";
 import type { Track } from "../../model/types";
@@ -210,5 +210,53 @@ describe("Stage-D: MCP schema<->handler fixes (silent-failure + dropped-field bu
     const up = await ex.execute("update_text", { captionGroupId: "grp1", content: "Z" });
     expect(up.isError).toBeFalsy();
     for (const id of ids) expect(ex.engine.clipRef(id)!.textContent).toBe("Z");
+  });
+});
+
+describe("add_captions overlap-clamp (silent-caption-drop guard)", () => {
+  it("shortens each caption to the next one's start so none overlap, and leaves gaps alone", () => {
+    // caption 0 [0,20) would end at 20 but caption 1 starts at 15 → clamp 0 to [0,15).
+    const specs = [
+      { startFrame: 0, durationFrames: 20 },
+      { startFrame: 15, durationFrames: 10 }, // ends 25; caption 2 starts 40 → gap, untouched
+      { startFrame: 40, durationFrames: 8 },  // last — never clamped
+    ];
+    clampCaptionsToNextStart(specs);
+    expect(specs[0].durationFrames).toBe(15); // clamped to next start
+    expect(specs[1].durationFrames).toBe(10); // gap before next → unchanged
+    expect(specs[2].durationFrames).toBe(8);  // last, unchanged
+    // No two captions overlap now.
+    for (let i = 0; i < specs.length - 1; i++) {
+      expect(specs[i].startFrame + specs[i].durationFrames).toBeLessThanOrEqual(specs[i + 1].startFrame);
+    }
+  });
+});
+
+describe("Stage-D: per-tool argument-rejection guards (untested reject paths)", () => {
+  const expectFail = async (ex: McpExecutor, tool: string, args: Record<string, unknown>, re: RegExp) => {
+    const r = await ex.execute(tool, args);
+    expect(r.isError).toBe(true);
+    expect(r.content[0].text).toMatch(re);
+  };
+
+  it("apply_layout rejects malformed requests with a clear message", async () => {
+    const ex = new McpExecutor();
+    seed(ex);
+    await expectFail(ex, "apply_layout", { layout: "nope", slots: [{ slot: "x" }] }, /unknown layout/);
+    await expectFail(ex, "apply_layout", { layout: "side_by_side", fit: "stretch", slots: [{ slot: "left" }] }, /fit must be/);
+    await expectFail(ex, "apply_layout", { layout: "full", slots: [{ slot: "main", mediaRef: "vid1", clipIds: ["c"], durationFrames: 30 }] }, /exactly one of/);
+    await expectFail(ex, "apply_layout", { layout: "side_by_side", slots: [{ slot: "left", mediaRef: "vid1", durationFrames: 30 }] }, /Missing: right/);
+    await expectFail(ex, "apply_layout", { layout: "side_by_side", slots: [{ slot: "left", mediaRef: "vid1", durationFrames: 30 }, { slot: "right", clipIds: ["c"] }] }, /don't mix/);
+    await expectFail(ex, "apply_layout", { layout: "full", durationFrames: 30, slots: [{ slot: "main", mediaRef: "ghost" }] }, /asset not found/);
+  });
+
+  it("add_clips / ripple_delete_ranges reject contradictory args", async () => {
+    const ex = new McpExecutor();
+    seed(ex);
+    await expectFail(ex, "add_clips", { entries: [] }, /entries is required/);
+    await expectFail(ex, "add_clips", { entries: [{ mediaRef: "vid1", startFrame: 0, durationFrames: 30, trimEndFrame: 10 }] }, /mutually exclusive/);
+    await expectFail(ex, "add_clips", { entries: [{ mediaRef: "vid1", startFrame: 0, durationFrames: 30, trackIndex: 0 }, { mediaRef: "vid1", startFrame: 40, durationFrames: 30 }] }, /every entry or none/);
+    await expectFail(ex, "ripple_delete_ranges", { ranges: [[0, 10]] }, /exactly one of/);
+    await expectFail(ex, "ripple_delete_ranges", { trackIndex: 0, units: "seconds", ranges: [[0, 10]] }, /requires units 'frames'/);
   });
 });
