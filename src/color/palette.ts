@@ -70,6 +70,50 @@ function toHex([r, g, b]: [number, number, number]): string {
   return "#" + [r, g, b].map((v) => Math.round(v).toString(16).padStart(2, "0")).join("");
 }
 
+/** Decode RGB frames from a specific [startSec, endSec) window (for per-beat / per-segment palettes). */
+function decodeRgbWindow(path: string, startSec: number, endSec: number, frames: number, ffmpegPath = ffmpegBin()): Promise<Uint8Array> {
+  const dur = Math.max(0.05, endSec - startSec);
+  const rate = Math.max(0.1, frames / dur);
+  return new Promise((resolve, reject) => {
+    const ff = spawn(ffmpegPath, [
+      "-v", "error", "-ss", String(startSec), "-t", String(dur), "-i", path,
+      "-vf", `fps=${rate.toFixed(4)},scale=${SIZE}:${SIZE}:force_original_aspect_ratio=increase,crop=${SIZE}:${SIZE}`,
+      "-frames:v", String(frames), "-f", "rawvideo", "-pix_fmt", "rgb24", "-",
+    ], { stdio: ["ignore", "pipe", "pipe"] });
+    const chunks: Buffer[] = [];
+    let err = "";
+    ff.stdout.on("data", (d: Buffer) => chunks.push(d));
+    ff.stderr.on("data", (d: Buffer) => { err += d.toString(); });
+    ff.on("error", reject);
+    ff.on("close", (code) => {
+      const buf = Buffer.concat(chunks);
+      if (buf.length === 0) return reject(new Error(`ffmpeg RGB window decode produced no pixels (${code}): ${err.slice(0, 200)}`));
+      resolve(new Uint8Array(buf));
+    });
+  });
+}
+
+function paletteFromRgb(rgb: Uint8Array, colors: number): Palette {
+  const total = Math.floor(rgb.length / 3);
+  const boxes = medianCut(rgb, Math.max(1, colors));
+  const swatches: Swatch[] = boxes
+    .filter((b) => b.pixels.length > 0)
+    .map((b) => {
+      let r = 0, g = 0, bl = 0;
+      for (const i of b.pixels) { r += rgb[i * 3]; g += rgb[i * 3 + 1]; bl += rgb[i * 3 + 2]; }
+      const rgbAvg: [number, number, number] = [r / b.pixels.length, g / b.pixels.length, bl / b.pixels.length];
+      return { hex: toHex(rgbAvg), rgb: rgbAvg.map(Math.round) as [number, number, number], weight: b.pixels.length / total };
+    })
+    .sort((a, b) => b.weight - a.weight);
+  return { swatches };
+}
+
+/** Per-window palette (e.g. one beat/segment) — same median-cut, restricted to [startSec, endSec). */
+export async function extractPaletteWindow(path: string, startSec: number, endSec: number, colors = 4, sampleFrames = 3, ffmpegPath = ffmpegBin()): Promise<Palette> {
+  const rgb = await decodeRgbWindow(path, startSec, endSec, Math.max(1, sampleFrames), ffmpegPath);
+  return paletteFromRgb(rgb, colors);
+}
+
 /** Extract an N-colour palette (default 6) from a media file, sorted by prominence. */
 export async function extractPalette(path: string, colors = 6, sampleFrames = 4, ffmpegPath = ffmpegBin()): Promise<Palette> {
   const rgb = await decodeRgb(path, Math.max(1, sampleFrames), ffmpegPath);

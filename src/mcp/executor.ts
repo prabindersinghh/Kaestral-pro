@@ -22,6 +22,7 @@ import { SkillStore } from "./skills";
 import { extractWaveform, type WaveformEnvelope } from "../audio/waveform";
 import { analyzeBeats } from "../audio/beats";
 import { extractPalette } from "../color/palette";
+import { extractMotionSpec } from "../motion/matchMotion";
 import { extractFrames, type SampleMode } from "../vision/frames";
 import { transcribe, whisperAvailable, type TranscriptWord } from "../audio/transcribe";
 import { generate, type GenConfig, type GenKind } from "../gen/hosted";
@@ -305,6 +306,19 @@ export class McpExecutor {
     return okJson({
       swatches: pal.swatches.map((s) => ({ hex: s.hex, rgb: s.rgb, weight: Number(s.weight.toFixed(3)) })),
       note: "Sorted by prominence. Use these for on-brand text colors (add_texts textStyle) and grading targets (apply_color).",
+    });
+  }
+
+  // match_motion — extract a reference clip's motion STRUCTURE (beat/cut boundaries, per-beat palette,
+  // per-beat camera-motion class via coarse optical flow) into a MotionSpec JSON that the Cinematic
+  // Reel preset can consume to auto-time a film to the reference. Timing/structure, not a video cloner.
+  private async matchMotion(a: Args): Promise<ToolResult> {
+    const path = this.mediaPathFor(a);
+    if (!path) throw new ToolFail("match_motion: provide a resolvable mediaRef or clipId (call get_media/get_timeline first).");
+    const spec = await extractMotionSpec(path, { fps: this.fps });
+    return okJson({
+      ...spec,
+      note: "MotionSpec feeds the Cinematic Reel preset: beats → transitionOut timing; camera (push-in/pull-back → camera.move; pan → a whip/pan transition) → each beat's move; per-beat palette → meta.palette. Coarse structure extractor, not a frame-perfect clone.",
     });
   }
 
@@ -627,7 +641,7 @@ export class McpExecutor {
     const READ_ONLY = new Set([
       "get_timeline", "get_media", "inspect_media", "get_transcript", "inspect_timeline",
       "search_media", "inspect_color", "list_folders", "list_models", "send_feedback", "export_project",
-      "list_skills", "read_skill", "analyze_audio", "extract_palette", "see_video", "get_transcript",
+      "list_skills", "read_skill", "analyze_audio", "extract_palette", "match_motion", "see_video", "get_transcript",
     ]);
     try {
       const result = await this.run(name, args ?? {});
@@ -657,6 +671,7 @@ export class McpExecutor {
       // Analysis + perception (Kaestral extension)
       case "analyze_audio": return this.analyzeAudio(a);
       case "extract_palette": return this.extractPalette(a);
+      case "match_motion": return this.matchMotion(a);
       case "see_video": return this.seeVideo(a);
       // Read
       case "get_timeline": return this.getTimeline(a);

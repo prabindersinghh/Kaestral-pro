@@ -54,7 +54,7 @@ describe("Stage-C: MCP HTTP transport (kaestral on 127.0.0.1)", () => {
     expect(names).toContain("extract_palette");
     expect(names).toContain("see_video");
     expect(names).toContain("import_from_url");
-    expect(json.result.tools.length).toBe(50); // 41 frozen + skills(2) + motion(3) + analysis(3) + import_from_url
+    expect(json.result.tools.length).toBe(51); // 41 frozen + skills(2) + motion(3) + analysis(5: analyze_audio, extract_palette, match_motion, import_from_url, see_video)
   });
 
   it("tools/call get_timeline returns canGenerate:false", async () => {

@@ -60,7 +60,7 @@ describe("Stage-C: MCP stdio transport (npx kaestral default mode)", () => {
     expect(parsed.result.capabilities.tools).toBeDefined();
   });
 
-  it("tools/list returns the full tool array (50 tools) over stdout", async () => {
+  it("tools/list returns the full tool array (51 tools) over stdout", async () => {
     const id = nextId++;
     send({ jsonrpc: "2.0", id, method: "tools/list", params: {} });
     await waitForLines(2);
@@ -72,7 +72,7 @@ describe("Stage-C: MCP stdio transport (npx kaestral default mode)", () => {
     expect(names).toContain("read_skill");
     expect(names).toContain("generate_motion");
     expect(names).toContain("analyze_audio");
-    expect(parsed.result.tools.length).toBe(50);
+    expect(parsed.result.tools.length).toBe(51);
   });
 
   it("a notification (no id) produces no stdout line", async () => {

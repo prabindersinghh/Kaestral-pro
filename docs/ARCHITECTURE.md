@@ -66,8 +66,8 @@ appear live in the window.
 - **HTTP** (`npx kaestral --http`, or the desktop app's own server): POST /mcp on 127.0.0.1:19789, plus
   it serves media/waveforms to the app's preview. Used by the in-app flow and http-transport clients.
 
-`ALL_TOOL_DEFS` in `toolDefs.ts` = the **50 tools** (`TOOL_DEFS` 41 + `SKILL_TOOL_DEFS` 2 +
-`MOTION_TOOL_DEFS` 3 + `ANALYSIS_TOOL_DEFS` 4). The 41 are a frozen name/schema contract mirrored from
+`ALL_TOOL_DEFS` in `toolDefs.ts` = the **51 tools** (`TOOL_DEFS` 41 + `SKILL_TOOL_DEFS` 2 +
+`MOTION_TOOL_DEFS` 3 + `ANALYSIS_TOOL_DEFS` 5). The 41 are a frozen name/schema contract mirrored from
 the upstream Swift `ToolDefinitions`. Full reference: [MCP-TOOLS.md](./MCP-TOOLS.md).
 
 ## The generative motion surface (the differentiator)

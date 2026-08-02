@@ -72,7 +72,7 @@ Static site in `landing/` (self-contained `index.html` + `pricing.html`), deploy
 - All links → `github.com/prabindersinghh/Kaestral-pro`; Download → `/releases/latest`; Vercel
   Analytics + `download_click`/`pro_waitlist_submit` events; Pro waitlist wired to Formspree; a 3-step
   "How it works" (Install → Connect Claude → Describe your edit) with the one-command connect.
-- **Expanded content:** an 8-audience **Use Cases** section, a full **Capabilities / 50-tools** section
+- **Expanded content:** an 8-audience **Use Cases** section, a full **Capabilities / 51-tools** section
   (tool names visible; Pro marked "coming"), and a **Pricing** page (Basic defined/free, Pro defined/
   coming, Max deliberately mysterious — **no prices**, waitlist CTAs).
 - **Local-first privacy** stated prominently (landing + in-app), honest about the two exceptions.

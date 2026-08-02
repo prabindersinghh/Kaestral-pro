@@ -792,6 +792,14 @@ export const ANALYSIS_TOOL_DEFS: ToolDef[] = [
     }),
   },
   {
+    name: "match_motion",
+    description: "Match motion from a REFERENCE clip: extract its beat/cut structure, dominant palette PER BEAT, and per-beat camera-motion class (static / push-in / pull-back / pan) via coarse optical flow — returned as a MotionSpec JSON. Feed it into the Cinematic Reel preset (compose_motion) to auto-time a film to the reference: beats → transitionOut timing; camera → each beat's camera.move (push-in/pull-back) or a pan/whip transition; per-beat palette → meta.palette. This is a timing/STRUCTURE extractor, not a frame-perfect video cloner. Give a mediaRef or a clipId.",
+    inputSchema: obj({
+      mediaRef: str("Reference video asset id (from get_media)."),
+      clipId: str("Timeline clip id (from get_timeline) — analyze that clip instead."),
+    }),
+  },
+  {
     name: "import_from_url",
     description: "Download a video from a URL (YouTube, Vimeo, a direct link, …) and place it on the timeline. Uses the user's installed yt-dlp (not bundled); if it's missing, returns a clear install message. Give a `url`; place=false to only add it to the library.",
     inputSchema: obj({
