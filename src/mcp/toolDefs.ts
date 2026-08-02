@@ -586,9 +586,9 @@ export const TOOL_DEFS: ToolDef[] = [
   {
     name: "export_project",
     description:
-      "Exports from the current project. mode: video (H.264/H.265/ProRes), xml (XMEML→Premiere), fcpxml (→Resolve/FCP), kaestral (.kaestral package). Omit outputPath to write to ~/Downloads.",
+      "Exports from the current project. mode: video (H.264/H.265/ProRes), xml (XMEML→Premiere), fcpxml (→Resolve/FCP), srt (SubRip captions from the text/caption clips), kaestral (.kaestral package). Omit outputPath to write to ~/Downloads.",
     inputSchema: obj({
-      mode: enumStr(["video", "xml", "fcpxml", "kaestral"], "Optional. Default video."),
+      mode: enumStr(["video", "xml", "fcpxml", "srt", "kaestral"], "Optional. Default video."),
       codec: enumStr(["H.264", "H.265", "ProRes"], "Video mode only. Default H.264."),
       resolution: enumStr(["720p", "1080p", "2K", "4K", "Match Timeline"], "Video mode only. Default Match Timeline."),
       outputPath: str("Optional. Absolute destination path."),

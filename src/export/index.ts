@@ -3,3 +3,4 @@ export * from "./timecode";
 export * from "./resolver";
 export * from "./xml";
 export * from "./fcpxml";
+export * from "./srt";

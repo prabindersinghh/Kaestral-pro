@@ -153,6 +153,26 @@ describe("Stage-D (pure): export_project interchange modes", () => {
     // mode:video renders via FFmpeg — covered end-to-end in src/render/__tests__/render.test.ts.
   });
 
+  it("export_project mode:'srt' writes SubRip captions from the timeline's text clips", async () => {
+    const root = mkdtempSync(join(tmpdir(), "kaestral-srt-"));
+    const ex = new McpExecutor({ fs: nodePackageFS(), projectDir: root });
+    await ex.execute("add_texts", { entries: [
+      { startFrame: 0, durationFrames: 30, content: "Hello" },
+      { startFrame: 60, durationFrames: 30, content: "World" },
+    ] });
+    const out = join(root, "captions.srt");
+    const r = await ex.execute("export_project", { mode: "srt", outputPath: out });
+    expect(r.isError).toBeFalsy();
+    const srt = readFileSync(out, "utf8");
+    expect(srt).toContain("1\n00:00:00,000 --> 00:00:01,000\nHello");
+    expect(srt).toContain("World");
+    // A timeline with no captions gives a clear error, not an empty file.
+    const empty = new McpExecutor({ fs: nodePackageFS(), projectDir: root });
+    const er = await empty.execute("export_project", { mode: "srt", outputPath: join(root, "none.srt") });
+    expect(er.isError).toBe(true);
+    expect(er.content[0].text).toMatch(/no caption/i);
+  });
+
   it("mcp-8: export_project overwrite:false refuses to clobber an existing destination", async () => {
     const root = mkdtempSync(join(tmpdir(), "kaestral-ovw-"));
     const ex = new McpExecutor({ fs: nodePackageFS(), projectDir: root });

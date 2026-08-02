@@ -103,7 +103,7 @@ hiring an editor.
 - **Motion graphics** — bespoke, art-directed compositions (`compose_motion`) + fast canvas titles.
 - **Color** — grade with wheels, curves, LUTs, temperature.
 - **Import from anywhere** — files, drag-drop, or a URL (`import_from_url`, via your `yt-dlp`).
-- **Export** — H.264 / H.265 / ProRes, plus **Premiere (XMEML)** and **Resolve/FCP (FCPXML)**.
+- **Export** — H.264 / H.265 / ProRes, plus **Premiere (XMEML)**, **Resolve/FCP (FCPXML)**, and **SubRip captions (SRT)**.
 - **Editing playbooks (skills)** — art-direction, viral-reel, beat-sync, creative-director, captions,
   b-roll, platform-delivery, promo/ad. The AI reads them and follows pro workflows.
 

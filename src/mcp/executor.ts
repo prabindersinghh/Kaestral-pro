@@ -13,7 +13,7 @@ import { buildGetTimelineOutput } from "./getTimelineOutput";
 import { totalFrames } from "../model/helpers";
 import { MediaLibrary } from "./mediaLibrary";
 import { writeProjectPackage, type PackageFS } from "../project/package";
-import { exportXMEML, exportFCPXML, libraryResolver } from "../export";
+import { exportXMEML, exportFCPXML, exportSRT, libraryResolver } from "../export";
 import { applyColorGrade, applyEffectStack, type ColorArgs, type EffectSpec } from "../model/effectStack";
 import { resolveRenderMediaPath } from "../render/mediaPath";
 import { encodeTimeline, decodeTimeline } from "../model/codec";
@@ -1443,7 +1443,7 @@ export class McpExecutor {
   private async exportProject(a: Args): Promise<ToolResult> {
     const mode = aStr(a, "mode") ?? "video";
     const codec = (aStr(a, "codec") ?? "H.264") as VideoCodec;
-    const ext = mode === "kaestral" ? "kaestral" : mode === "xml" ? "xml" : mode === "fcpxml" ? "fcpxml" : codec === "ProRes" ? "mov" : "mp4";
+    const ext = mode === "kaestral" ? "kaestral" : mode === "xml" ? "xml" : mode === "fcpxml" ? "fcpxml" : mode === "srt" ? "srt" : codec === "ProRes" ? "mov" : "mp4";
     const outPath = aStr(a, "outputPath") ?? `${this.projectDir ?? "."}/export.${ext}`;
 
     // overwrite:false — refuse to clobber an existing destination (the flag was previously ignored,
@@ -1474,6 +1474,13 @@ export class McpExecutor {
       const resolver = libraryResolver(this.media, this.projectDir ?? undefined);
       const xml = mode === "xml" ? exportXMEML(this.timeline, resolver) : exportFCPXML(this.timeline, resolver);
       await this.fs.writeText(outPath, xml);
+      return okJson({ mode, outputPath: outPath, status: "written" });
+    }
+    if (mode === "srt") {
+      if (!this.fs) return err("export_project: no filesystem bound in this context.");
+      const srt = exportSRT(this.timeline);
+      if (srt.trim().length === 0) return err("export_project: no caption/text clips on the timeline to export as .srt.");
+      await this.fs.writeText(outPath, srt);
       return okJson({ mode, outputPath: outPath, status: "written" });
     }
     // video: rasterize the composited frames and encode with FFmpeg. Renders inline (a port
