@@ -209,6 +209,22 @@ describe("Stage-B core: add/insert/speed/undo", () => {
     expect(byStart[2].id).toBe("B");
   });
 
+  it("insert_clips keeps a linked A/V pair in sync when the partner track is NOT sync-locked (rnd-3)", () => {
+    // Video on t0, its linked audio on t1 with syncLocked OFF (a deliberate unlock). Inserting into
+    // t0 across the pair must still shift the audio partner's right half so A/V stays aligned.
+    const eng = new EditEngine(timeline([
+      track("video", "t0", [clip("V", 0, 50, { linkGroupId: "g" })]),
+      track("audio", "t1", [clip("Aud", 0, 50, { mediaType: "audio", linkGroupId: "g" })], { syncLocked: false }),
+    ]));
+    eng.insertClips([{ mediaRef: "m2", durationFrames: 30 }], 0, 25);
+    const vRight = eng.timeline.tracks[0].clips.find((c) => c.startFrame === 55);
+    const audRight = eng.timeline.tracks[1].clips.find((c) => c.startFrame === 55);
+    expect(vRight).toBeDefined();               // video right half pushed 25 → 55
+    expect(audRight).toBeDefined();              // audio right half pushed in lockstep (was the bug: stayed at 25)
+    expect(vRight!.linkGroupId).toBeDefined();
+    expect(audRight!.linkGroupId).toBe(vRight!.linkGroupId); // still one linked pair
+  });
+
   it("setClipSpeed rescales duration and ripples the contiguous chain", () => {
     const eng = new EditEngine(timeline([track("video", "t0", [clip("A", 0, 100), clip("B", 100, 50)])]));
     eng.setClipSpeed(["A"], 2); // 100 source frames at 2× → 50 timeline frames

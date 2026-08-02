@@ -48,4 +48,18 @@ describe("renderVideo → real playable file (FFmpeg finish line)", () => {
     expect(Number(s.width)).toBe(640);
     expect(Number(s.height)).toBe(360);
   }, 60000);
+
+  it("reports missingMedia when a clip's source can't be decoded (rnd-1 — no silent placeholder export)", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "kaestral-missing-"));
+    const out = join(dir, "out.mp4");
+    const tl: Timeline = {
+      ...defaultTimeline(), fps: 30, width: 320, height: 180,
+      tracks: [{ ...defaultTrack("video", "v"), clips: [defaultClip({ mediaRef: "gone", startFrame: 0, durationFrames: 6, id: "cv", mediaType: "video" })] }],
+    };
+    // mediaPath points the video clip at a file that doesn't exist → ffmpeg extract fails → the clip
+    // renders as a placeholder tile. The render must still finish, but flag the undecodable media.
+    const res = await renderVideo(tl, { outputPath: out, codec: "H.264", mediaName: (r) => r, mediaPath: (r) => (r === "gone" ? join(dir, "nonexistent.mp4") : null) });
+    expect(res.missingMedia).toContain("gone");
+    expect(existsSync(out)).toBe(true); // a file is still produced (tiles), but the caller now knows it's incomplete
+  }, 60000);
 });

@@ -32,6 +32,9 @@ export interface RenderResult {
   width: number;
   height: number;
   codec: VideoCodec;
+  /** mediaRefs whose pixels could not be decoded and rendered as a placeholder tile (empty on a
+   * clean render). Non-empty means the output shows a color block where real footage should be. */
+  missingMedia: string[];
 }
 
 const even = (n: number): number => Math.max(2, Math.floor(Math.round(n) / 2) * 2);
@@ -122,5 +125,5 @@ export async function renderVideo(timeline: Timeline, opts: RenderOptions): Prom
     await frameSource?.cleanup();
   }
   await closed;
-  return { outputPath: opts.outputPath, frames: total, width: W, height: H, codec };
+  return { outputPath: opts.outputPath, frames: total, width: W, height: H, codec, missingMedia: frameSource ? [...frameSource.missing] : [] };
 }

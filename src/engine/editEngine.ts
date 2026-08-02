@@ -438,9 +438,23 @@ export class EditEngine {
     if (!this.timeline.tracks[trackIndex] || specs.length === 0) return false;
     return this.commit(specs.length === 1 ? "Insert Clip" : "Insert Clips", () => {
       const totalPush = specs.reduce((s, x) => s + x.durationFrames, 0);
-      const pushTracks = this.timeline.tracks
-        .map((_, i) => i)
-        .filter((i) => i === trackIndex || this.timeline.tracks[i].syncLocked);
+      const pushTrackSet = new Set<number>(
+        this.timeline.tracks.map((_, i) => i).filter((i) => i === trackIndex || this.timeline.tracks[i].syncLocked),
+      );
+      // A straddling clip whose link group reaches a track OUTSIDE the push set drags that track in:
+      // splitGroupAt splits every group member regardless of track, so without this the partner's
+      // right half would be split but never shifted → the linked pair (e.g. A/V) loses sync. Mirrors
+      // how rippleDeleteRangesOnTrack folds linked-partner tracks into its clear set.
+      for (const ti of [...pushTrackSet]) {
+        const straddler = this.timeline.tracks[ti].clips.find((c) => c.startFrame < atFrame && atFrame < endFrame(c));
+        if (straddler?.linkGroupId) {
+          for (const pid of this.linkedPartnerIds(straddler.id)) {
+            const pIdx = this.findClip(pid)?.trackIndex;
+            if (pIdx !== undefined) pushTrackSet.add(pIdx);
+          }
+        }
+      }
+      const pushTracks = [...pushTrackSet];
 
       for (const ti of pushTracks) {
         const straddler = this.timeline.tracks[ti].clips.find((c) => c.startFrame < atFrame && atFrame < endFrame(c));

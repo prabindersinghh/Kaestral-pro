@@ -1480,9 +1480,14 @@ export class McpExecutor {
         return resolveRenderMediaPath(asset.source, this.projectDir ?? ".", publicDir());
       },
     });
+    // Surface clips whose pixels couldn't be decoded — they rendered as a placeholder tile, so a
+    // "rendered" status alone would hide that the MP4 shows a color block instead of real footage.
+    const missing = result.missingMedia.map((r) => this.media.asset(r)?.name ?? r);
     return okJson({
       mode: "video", codec: result.codec, outputPath: result.outputPath,
-      frames: result.frames, size: `${result.width}x${result.height}`, status: "rendered",
+      frames: result.frames, size: `${result.width}x${result.height}`,
+      status: missing.length ? "rendered_with_missing_media" : "rendered",
+      ...(missing.length ? { missingMedia: missing, warning: `${missing.length} clip(s) could not be decoded and rendered as a placeholder: ${missing.join(", ")}` } : {}),
     });
   }
 

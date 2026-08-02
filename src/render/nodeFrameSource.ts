@@ -29,6 +29,10 @@ export class NodeFrameSource implements FrameSource {
   private videos = new Map<string, { dir: string; files: string[] }>();
   private cache = new Map<string, FrameImage>();
   private root = "";
+  /** mediaRefs whose pixels could NOT be decoded (unresolved path, ffmpeg failure, or zero frames).
+   * These render as the colored placeholder tile — the caller surfaces them so a "successful" export
+   * of a color block instead of real footage is never reported as a clean render. */
+  readonly missing = new Set<string>();
 
   constructor(
     private readonly mediaPath: (mediaRef: string) => string | null,
@@ -43,13 +47,13 @@ export class NodeFrameSource implements FrameSource {
       if (!isVisual(track.type)) continue;
       for (const clip of track.clips) {
         const path = this.mediaPath(clip.mediaRef);
-        if (!path) continue;
+        if (!path) { this.missing.add(clip.mediaRef); continue; } // unresolved/offline/remote source
         if (clip.mediaType === "image") {
           if (!this.images.has(clip.mediaRef)) {
             try {
               const img = await loadImage(path);
               this.images.set(clip.mediaRef, { image: img as unknown as CanvasImageSource, width: img.width, height: img.height });
-            } catch { /* leave as tile fallback */ }
+            } catch { this.missing.add(clip.mediaRef); /* leave as tile fallback */ }
           }
         } else if (clip.mediaType === "video") {
           await this.extractVideo(clip, path);
@@ -68,6 +72,7 @@ export class NodeFrameSource implements FrameSource {
         "-frames:v", String(count), "-start_number", "0", join(this.root, `${clip.id}_%05d.png`),
       ]);
     } catch (e) {
+      this.missing.add(clip.mediaRef);
       console.error(`[NodeFrameSource] extract failed for ${clip.mediaRef} (${path}): ${e instanceof Error ? e.message : e}`);
       return;
     }
@@ -76,7 +81,7 @@ export class NodeFrameSource implements FrameSource {
       .filter((f) => f.startsWith(`${clip.id}_`) && f.endsWith(".png"))
       .sort();
     if (files.length > 0) this.videos.set(clip.id, { dir: this.root, files });
-    else console.error(`[NodeFrameSource] no frames extracted for ${clip.id} from ${path}`);
+    else { this.missing.add(clip.mediaRef); console.error(`[NodeFrameSource] no frames extracted for ${clip.id} from ${path}`); }
   }
 
   /** Preload the decoded frames this output frame needs (imageFor is sync). */
