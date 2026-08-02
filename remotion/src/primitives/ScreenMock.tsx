@@ -24,7 +24,7 @@ export const ScreenMock: React.FC<PrimitiveProps> = ({ props, frame, fps, width,
   // `layer.animate.<prop>` actually owns, independent of the other (see Text.tsx's fuller comment).
   const animOpacity = enter?.neutralizeOpacity ? 1 : p;
   const translateY = enter?.neutralizePosition ? 0 : interpolate(p, [0, 1], [26, 0]);
-  const scale = enter?.neutralizePosition ? 1 : interpolate(p, [0, 1], [0.94, 1]);
+  const scale = (enter?.neutralizePosition || enter?.neutralizeScale) ? 1 : interpolate(p, [0, 1], [0.94, 1]);
 
   const chromeH = Math.round(boxW * 0.072);
   const contentAspect = 9 / 16; // default content-area aspect if no image loaded yet (16:10-ish window)

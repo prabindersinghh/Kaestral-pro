@@ -35,6 +35,54 @@ describe("validateSceneSpec", () => {
     }
   });
 
+  // Guards against a render CRASH: a 0-frame animate tween makes Remotion's interpolate() throw
+  // "inputRange must be strictly monotonically increasing" (input range [s,s]). The validator must
+  // floor durationFrames to 1 for both scalar tweens and position tweens.
+  it("floors a 0-frame animate.opacity tween to durationFrames 1 (interpolate would otherwise throw)", () => {
+    const spec = { ...minimal, beats: [{ durationInFrames: 60, layers: [{ element: "text", props: { text: "x" }, animate: { opacity: { from: 0, to: 1, startFrame: 0, durationFrames: 0, easing: "linear" } } }] }] };
+    const r = validateSceneSpec(spec);
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.spec.beats[0].layers[0].animate?.opacity?.durationFrames).toBe(1);
+  });
+
+  it("floors a 0-frame animate.position tween to durationFrames 1", () => {
+    const spec = { ...minimal, beats: [{ durationInFrames: 60, layers: [{ element: "text", props: { text: "x" }, animate: { position: { from: { x: 0, y: 0 }, to: { x: 1, y: 1 }, startFrame: 0, durationFrames: 0, easing: "linear" } } }] }] };
+    const r = validateSceneSpec(spec);
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.spec.beats[0].layers[0].animate?.position?.durationFrames).toBe(1);
+  });
+
+  // Guards against a render CRASH: the composition duration = sum of beat durations, validated by
+  // Remotion with allowFloats:false — a fractional beat duration throws at metadata resolution.
+  it("rounds a fractional beat durationInFrames to an integer", () => {
+    const spec = { ...minimal, beats: [{ durationInFrames: 60.5, layers: [{ element: "text", props: { text: "x" } }] }] };
+    const r = validateSceneSpec(spec);
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(Number.isInteger(r.spec.beats[0].durationInFrames)).toBe(true);
+  });
+
+  // Guards against OOM/hang: each beat mounts a <Sequence> tree and the composition runs for the
+  // sum of all beat durations, so beats[]/layers[] must be bounded.
+  it("rejects too many beats with the offending path", () => {
+    const many = { ...minimal, beats: Array.from({ length: 201 }, () => ({ durationInFrames: 8, layers: [{ element: "text", props: { text: "x" } }] })) };
+    const r = validateSceneSpec(many);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toMatch(/beats/);
+  });
+
+  it("rejects too many layers in one beat with the offending path", () => {
+    const many = { ...minimal, beats: [{ durationInFrames: 60, layers: Array.from({ length: 41 }, () => ({ element: "text", props: { text: "x" } })) }] };
+    const r = validateSceneSpec(many);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toMatch(/beats\[0\]\.layers/);
+  });
+
+  it("accepts a spec exactly at the beat and layer caps (boundary)", () => {
+    const atCap = { meta: { aspect: "16:9", fps: 30 }, beats: Array.from({ length: 200 }, () => ({ durationInFrames: 8, layers: Array.from({ length: 40 }, () => ({ element: "text", props: { text: "x" } })) })) };
+    const r = validateSceneSpec(atCap);
+    expect(r.ok).toBe(true);
+  });
+
   describe("style.anchor / style.font", () => {
     it("accepts anchor:left + font:mono and returns them", () => {
       const spec = {

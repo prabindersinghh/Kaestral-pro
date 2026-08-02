@@ -32,7 +32,7 @@ export const Image: React.FC<PrimitiveProps> = ({ props, frame, fps, width, opac
   // TASK 5 FIX (per-property `animate` "sole driver" contract) — pin ONLY the piece
   // `layer.animate.<prop>` actually owns, independent of the other (see Text.tsx's fuller comment).
   const animOpacity = enter?.neutralizeOpacity ? 1 : p;
-  const scale = enter?.neutralizePosition ? 1 : interpolate(p, [0, 1], [0.92, 1]);
+  const scale = (enter?.neutralizePosition || enter?.neutralizeScale) ? 1 : interpolate(p, [0, 1], [0.92, 1]);
 
   const driftPx = parallax > 0 ? interpolate(frame, [0, fps * 8], [0, width * 0.04 * parallax], { extrapolateRight: "extend" }) : 0;
 

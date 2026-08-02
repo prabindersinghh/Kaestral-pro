@@ -32,16 +32,28 @@ function resolvePanels(raw: unknown): PanelDef[] {
     .filter((p) => p.element !== "");
 }
 
-export const SplitLayout: React.FC<PrimitiveProps> = ({ props, frame, fps, width, height, opacity, blur }) => {
+export const SplitLayout: React.FC<PrimitiveProps> = ({ props, frame, fps, width, height, opacity, blur, position, enter }) => {
   const panels = resolvePanels(props.panels).slice(0, 2); // exactly 2 panels — "split" by definition
   const direction = props.direction === "column" ? "column" : "row";
   const dividerColor = props.dividerColor ? tokenColor(String(props.dividerColor)) : TOKENS.gold;
 
   if (panels.length === 0) return null;
 
+  // Honor enter.delay: this element is a full-frame container, so its internal entrance springs
+  // must start at the layer's authored delay, not always at beat-local frame 0 (an authored
+  // stagger relative to sibling layers was previously silently ignored).
+  const delay = enter?.delay ?? 0;
+  const f = frame - delay;
+
+  // Honor layer.position as an OFFSET from center: a split subdivides the whole frame, so it stays
+  // full-bleed at the default center (0.5,0.5) — offset is 0, identical to before — but an author
+  // who pushes position off-center now shifts the whole split instead of it being ignored.
+  const offX = position ? (position.x - 0.5) * width : 0;
+  const offY = position ? (position.y - 0.5) * height : 0;
+
   // Divider grows in lockstep with the group entrance spring — no separate curve needed, the
   // spring's own easing already reads as a deliberate "grows in" motion.
-  const dividerGrow = spring({ frame, fps, config: { damping: 16, mass: 0.8 } });
+  const dividerGrow = spring({ frame: f, fps, config: { damping: 16, mass: 0.8 } });
 
   return (
     <div
@@ -52,6 +64,7 @@ export const SplitLayout: React.FC<PrimitiveProps> = ({ props, frame, fps, width
         flexDirection: direction,
         opacity,
         filter: blur > 0 ? `blur(${blur}px)` : undefined,
+        transform: offX || offY ? `translate(${offX}px, ${offY}px)` : undefined,
       }}
     >
       {panels.map((panel, i) => {
@@ -63,7 +76,7 @@ export const SplitLayout: React.FC<PrimitiveProps> = ({ props, frame, fps, width
         const STAGGER = 8;
         const panelDelay = STAGGER * i;
         const slideFrom = direction === "row" ? (i === 0 ? -1 : 1) : i === 0 ? -1 : 1;
-        const panelP = spring({ frame: frame - panelDelay, fps, config: { damping: 16, mass: 0.8 } });
+        const panelP = spring({ frame: f - panelDelay, fps, config: { damping: 16, mass: 0.8 } });
         const translate = interpolate(panelP, [0, 1], [slideFrom * 24, 0]);
         const panelOpacity = panelP;
 
@@ -80,7 +93,7 @@ export const SplitLayout: React.FC<PrimitiveProps> = ({ props, frame, fps, width
           >
             <Primitive
               props={panel.props ?? {}}
-              frame={Math.max(0, frame - panelDelay)}
+              frame={Math.max(0, f - panelDelay)}
               fps={fps}
               width={width / (direction === "row" ? 2 : 1)}
               height={height / (direction === "column" ? 2 : 1)}

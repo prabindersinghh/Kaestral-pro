@@ -574,7 +574,9 @@ function validateTween(value: unknown, path: string, range: [number, number]): T
   const from = clamp(obj.from, min, max, min);
   const to = clamp(obj.to, min, max, max);
   const startFrame = clamp(obj.startFrame, 0, 600, 0);
-  const durationFrames = clamp(obj.durationFrames, 0, 600, 30);
+  // Min 1: a 0-frame tween yields interpolate() inputRange [s,s], which Remotion rejects
+  // ("inputRange must be strictly monotonically increasing") and aborts the whole render.
+  const durationFrames = clamp(obj.durationFrames, 1, 600, 30);
   const easing = validateEasing(obj.easing, `${path}.easing`);
   return { from, to, startFrame, durationFrames, easing };
 }
@@ -601,7 +603,8 @@ function validatePositionTween(value: unknown, path: string): PositionTween {
   const from = validatePositionTweenPoint(obj.from, `${path}.from`);
   const to = validatePositionTweenPoint(obj.to, `${path}.to`);
   const startFrame = clamp(obj.startFrame, 0, 600, 0);
-  const durationFrames = clamp(obj.durationFrames, 0, 600, 30);
+  // Min 1: see validateTween — a 0-frame span makes Remotion's interpolate() throw.
+  const durationFrames = clamp(obj.durationFrames, 1, 600, 30);
   const easing = validateEasing(obj.easing, `${path}.easing`);
   return { from, to, startFrame, durationFrames, easing };
 }
@@ -825,10 +828,17 @@ function validateBeat(value: unknown, path: string, opts: ValidateOpts | undefin
   const obj = value as Record<string, unknown>;
   checkUnknownKeys(obj, BEAT_KEYS, path);
 
-  const durationInFrames = clamp(obj.durationInFrames, 8, 600, 60);
+  // Round to an integer: the composition duration = sum of beat durations, and Remotion's
+  // durationInFrames validation runs with allowFloats:false — a fractional beat (e.g. 60.5)
+  // throws at metadata resolution, before any frame renders. Round only here, NOT inside
+  // clamp(), which is shared by legitimately fractional fields (position, camera amount, size).
+  const durationInFrames = Math.round(clamp(obj.durationInFrames, 8, 600, 60));
 
   if (!Array.isArray(obj.layers) || obj.layers.length === 0) {
     fail(`${path}.layers`, "must be a non-empty array");
+  }
+  if ((obj.layers as unknown[]).length > MAX_LAYERS_PER_BEAT) {
+    fail(`${path}.layers`, `must have at most ${MAX_LAYERS_PER_BEAT} layers, got ${(obj.layers as unknown[]).length}`);
   }
   const layers = (obj.layers as unknown[]).map((l, i) => validateLayer(l, `${path}.layers[${i}]`, opts));
 
@@ -859,6 +869,14 @@ const MAX_BEAT_MARKER_FRAME = 100000;
 // circles, shine sweep's single tint, strikethrough's glow) plenty of variety without an unbounded
 // list.
 const MAX_PALETTE_COLORS = 6;
+
+// Structural caps on scene size. Unlike palette/beatMarkers (tuning knobs that clamp), an
+// oversized beats[]/layers[] is a malformed spec: each beat mounts a Remotion <Sequence> tree and
+// the composition runs for the SUM of all beat durations, so an unbounded count is an OOM/hang
+// vector. 200 beats (even at the 8-frame min that's ~26s of cuts) and 40 layers/beat sit far above
+// any real film, so a valid clip is never rejected — we fail loud with the path instead.
+const MAX_BEATS = 200;
+const MAX_LAYERS_PER_BEAT = 40;
 
 /**
  * Validates `meta.handheld` (Cinematic Reel pack effect #1) — either a plain `boolean` (on/off at
@@ -954,6 +972,9 @@ export function validateSceneSpec(input: unknown, opts?: ValidateOpts): Validati
 
     if (!Array.isArray(obj.beats) || obj.beats.length === 0) {
       fail("beats", "must be a non-empty array");
+    }
+    if ((obj.beats as unknown[]).length > MAX_BEATS) {
+      fail("beats", `must have at most ${MAX_BEATS} beats, got ${(obj.beats as unknown[]).length}`);
     }
     const beats = (obj.beats as unknown[]).map((b, i) => validateBeat(b, `beats[${i}]`, opts));
 

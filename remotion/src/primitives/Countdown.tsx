@@ -7,14 +7,17 @@ import { TOKENS, tokenColor } from "./tokens";
 // down to 1) over `props.stepFrames` (default 16) frames each — quick and punchy, matching the
 // "stinger" quality bar (masked reveals / stingers) rather than a slow counter reveal.
 
-export const Countdown: React.FC<PrimitiveProps> = ({ props, frame, fps, height, opacity, blur, position, style }) => {
+export const Countdown: React.FC<PrimitiveProps> = ({ props, frame, fps, height, opacity, blur, position, style, enter }) => {
   const from = typeof props.from === "number" ? Math.max(1, Math.round(props.from)) : 3;
   const stepFrames = typeof props.stepFrames === "number" ? Math.max(6, Math.round(props.stepFrames)) : 16;
   const accent = props.accent ? tokenColor(String(props.accent)) : TOKENS.greenHi;
 
-  const step = Math.min(from - 1, Math.floor(frame / stepFrames));
+  // Honor enter.delay: hold at the pre-entrance state until the authored delay, then start the
+  // 3-2-1. Clamped to 0 so a negative (pre-delay) frame reads as "not started yet", not a bogus digit.
+  const f = Math.max(0, frame - (enter?.delay ?? 0));
+  const step = Math.min(from - 1, Math.floor(f / stepFrames));
   const digit = from - step;
-  const localFrame = frame - step * stepFrames;
+  const localFrame = f - step * stepFrames;
 
   // Overshoot punch-in: scale rockets past 1 then settles, opacity snaps in fast.
   const p = spring({ frame: localFrame, fps, config: { damping: 10, mass: 0.5, stiffness: 180 } });

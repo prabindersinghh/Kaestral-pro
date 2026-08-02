@@ -28,7 +28,7 @@ function resolveCells(raw: unknown): CellDef[] {
 
 const STAGGER = 6;
 
-export const GridLayout: React.FC<PrimitiveProps> = ({ props, frame, fps, width, height, opacity, blur }) => {
+export const GridLayout: React.FC<PrimitiveProps> = ({ props, frame, fps, width, height, opacity, blur, position, enter }) => {
   const kind = props.kind === "filmstrip" ? "filmstrip" : "grid";
   const cells = resolveCells(props.cells).slice(0, kind === "grid" ? 4 : 6);
   if (cells.length === 0) return null;
@@ -37,6 +37,13 @@ export const GridLayout: React.FC<PrimitiveProps> = ({ props, frame, fps, width,
   const rows = kind === "filmstrip" ? 1 : Math.ceil(cells.length / 2);
   const cellW = width / cols;
   const cellH = height / rows;
+
+  // Honor enter.delay (full-frame container — internal cell springs must respect the authored
+  // stagger) and layer.position as a center-offset (0 at default center → no regression).
+  const delay = enter?.delay ?? 0;
+  const f = frame - delay;
+  const offX = position ? (position.x - 0.5) * width : 0;
+  const offY = position ? (position.y - 0.5) * height : 0;
 
   return (
     <div
@@ -48,12 +55,13 @@ export const GridLayout: React.FC<PrimitiveProps> = ({ props, frame, fps, width,
         gridTemplateRows: `repeat(${rows}, 1fr)`,
         opacity,
         filter: blur > 0 ? `blur(${blur}px)` : undefined,
+        transform: offX || offY ? `translate(${offX}px, ${offY}px)` : undefined,
       }}
     >
       {cells.map((cell, i) => {
         const Primitive = getPrimitive(cell.element);
         const cellDelay = STAGGER * i;
-        const p = spring({ frame: frame - cellDelay, fps, config: { damping: 16, mass: 0.75 } });
+        const p = spring({ frame: f - cellDelay, fps, config: { damping: 16, mass: 0.75 } });
         const scale = interpolate(p, [0, 1], [0.85, 1]);
         const cellOpacity = p;
         const col = i % cols;
@@ -74,7 +82,7 @@ export const GridLayout: React.FC<PrimitiveProps> = ({ props, frame, fps, width,
             {Primitive && (
               <Primitive
                 props={cell.props ?? {}}
-                frame={Math.max(0, frame - cellDelay)}
+                frame={Math.max(0, f - cellDelay)}
                 fps={fps}
                 width={cellW}
                 height={cellH}

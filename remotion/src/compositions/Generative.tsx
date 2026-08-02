@@ -472,6 +472,30 @@ function glitchExitStyle(exit: ExitField | undefined, frame: number): React.CSSP
   };
 }
 
+// Default fade/collapse exit ramp length when `exit.durationFrames` is unspecified.
+const EXIT_FADE_FRAMES = 12;
+
+/**
+ * `exit.anim: "fade"` and `"collapse"` — both were valid SceneSpec enum values but had NO
+ * interpreter handler, so an authored fade/collapse exit was a silent no-op: the layer stayed fully
+ * visible past `exit.at` and overlapped whatever followed. `"fade"` ramps opacity 1→0 over the exit
+ * window; `"collapse"` additionally shrinks scale 1→0.6. Composited on the outermost wrapper next to
+ * `glitchExitStyle` (the three are mutually exclusive — `exit.anim` is a single value).
+ */
+function fadeCollapseExitStyle(exit: ExitField | undefined, frame: number): React.CSSProperties | undefined {
+  if (!exit || (exit.anim !== "fade" && exit.anim !== "collapse")) return undefined;
+  const local = frame - exit.at;
+  if (local <= 0) return undefined; // exit hasn't started — render normally
+  const dur = Math.max(1, exit.durationFrames ?? EXIT_FADE_FRAMES);
+  const ease = Easing.bezier(...bezierFromSpec(exit.easing));
+  const opacity = interpolate(local, [0, dur], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: ease });
+  if (exit.anim === "collapse") {
+    const scale = interpolate(local, [0, dur], [1, 0.6], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: ease });
+    return { opacity, transform: `scale(${scale})`, transformOrigin: "50% 50%" };
+  }
+  return { opacity };
+}
+
 const BeatLayer: React.FC<{
   layer: Layer;
   frame: number;
@@ -532,10 +556,17 @@ const BeatLayer: React.FC<{
   const isEdgeFlipEnter = resolvedEnterBase.anim === "edgeFlip";
   const neutralizeOpacity = !!layer.animate?.opacity || isEdgeFlipEnter;
   const neutralizePosition = !!layer.animate?.position || isEdgeFlipEnter;
+  // Same "sole driver" contract for SCALE: primitives drive an internal entrance spring scale
+  // (Shape 0.6→1, Image/Video/ScreenMock 0.92→1, Text spring from:'scale') even on the DEFAULT
+  // entrance. When `animate.scale` (an outer CSS scale wrapper) is also authored, the two multiply
+  // into a compounding double-pop — so pin the primitive's internal scale to 1 and let the tween own
+  // it. edgeFlip likewise needs scale pinned so only the wrapper flip is visible.
+  const neutralizeScale = !!layer.animate?.scale || isEdgeFlipEnter;
   const resolvedEnter: EnterSpec = {
     ...resolvedEnterBase,
     neutralizeOpacity,
     neutralizePosition,
+    neutralizeScale,
   };
 
   // TASK 5 UPGRADE — explicit `layer.hold`: during [hold.startFrame, hold.startFrame+durationFrames]
@@ -578,12 +609,15 @@ const BeatLayer: React.FC<{
   if (animate?.position) {
     const t = animate.position;
     const easingFn = tweenEasing(t.easing);
-    const x = interpolate(animateFrame, [t.startFrame, t.startFrame + t.durationFrames], [t.from.x, t.to.x], {
+    // span floored to 1: interpolate() throws on a zero-width input range [s,s]. The validator
+    // already clamps durationFrames>=1, but this workspace is standalone — guard defensively.
+    const span = Math.max(1, t.durationFrames);
+    const x = interpolate(animateFrame, [t.startFrame, t.startFrame + span], [t.from.x, t.to.x], {
       easing: easingFn,
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
     });
-    const y = interpolate(animateFrame, [t.startFrame, t.startFrame + t.durationFrames], [t.from.y, t.to.y], {
+    const y = interpolate(animateFrame, [t.startFrame, t.startFrame + span], [t.from.y, t.to.y], {
       easing: easingFn,
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
@@ -595,7 +629,7 @@ const BeatLayer: React.FC<{
   let opacity = opacity0;
   if (animate?.opacity) {
     const t = animate.opacity;
-    opacity = interpolate(animateFrame, [t.startFrame, t.startFrame + t.durationFrames], [t.from, t.to], {
+    opacity = interpolate(animateFrame, [t.startFrame, t.startFrame + Math.max(1, t.durationFrames)], [t.from, t.to], {
       easing: tweenEasing(t.easing),
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
@@ -607,7 +641,7 @@ const BeatLayer: React.FC<{
   let blur = blur0;
   if (animate?.blur) {
     const t = animate.blur;
-    blur = interpolate(animateFrame, [t.startFrame, t.startFrame + t.durationFrames], [t.from, t.to], {
+    blur = interpolate(animateFrame, [t.startFrame, t.startFrame + Math.max(1, t.durationFrames)], [t.from, t.to], {
       easing: tweenEasing(t.easing),
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
@@ -620,7 +654,7 @@ const BeatLayer: React.FC<{
   let animateScale: number | undefined;
   if (animate?.scale) {
     const t = animate.scale;
-    animateScale = interpolate(animateFrame, [t.startFrame, t.startFrame + t.durationFrames], [t.from, t.to], {
+    animateScale = interpolate(animateFrame, [t.startFrame, t.startFrame + Math.max(1, t.durationFrames)], [t.from, t.to], {
       easing: tweenEasing(t.easing),
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
@@ -629,7 +663,7 @@ const BeatLayer: React.FC<{
   let animateRotation: number | undefined;
   if (animate?.rotation) {
     const t = animate.rotation;
-    animateRotation = interpolate(animateFrame, [t.startFrame, t.startFrame + t.durationFrames], [t.from, t.to], {
+    animateRotation = interpolate(animateFrame, [t.startFrame, t.startFrame + Math.max(1, t.durationFrames)], [t.from, t.to], {
       easing: tweenEasing(t.easing),
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
@@ -807,13 +841,20 @@ const BeatLayer: React.FC<{
   // opacity by the passed-in `opacity`), so it's not reapplied here — only the glitch burst's own
   // opacity (an independent EXIT effect, not the authored layer opacity) touches this wrapper.
   const glitchStyle = glitchExitStyle(layer.exit, frame);
+  // fade/collapse exit ramp (mutually exclusive with glitch — exit.anim is a single value).
+  const fadeStyle = fadeCollapseExitStyle(layer.exit, frame);
+  const wrapperTransform = [
+    parallaxPx ? `translateX(${parallaxPx}px)` : "",
+    fadeStyle?.transform ?? "",
+  ].filter(Boolean).join(" ") || undefined;
 
   return (
     <div
       style={{
         position: "absolute",
         inset: 0,
-        transform: parallaxPx ? `translateX(${parallaxPx}px)` : undefined,
+        transform: wrapperTransform,
+        ...(fadeStyle ? { opacity: fadeStyle.opacity, transformOrigin: fadeStyle.transformOrigin } : {}),
         ...glitchStyle,
       }}
     >

@@ -42,6 +42,13 @@ export interface EnterSpec {
    */
   neutralizeOpacity?: boolean;
   neutralizePosition?: boolean;
+  /**
+   * Companion to the two above, for SCALE. When `layer.animate.scale` (an outer CSS scale wrapper in
+   * the interpreter) is authored, a primitive that drives an internal entrance spring scale must pin
+   * that scale to 1 so the two don't multiply into a compounding double-pop. Kept SEPARATE from
+   * `neutralizePosition` so a scale-animated layer keeps its legitimate entrance translate/slide-in.
+   */
+  neutralizeScale?: boolean;
 }
 
 export interface StyleSpec {

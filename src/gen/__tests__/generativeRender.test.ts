@@ -955,4 +955,87 @@ describe("Generative render", () => {
     const beat2Frame = await frameThumbnailBytes(out, 130);
     expect(framesDiffer(beat1Frame, beat2Frame)).toBe(true);
   }, 240000);
+
+  // interp-2 — exit.anim:"fade" was a VALID SceneSpec enum value with NO interpreter handler, so an
+  // authored fade exit was a silent no-op: the layer stayed fully visible past exit.at and overlapped
+  // whatever followed (the "elements overlapping" reputational failure). This proves the layer's
+  // region actually darkens after its exit window (and before the beat's own out-fade confound).
+  it("renders a fade exit that actually darkens the layer (interp-2 — fade/collapse were silent no-ops)", async () => {
+    const v = validateSceneSpec({
+      meta: { aspect: "16:9", fps: 30 },
+      beats: [
+        {
+          durationInFrames: 60,
+          background: { kind: "solid", accent: "#0b0a0d" }, // solid black isolates the text's own luma
+          layers: [
+            {
+              element: "text",
+              props: { text: "EXIT" },
+              style: { role: "display", size: 0.2 },
+              position: { x: 0.5, y: 0.5 },
+              enter: { anim: "fade" }, // settled by ~frame 12, before the exit at 20
+              exit: { anim: "fade", at: 20, durationFrames: 8 }, // fully faded by frame 28
+            },
+          ],
+        },
+      ],
+    });
+    expect(v.ok).toBe(true);
+    if (!v.ok) return;
+    const out = join(remotionDir, ".test-out", "gen-fade-exit.mp4");
+    const res = await renderRemotion("Generative", { spec: v.spec }, out, remotionDir);
+    expect(res.width).toBe(1920);
+    expect(statSync(out).size).toBeGreaterThan(10000);
+
+    const ffmpegAvailable = await checkFfmpegAvailable();
+    if (!ffmpegAvailable) return; // render success already proves the spec is legal + fade is wired
+    const crop = { x: 1920 * 0.35, y: 1080 * 0.4, w: 1920 * 0.3, h: 1080 * 0.2 };
+    const beforeExit = await meanLumaOfCrop(out, 18, crop); // pre-exit, settled — text bright
+    const afterExit = await meanLumaOfCrop(out, 36, crop);  // past exit end (28), before beat out-fade (42)
+    // The fade must have visibly reduced the layer's brightness. If fade were still a no-op the text
+    // would remain fully bright and these would be ~equal.
+    expect(afterExit).toBeLessThan(beforeExit - 5);
+  }, 240000);
+
+  // interp-3 + val-3 — a splitLayout authored with an off-center position + enter.delay, a countdown
+  // with enter.delay, and a scale-animated shape on its DEFAULT entrance (which would otherwise
+  // compound the primitive's own internal spring scale into a double-pop). Proves all three legal
+  // spec shapes render without throwing (previously position/delay were silently ignored; the
+  // scale-animate had no neutralizeScale pin).
+  it("renders splitLayout(position+delay) + countdown(delay) + scale-animated shape without error (interp-3/val-3)", async () => {
+    const v = validateSceneSpec({
+      meta: { aspect: "9:16", fps: 30 },
+      beats: [
+        {
+          durationInFrames: 70,
+          background: { kind: "solid", accent: "#0b0a0d" },
+          layers: [
+            {
+              element: "splitLayout",
+              props: { direction: "row", panels: [{ element: "text", props: { text: "A" } }, { element: "text", props: { text: "B" } }] },
+              position: { x: 0.4, y: 0.5 },
+              enter: { anim: "spring", delay: 12 },
+            },
+            {
+              element: "shape",
+              props: { shape: "circle", fill: "#16b16a" },
+              position: { x: 0.5, y: 0.8 },
+              animate: { scale: { from: 0.5, to: 1, startFrame: 0, durationFrames: 20, easing: "ease-out" } },
+            },
+          ],
+        },
+        {
+          durationInFrames: 60,
+          background: { kind: "solid", accent: "#0b0a0d" },
+          layers: [{ element: "countdown", props: { from: 3, stepFrames: 12 }, position: { x: 0.5, y: 0.5 }, enter: { anim: "fade", delay: 15 } }],
+        },
+      ],
+    });
+    expect(v.ok).toBe(true);
+    if (!v.ok) return;
+    const out = join(remotionDir, ".test-out", "gen-interp3-val3.mp4");
+    const res = await renderRemotion("Generative", { spec: v.spec }, out, remotionDir);
+    expect(res.height).toBe(1920); // 9:16
+    expect(statSync(out).size).toBeGreaterThan(10000);
+  }, 240000);
 });

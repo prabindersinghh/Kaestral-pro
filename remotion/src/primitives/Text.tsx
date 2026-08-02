@@ -143,8 +143,10 @@ export const Text: React.FC<PrimitiveProps> = ({ props, frame, fps, width, heigh
   if (enter?.neutralizePosition) {
     translateX = 0;
     translateY = 0;
-    scale = 1;
   }
+  // Pin scale when EITHER position (legacy) or scale is animate-driven — keeps translateX/Y (a
+  // position concern) free so a scale-animated line still slides in.
+  if (enter?.neutralizePosition || enter?.neutralizeScale) scale = 1;
 
   // TASK 6b1 — text ANCHOR: `text` layers used to unconditionally CENTER on `position` (translate
   // -50%,-50%), which runs a left-column title authored at e.g. x:0.12 off the left edge of the

@@ -37,10 +37,12 @@ export const Shape: React.FC<PrimitiveProps> = ({ props, frame, fps, width, heig
   // pin ONLY the piece `layer.animate.<prop>` actually owns to its settled/rest value, independent
   // of the other — `animate.position` alone must not also kill this primitive's own opacity fade.
   if (enter?.neutralizeOpacity) animOpacity = 1;
-  if (enter?.neutralizePosition) {
+  if (enter?.neutralizePosition) translateY = 0;
+  // Pin scale when EITHER position (legacy) or scale is animate-driven — keeps translateY (a
+  // position concern) free so a scale-animated layer still slides in.
+  if (enter?.neutralizePosition || enter?.neutralizeScale) {
     scaleX = 1;
     scaleY = 1;
-    translateY = 0;
   }
 
   const radius = shape === "circle" ? "50%" : shape === "pill" ? h : shape === "line" ? h / 2 : 8;

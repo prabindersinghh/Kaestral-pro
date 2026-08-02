@@ -6,7 +6,8 @@
 
 import { bundle } from "@remotion/bundler";
 import { selectComposition, renderMedia, ensureBrowser } from "@remotion/renderer";
-import { existsSync, readFileSync, writeFileSync, mkdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, mkdirSync, statSync, readdirSync } from "node:fs";
+import { createHash } from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -63,6 +64,31 @@ function inlineMediaSrcs(spec) {
 }
 if (inputProps && inputProps.spec) inlineMediaSrcs(inputProps.spec);
 
+/**
+ * Content hash of the composition source tree (remotion/src). The bundle cache key MUST reflect the
+ * actual source — a fixed marker meant a shipped fix to the compositions was NEVER re-bundled, so
+ * `compose_motion`/`generate_motion` kept rendering the first-bundled code forever (and render tests
+ * silently exercised a stale bundle). Hashing every .ts/.tsx/.css/.json under src makes the key
+ * change exactly when the code does, and no more (stable across identical builds → no needless
+ * re-bundle / slow cold start).
+ */
+function sourceHash(dir) {
+  const h = createHash("sha256");
+  const walk = (d) => {
+    for (const name of readdirSync(d, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+      const full = path.join(d, name.name);
+      if (name.isDirectory()) { walk(full); continue; }
+      if (!/\.(ts|tsx|css|json)$/.test(name.name)) continue;
+      h.update(path.relative(dir, full));
+      h.update("\0");
+      h.update(readFileSync(full));
+      h.update("\0");
+    }
+  };
+  walk(dir);
+  return h.digest("hex");
+}
+
 async function getServeUrl() {
   // Cache the webpack bundle so only the first render pays the bundling cost. This writes next to
   // render.mjs — which is fine in dev and in the packaged app, because the whole remotion workspace
@@ -72,13 +98,21 @@ async function getServeUrl() {
   const marker = path.join(cacheDir, "serveUrl.txt");
   const entryHashPath = path.join(cacheDir, "entry.txt");
   const entryPoint = path.join(__dirname, "src", "index.ts");
-  if (existsSync(marker) && existsSync(readFileSync(marker, "utf8")) && existsSync(entryHashPath)) {
+  const currentHash = sourceHash(path.join(__dirname, "src"));
+  // Reuse the cache ONLY when the bundle exists AND the stored source hash matches the current
+  // source — otherwise re-bundle so composition edits/fixes actually take effect.
+  if (
+    existsSync(marker) &&
+    existsSync(readFileSync(marker, "utf8")) &&
+    existsSync(entryHashPath) &&
+    readFileSync(entryHashPath, "utf8") === currentHash
+  ) {
     return readFileSync(marker, "utf8");
   }
   mkdirSync(cacheDir, { recursive: true });
   const serveUrl = await bundle({ entryPoint, outDir: path.join(cacheDir, "bundle") });
   writeFileSync(marker, serveUrl);
-  writeFileSync(entryHashPath, "1");
+  writeFileSync(entryHashPath, currentHash);
   return serveUrl;
 }
 
