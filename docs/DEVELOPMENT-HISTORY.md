@@ -91,6 +91,40 @@ Static site in `landing/` (self-contained `index.html` + `pricing.html`), deploy
   provenance in dev docs (`palmier-pro-main/…` Swift paths). None of these present Kaestral *as*
   Palmier.
 
+## 6. Reliability hardening pass (post-launch)
+A comprehensive bug-hunt + fix pass, since a tool an LLM drives has to be trustworthy: a silent
+failure reads as "it worked" and produces a bad result. Four reviewers swept the whole pipeline
+(validator, interpreter/primitives, MCP handlers, render/export/engine); every candidate was
+adversarially re-verified against the real code before fixing. What it fixed:
+- **Two whole-render crashes** — a `0`-frame `animate` tween made Remotion's `interpolate()` throw,
+  and a fractional beat `durationInFrames` failed the composition's integer-duration check; both
+  now clamp/round in `sceneSpec.ts` (plus a defensive floor in the interpreter).
+- **Silent no-ops that read as success** — `exit.anim:"fade"/"collapse"` were valid enums with no
+  handler (elements never left, overlapping later content — now implemented); several MCP mutators
+  reported success on edits that changed nothing (now branch on the engine's real `changed`/track
+  existence); `add_texts`/`update_text` dropped the styling their schema advertised; `captionGroupId`,
+  `hueCurves`, `language`, `cutAggressiveness`, `overwrite`, transcript windowing were all dead.
+- **The undecodable-media trap** — a clip that couldn't decode rendered as a placeholder tile while
+  `export_project` reported a clean `status:"rendered"`. It now surfaces `missingMedia` and a
+  degraded status, so a "successful" export of color blocks is never silently shipped.
+- **The stale-bundle bug** — the Remotion bundle cache used a fixed key, so composition fixes were
+  never re-bundled (shipping first-install code forever, and masking interpreter changes in tests).
+  Now content-hashed (`render.mjs`), and the installer re-mirrors `remotion/src` on every launch
+  (`lib.rs`) so an update actually reaches the writable render dir.
+- **Sweep fixes** — a `Math.max(...env)` spread crashed beat detection on ~50min+ audio; media
+  provenance (generation/import inputs, cached URLs) was dropped on the first save; a legacy
+  transform migration mis-centered scaled clips; a corrupt `project.json` threw a raw parser error.
+- **SRT caption export** — advertised but missing; now implemented (`src/export/srt.ts`,
+  `export_project mode:"srt"`).
+- **Tests at every pipeline point** — the suite grew from 274 to **307** (the previously-untested
+  layout cover-crop solver, apply_layout/arg-validation guards, the caption overlap-clamp, missing
+  media, linked-A/V insert sync, long-audio, project round-trip, SRT).
+
+Reality check: Kaestral is **not yet a flawless MCP** — it's early, and bugs still surface. This
+pass raised the floor; the direction is a genuinely best-in-class harness (hosted, drivable by any
+AI chat) with a first-class generative video engine attached. See the new-developer overview a
+maintainer can share for the plain-language version.
+
 ---
 
 ## Where to look next

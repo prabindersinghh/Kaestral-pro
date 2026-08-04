@@ -89,7 +89,7 @@ Full input schemas (types, required fields, enums) for every tool above live in
 | import_media | ffprobe metadata (verified: real mp4/png) |
 | list_folders / create_folder / move_to_folder / rename_folder / delete_folder | folder CRUD |
 | rename_media / delete_media | media CRUD |
-| export_project | XMEML / FCPXML / .kaestral / **H.264·H.265·ProRes video** (verified real-footage MP4) |
+| export_project | XMEML / FCPXML / SRT captions / .kaestral / **H.264·H.265·ProRes video** (verified real-footage MP4) |
 | set_project_settings | fps/size/etc |
 | send_feedback | records |
 
