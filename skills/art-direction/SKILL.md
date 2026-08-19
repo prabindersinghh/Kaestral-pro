@@ -284,6 +284,8 @@ Eight composable effects tuned specifically for **9:16 vertical** (Reels/Shorts/
 
 **`meta.palette`** (`["#rrggbb", ...]`, up to 6, brand tokens also accepted) is what colors every one of these effects that needs a tint (orbs, shineSweep, strikethrough's glow) — always pull the user's actual brand colors into this field rather than leaving it unset; unset falls back to the engine's own green/gold brand tokens, which is a safe default but not *this* film's brand.
 
+**Matching a reference clip:** when the user hands you a reference video ("make it move like this"), do NOT eyeball it — call **`match_motion`** on the clip first. It returns a MotionSpec: the clip's beat boundaries (start/end frames per beat), a per-beat color palette, and a per-beat camera classification (static / push-in / pull-back / pan + direction). Author your SceneSpec FROM that: beat `durationInFrames` from the beat boundaries, `meta.palette` from the extracted palette, and `camera` moves matching each beat's class. The reference gives you the rhythm and the color; this skill still governs the craft.
+
 ---
 
 ## The bar

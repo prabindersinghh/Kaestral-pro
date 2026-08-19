@@ -5,7 +5,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { createInterface } from "node:readline";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const SERVER_CJS = join(__dirname, "..", "..", "..", "dist-server", "server.cjs");
@@ -46,7 +46,7 @@ describe("Stage-C: MCP stdio transport (npx kaestral default mode)", () => {
     }
   }
 
-  it("initialize handshake returns kaestral 1.0.0 over stdout, with clean framing", async () => {
+  it("initialize handshake returns kaestral at the package.json version over stdout, with clean framing", async () => {
     const id = nextId++;
     send({ jsonrpc: "2.0", id, method: "initialize", params: { protocolVersion: "2025-06-18" } });
     await waitForLines(1);
@@ -56,7 +56,10 @@ describe("Stage-C: MCP stdio transport (npx kaestral default mode)", () => {
     const parsed = JSON.parse(line);
     expect(parsed.jsonrpc).toBe("2.0");
     expect(parsed.id).toBe(id);
-    expect(parsed.result.serverInfo).toEqual({ name: "kaestral", version: "1.0.0" });
+    // Dynamic, not pinned: a hardcoded copy once drifted and told every agent the server was 1.0.0
+    // while npm shipped 1.0.4. This asserts the bundled artifact always carries the real version.
+    const pkgVersion = JSON.parse(readFileSync(join(__dirname, "..", "..", "..", "package.json"), "utf8")).version as string;
+    expect(parsed.result.serverInfo).toEqual({ name: "kaestral", version: pkgVersion });
     expect(parsed.result.capabilities.tools).toBeDefined();
   });
 

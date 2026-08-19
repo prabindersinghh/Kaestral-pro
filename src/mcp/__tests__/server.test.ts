@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { McpServer, MCP_PORT, MCP_HOST } from "../server";
 import { McpExecutor } from "../executor";
 import { TOOL_NAMES } from "../toolDefs";
+import { version as PKG_VERSION } from "../../../package.json";
 
 const PORT = 34567; // distinct from the contract port to avoid collisions during tests
 let server: McpServer;
@@ -30,9 +31,10 @@ describe("Stage-C: MCP HTTP transport (kaestral on 127.0.0.1)", () => {
     expect(MCP_HOST).toBe("127.0.0.1");
   });
 
-  it("initialize returns kaestral 1.0.0 with tools capability", async () => {
+  it("initialize returns kaestral at the package.json version with tools capability", async () => {
     const { json } = await rpc("initialize", { protocolVersion: "2025-06-18" });
-    expect(json.result.serverInfo).toEqual({ name: "kaestral", version: "1.0.0" });
+    // Dynamic, not pinned — the identity every connected agent sees must track the real version.
+    expect(json.result.serverInfo).toEqual({ name: "kaestral", version: PKG_VERSION });
     expect(json.result.capabilities.tools).toBeDefined();
     expect(json.result.capabilities.resources).toBeDefined();
   });

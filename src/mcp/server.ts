@@ -1,6 +1,8 @@
 // MCP HTTP server. Ported from Agent/MCP/MCPHTTPServer.swift + MCPService.swift.
 // Localhost-only (127.0.0.1) on 19789, POST /mcp, GET SSE keep-alive, oauth probe, and the
-// three validators (origin / content-type / protocol-version). Server identity kaestral 1.0.0.
+// three validators (origin / content-type / protocol-version). Server identity "kaestral" at the
+// package.json version (single source — a hardcoded copy here once drifted and told every
+// connected agent the server was 1.0.0 while npm shipped 1.0.4).
 
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { createReadStream } from "node:fs";
@@ -13,12 +15,13 @@ import { publicDir } from "./env";
 import { DEFAULT_MODELS as DEFAULT_GEN_MODELS } from "../gen/hosted";
 import { startVm, stopVm, gpuState as probeGpu, type GpuConfig, type GpuState } from "../gen/gcp";
 import type { McpExecutor } from "./executor";
+import { version as PKG_VERSION } from "../../package.json";
 
 export const MCP_PORT = 19789;
 export const MCP_HOST = "127.0.0.1";
 // The MCP server identifies as "kaestral". (The on-disk project format is now ".kaestral" — that's a
 // data-format contract for opening existing projects, independent of this wire name.)
-const SERVER_INFO = { name: "kaestral", version: "1.0.0" };
+const SERVER_INFO = { name: "kaestral", version: PKG_VERSION };
 const DEFAULT_PROTOCOL = "2025-06-18";
 const SUPPORTED_PROTOCOLS = new Set(["2025-06-18", "2025-03-26", "2024-11-05", DEFAULT_PROTOCOL]);
 
