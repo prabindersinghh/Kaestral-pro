@@ -40,10 +40,10 @@ What Claude can actually do over MCP right now. Categories: **✅ fully wired**
 (real behavior), **🟡 partial**, **⛔ stubbed** (needs infra not in this build), **🔒 signed-out by
 design** (the upstream closed cloud). Verified live over the running MCP server unless noted.
 
-Advertised: **51 tools** = the frozen **41** parity tools + **2** Kaestral Skills extensions
+Advertised: **52 tools** = the frozen **41** parity tools + **2** Kaestral Skills extensions
 (`list_skills`, `read_skill`) + **3** motion-graphics extensions (`generate_title`,
-`generate_motion`, `compose_motion`) + **5** analysis/perception extensions (`analyze_audio`,
-`extract_palette`, `match_motion`, `import_from_url`, `see_video`). Exact count is enforced by a test
+`generate_motion`, `compose_motion`) + **6** analysis/perception extensions (`analyze_audio`,
+`extract_palette`, `match_motion`, `detect_scenes`, `import_from_url`, `see_video`). Exact count is enforced by a test
 (`src/mcp/__tests__/server.test.ts`) against `ALL_TOOL_DEFS.length` in `src/mcp/toolDefs.ts`.
 
 ### Tool categories (one-line purpose each)
@@ -60,7 +60,7 @@ Advertised: **51 tools** = the frozen **41** parity tools + **2** Kaestral Skill
 | Feedback | `send_feedback` | Report an agent limitation or bug. |
 | Skills extension | `list_skills`, `read_skill` | Discover and load Kaestral's editing playbooks (skills). |
 | Motion graphics extension | `generate_title`, `generate_motion`, `compose_motion` | Generate titles, template motion graphics, and bespoke generative scenes. |
-| Analysis / perception extension | `analyze_audio`, `extract_palette`, `match_motion`, `import_from_url`, `see_video` | Beat/silence detection, palette extraction, reference-motion extraction (beat structure + per-beat palette + optical-flow camera class → a MotionSpec JSON), URL import, and frame vision. |
+| Analysis / perception extension | `analyze_audio`, `extract_palette`, `match_motion`, `detect_scenes`, `import_from_url`, `see_video` | Beat/silence detection, palette extraction, reference-motion extraction (MotionSpec JSON), scene-cut detection, URL import, and frame vision. |
 
 Full input schemas (types, required fields, enums) for every tool above live in
 [`src/mcp/toolDefs.ts`](../src/mcp/toolDefs.ts) as `TOOL_DEFS`, `SKILL_TOOL_DEFS`,

@@ -15,6 +15,25 @@ Don't edit blind. Before cutting, actually look and listen:
 - **Read it:** `get_transcript` on the spoken clip → word-level timestamps of everything said. Now you know the actual hook line, the payoff, and where the filler is — so cuts and captions land on real content, not guesses.
 Use this understanding throughout: hook = the best moment you SAW or the best line you READ; captions = the real words; b-roll = illustrate what's actually said.
 
+## 0.5 Long-form → ranked clip candidates (moment mining)
+When the source is LONG (a podcast, lecture, stream, demo recording) and the ask is "make shorts
+from this," don't scrub linearly — mine it:
+1. **Segment:** `detect_scenes` on the source → its real cut boundaries. `analyze_audio` → beats +
+   silence ranges. `get_transcript` → every word with timing. Segments = scene cuts intersected
+   with sentence boundaries from the transcript.
+2. **Rank each segment** on four signals, in this priority:
+   - **Hook strength** — does its FIRST line/frame work with zero context? (a question, a bold
+     claim, a number, a visible surprise). A great moment with a weak first line ranks below a good
+     moment with a killer first line.
+   - **Self-containment** — understandable without what came before; no dangling "so as I said."
+   - **Emotional peak** — laughter, disbelief, a reveal, a mistake owned. `see_video` the segment
+     (mode:"scene") to confirm the visual matches the transcript's promise.
+   - **Length fit** — trims cleanly to 15–45s at a natural out-point (a landed punchline, a
+     completed claim), not a mid-sentence cliff.
+3. **Tell the user the top 3–5** with timestamps + the would-be hook line of each, then build the
+   chosen one(s): `split_clips` at the segment bounds, `ripple_delete_ranges` for everything else,
+   then continue from §1 below. If they say "just make the best one," build rank #1.
+
 ## 1. Set the frame (9:16)
 - `set_project_settings` with `aspectRatio: "9:16"` and `quality: "1080p"`. This is the single most important framing move for reels.
 - If a clip is landscape and now letterboxed, reframe it: `apply_layout` with `full` + `fill` so it covers the vertical frame (center-crop), or use `set_clip_properties` to scale/position the subject into frame. Keep faces/subjects in the upper-middle third.

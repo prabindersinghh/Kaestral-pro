@@ -1038,4 +1038,28 @@ describe("Generative render", () => {
     expect(res.height).toBe(1920); // 9:16
     expect(statSync(out).size).toBeGreaterThan(10000);
   }, 240000);
+
+  // openvid absorb — screenMock's `props.frame:"phone"` device frame (phone body + dynamic-island
+  // pill) must render a legal 9:16 spec without error, alongside the default browser frame.
+  it("renders screenMock frame:'phone' and frame:'browser' in one 9:16 beat (device frames)", async () => {
+    const v = validateSceneSpec({
+      meta: { aspect: "9:16", fps: 30 },
+      beats: [
+        {
+          durationInFrames: 60,
+          background: { kind: "solid", accent: "#0b0a0d" },
+          layers: [
+            { element: "screenMock", props: { frame: "phone" }, position: { x: 0.3, y: 0.5 }, enter: { anim: "spring" } },
+            { element: "screenMock", props: { frame: "browser", url: "kaestral.com" }, position: { x: 0.72, y: 0.5 }, enter: { anim: "spring", delay: 8 } },
+          ],
+        },
+      ],
+    });
+    expect(v.ok).toBe(true);
+    if (!v.ok) return;
+    const out = join(remotionDir, ".test-out", "gen-devframes.mp4");
+    const res = await renderRemotion("Generative", { spec: v.spec }, out, remotionDir);
+    expect(res.height).toBe(1920);
+    expect(statSync(out).size).toBeGreaterThan(10000);
+  }, 240000);
 });

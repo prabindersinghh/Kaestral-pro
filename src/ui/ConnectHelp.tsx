@@ -19,7 +19,7 @@ const CLIENTS: Snippet[] = [
     title: "Cursor",
     sub: "Add to ~/.cursor/mcp.json (or project .cursor/mcp.json)",
     code: '{\n  "mcpServers": {\n    "kaestral": { "command": "npx", "args": ["kaestral"] }\n  }\n}',
-    note: "Restart Cursor (or toggle it in Settings → MCP). Kaestral's ~51 tools appear in the tool list.",
+    note: "Restart Cursor (or toggle it in Settings → MCP). Kaestral's ~52 tools appear in the tool list.",
   },
   {
     title: "Claude Desktop",

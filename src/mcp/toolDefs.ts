@@ -800,6 +800,15 @@ export const ANALYSIS_TOOL_DEFS: ToolDef[] = [
     }),
   },
   {
+    name: "detect_scenes",
+    description: "Detect the exact CUT points (scene changes) of a clip via ffmpeg's scene filter — returns each cut's frame index (at project fps), source time, and a 0..1 cut-hardness score. Complements see_video: see_video SHOWS sampled frames; detect_scenes tells you where the source itself CUTS, giving the segment boundaries that moment extraction / viral-clip ranking / reference-timing work from. Give a mediaRef or a clipId; optional threshold (0.05–1, default 0.3 — lower = more sensitive).",
+    inputSchema: obj({
+      mediaRef: str("Media asset id (from get_media)."),
+      clipId: str("Timeline clip id (from get_timeline) — analyze that clip's media instead."),
+      threshold: num("Scene-change sensitivity 0.05–1 (default 0.3). Hard cuts score ~0.4–0.9; use ~0.2 to also catch soft cuts/dissolves."),
+    }),
+  },
+  {
     name: "import_from_url",
     description: "Download a video from a URL (YouTube, Vimeo, a direct link, …) and place it on the timeline. Uses the user's installed yt-dlp (not bundled); if it's missing, returns a clear install message. Give a `url`; place=false to only add it to the library.",
     inputSchema: obj({

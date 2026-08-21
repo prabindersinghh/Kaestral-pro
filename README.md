@@ -9,7 +9,7 @@
 <p align="center">
   <a href="https://github.com/prabindersinghh/Kaestral-pro/releases/latest"><img src="https://img.shields.io/badge/Download-Windows-16b16a?style=flat-square" alt="Download"></a>
   <img src="https://img.shields.io/badge/license-GPLv3-1fce7e?style=flat-square" alt="GPLv3">
-  <img src="https://img.shields.io/badge/MCP-51%20tools-c9a227?style=flat-square" alt="51 MCP tools">
+  <img src="https://img.shields.io/badge/MCP-52%20tools-c9a227?style=flat-square" alt="52 MCP tools">
   <img src="https://img.shields.io/badge/local--first-no%20cloud-484852?style=flat-square" alt="Local-first">
 </p>
 
@@ -107,7 +107,7 @@ hiring an editor.
 - **Editing playbooks (skills)** — art-direction, viral-reel, beat-sync, creative-director, captions,
   b-roll, platform-delivery, promo/ad. The AI reads them and follows pro workflows.
 
-**51 MCP tools.** A full editor the AI operates like a pair of hands. Full reference:
+**52 MCP tools.** A full editor the AI operates like a pair of hands. Full reference:
 [docs/MCP-TOOLS.md](./docs/MCP-TOOLS.md).
 
 ---
@@ -116,7 +116,7 @@ hiring an editor.
 
 On-device **whisper** for word-level transcription · **frame vision** so the model sees the footage ·
 **beat/silence detection** for rhythmic cuts · **palette extraction** for on-brand color · **Remotion**
-motion graphics · an **MCP server** exposing 51 tools over stdio (or HTTP) · a full multi-track
+motion graphics · an **MCP server** exposing 52 tools over stdio (or HTTP) · a full multi-track
 timeline · **H.264/H.265/ProRes** render + **Premiere/Resolve** interchange export.
 **No cloud required for any of it — nothing is uploaded.**
 
@@ -152,7 +152,7 @@ Add Kaestral to your MCP config — global at **`~/.cursor/mcp.json`** (or per-p
   }
 }
 ```
-Restart Cursor (or toggle the server in **Settings → MCP**). Kaestral's ~51 tools appear in the tool
+Restart Cursor (or toggle the server in **Settings → MCP**). Kaestral's ~52 tools appear in the tool
 list.
 
 ### 3. Claude Desktop

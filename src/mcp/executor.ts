@@ -24,6 +24,7 @@ import { extractWaveform, type WaveformEnvelope } from "../audio/waveform";
 import { analyzeBeats } from "../audio/beats";
 import { extractPalette } from "../color/palette";
 import { extractMotionSpec } from "../motion/matchMotion";
+import { detectScenes } from "../motion/sceneDetect";
 import { extractFrames, type SampleMode } from "../vision/frames";
 import { transcribe, whisperAvailable, type TranscriptWord } from "../audio/transcribe";
 import { generate, type GenConfig, type GenKind } from "../gen/hosted";
@@ -362,6 +363,17 @@ export class McpExecutor {
     });
   }
 
+  // detect_scenes — exact CUT points of a clip via ffmpeg's scene filter. Complements see_video
+  // (which SHOWS sampled frames but not where the source itself cuts): the segment boundaries are
+  // what moment-extraction / viral-clip ranking works from.
+  private async detectScenes(a: Args): Promise<ToolResult> {
+    const path = this.mediaPathFor(a);
+    if (!path) throw new ToolFail("detect_scenes: provide a resolvable mediaRef or clipId (call get_media/get_timeline first).");
+    const threshold = aNum(a, "threshold");
+    const report = await detectScenes(path, { fps: this.fps, threshold });
+    return okJson(report);
+  }
+
   getState(): { version: number; timeline: unknown; media: unknown; projectDir: string | null } {
     return {
       version: this.stateVersion,
@@ -681,7 +693,7 @@ export class McpExecutor {
     const READ_ONLY = new Set([
       "get_timeline", "get_media", "inspect_media", "get_transcript", "inspect_timeline",
       "search_media", "inspect_color", "list_folders", "list_models", "send_feedback", "export_project",
-      "list_skills", "read_skill", "analyze_audio", "extract_palette", "match_motion", "see_video", "get_transcript",
+      "list_skills", "read_skill", "analyze_audio", "extract_palette", "match_motion", "detect_scenes", "see_video", "get_transcript",
     ]);
     try {
       const result = await this.run(name, args ?? {});
@@ -712,6 +724,7 @@ export class McpExecutor {
       case "analyze_audio": return this.analyzeAudio(a);
       case "extract_palette": return this.extractPalette(a);
       case "match_motion": return this.matchMotion(a);
+      case "detect_scenes": return this.detectScenes(a);
       case "see_video": return this.seeVideo(a);
       // Read
       case "get_timeline": return this.getTimeline(a);

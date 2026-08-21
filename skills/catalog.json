@@ -61,5 +61,19 @@
     "description": "Master motion-designer playbook for composing premium films with compose_motion — the decision process, optical composition, rhythm, restraint, transition craft, and the physics of premium motion, with worked examples and failure modes. Read this BEFORE composing any motion piece (launch film, product reel, title sequence, brand sting).",
     "sha": "local",
     "path": "art-direction/SKILL.md"
+  },
+  {
+    "id": "shot-recipes",
+    "name": "Shot recipes (motion grammar)",
+    "description": "A library of ~26 named, composable shots for compose_motion — openers, product/UI shots, data & proof, emphasis accents, transitions, atmosphere, closers — each mapped to exact SceneSpec fields, plus film-level composition patterns. Use WITH art-direction: principles there, vocabulary here.",
+    "sha": "local",
+    "path": "shot-recipes/SKILL.md"
+  },
+  {
+    "id": "topic-to-short",
+    "name": "Topic → short video",
+    "description": "Turn a topic or script into a complete, editable short ON the timeline: write/approve the script, beat it into scenes, source visuals honestly (user media, hosted generation if configured, or composed motion), time to VO/music, caption word-accurately, brand, grade, quality-gate, export. Use for 'make a video about X' / 'turn this script into a short'.",
+    "sha": "local",
+    "path": "topic-to-short/SKILL.md"
   }
 ]
