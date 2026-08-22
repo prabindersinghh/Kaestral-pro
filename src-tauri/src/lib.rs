@@ -174,10 +174,14 @@ fn launch_claude_code() -> Result<String, String> {
 
 /// Start the project/MCP server as a child. Packaged: bundled node + server.cjs + resource env.
 fn spawn_project_server(app: &AppHandle) {
+    // --http is REQUIRED here: the server's default transport is stdio (for `npx kaestral`), and
+    // this spawn wires stdin to null — a stdio server reads EOF and exits instantly, leaving the
+    // desktop app with a dead engine and port 19789 closed. Verified against the installed 1.0.4
+    // build: `node server.cjs` printed "running on stdio" and exited 0 within seconds.
     let mut cmd;
     if let Some(p) = packaged(app) {
         cmd = Command::new(&p.node);
-        cmd.arg(p.res.join("dist-server").join("server.cjs"));
+        cmd.arg(p.res.join("dist-server").join("server.cjs")).arg("--http");
         apply_env(&mut cmd, &p);
     } else {
         let cwd = match std::env::current_dir() {
@@ -186,7 +190,7 @@ fn spawn_project_server(app: &AppHandle) {
         };
         let project_root = cwd.parent().map(|p| p.to_path_buf()).unwrap_or(cwd);
         cmd = Command::new("node");
-        cmd.args(["--import", "tsx", "src/mcp/main.ts"]).current_dir(&project_root);
+        cmd.args(["--import", "tsx", "src/mcp/main.ts", "--http"]).current_dir(&project_root);
     }
     no_window(&mut cmd);
     let _ = cmd.stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null()).spawn();
