@@ -24,19 +24,26 @@ async function main(): Promise<void> {
   const media = new MediaLibrary();
 
   if (dir) {
-    const contents = await readProjectPackage(fs, dir);
-    timeline = contents.timeline;
-    if (contents.manifest) {
-      media.folders = contents.manifest.folders;
-      media.assets = contents.manifest.entries.map(
-        (e): MediaAssetLite => ({
-          id: e.id, name: e.name, type: e.type, duration: e.duration, source: e.source,
-          folderId: e.folderId, sourceWidth: e.sourceWidth, sourceHeight: e.sourceHeight,
-          sourceFPS: e.sourceFPS, hasAudio: e.hasAudio, generationStatus: e.generationStatus,
-          generationInput: e.generationInput, importInput: e.importInput,
-          cachedRemoteURL: e.cachedRemoteURL, cachedRemoteURLExpiresAt: e.cachedRemoteURLExpiresAt,
-        }),
-      );
+    // A corrupt/unreadable project must NOT kill the server (the desktop app's engine would die
+    // with it): report the clean one-line reason to stderr — no stack trace — and start empty.
+    try {
+      const contents = await readProjectPackage(fs, dir);
+      timeline = contents.timeline;
+      if (contents.manifest) {
+        media.folders = contents.manifest.folders;
+        media.assets = contents.manifest.entries.map(
+          (e): MediaAssetLite => ({
+            id: e.id, name: e.name, type: e.type, duration: e.duration, source: e.source,
+            folderId: e.folderId, sourceWidth: e.sourceWidth, sourceHeight: e.sourceHeight,
+            sourceFPS: e.sourceFPS, hasAudio: e.hasAudio, generationStatus: e.generationStatus,
+            generationInput: e.generationInput, importInput: e.importInput,
+            cachedRemoteURL: e.cachedRemoteURL, cachedRemoteURLExpiresAt: e.cachedRemoteURLExpiresAt,
+          }),
+        );
+      }
+    } catch (e) {
+      console.error(`kaestral: could not open "${dir}" — ${e instanceof Error ? e.message : String(e)}. Starting with an empty project instead.`);
+      timeline = undefined;
     }
   }
 
