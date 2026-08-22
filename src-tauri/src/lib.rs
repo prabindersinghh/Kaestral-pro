@@ -193,7 +193,37 @@ fn spawn_project_server(app: &AppHandle) {
         cmd.args(["--import", "tsx", "src/mcp/main.ts", "--http"]).current_dir(&project_root);
     }
     no_window(&mut cmd);
-    let _ = cmd.stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null()).spawn();
+    if let Ok(child) = cmd.stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null()).spawn() {
+        *ENGINE_CHILD.lock().unwrap() = Some(child);
+    }
+}
+
+/// The spawned engine process, kept so app exit can kill it. Without this the engine outlived the
+/// app forever: it kept port 19789, and after an auto-update the NEW app was silently served by the
+/// OLD engine version (observed live: a freshly installed 1.0.5 answered as 1.0.4).
+static ENGINE_CHILD: std::sync::Mutex<Option<std::process::Child>> = std::sync::Mutex::new(None);
+
+/// Best-effort sweep of stale Kaestral engines from previous runs/versions (matched precisely by
+/// their command line — never other node.exe processes). Heals machines where an older app version
+/// (which never killed its engine on exit) left one holding 19789.
+fn kill_stale_engines() {
+    let mut cmd = Command::new("powershell");
+    cmd.args([
+        "-NoProfile",
+        "-Command",
+        "Get-CimInstance Win32_Process -Filter \"Name='node.exe'\" | Where-Object { $_.CommandLine -match 'Kaestral.+dist-server.+server\\.cjs' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }",
+    ]);
+    no_window(&mut cmd);
+    let _ = cmd.stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null()).status();
+}
+
+fn kill_engine_child() {
+    if let Ok(mut guard) = ENGINE_CHILD.lock() {
+        if let Some(mut child) = guard.take() {
+            let _ = child.kill();
+            let _ = child.wait();
+        }
+    }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -203,10 +233,16 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
+            kill_stale_engines();
             spawn_project_server(&app.handle());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![export_video, launch_claude_code])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|_app, event| {
+            if let tauri::RunEvent::Exit = event {
+                kill_engine_child();
+            }
+        });
 }
