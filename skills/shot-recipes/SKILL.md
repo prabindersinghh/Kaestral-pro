@@ -18,14 +18,14 @@ Durations assume 30fps. Energy: ▁ calm · ▂ medium · ▃ high.
 
 **Cold-open claim** ▂ · 45–70f — One display line, nothing else. The thesis.
 `layers:[{element:"text",props:{text},style:{role:"display",size:0.09},enter:{anim:"spring"}}]`,
-`background:{kind:"glow"}`. The default spring rise IS the house opener — don't decorate it.
+`background:{kind:"glow",accent:"#<brand>"}`. The default spring rise IS the house opener — don't decorate it.
 
 **Blur push-up hook** ▃ · 40–60f — Punchier opener for short-form; per-word stagger built in.
 `enter:{anim:"blurPushUp"}` on a display text. Pair with `meta.handheld:true` for the alive feel.
 Use INSTEAD of Cold-open when the film is 9:16 social — never both opener languages in one film.
 
 **Typewriter terminal** ▁ · 60–90f — Dev-product opener; text arrives as if typed.
-`enter:{anim:"typewriter"}` + `style:{font:"mono"}` + `background:{kind:"grid"}`. Calm by design —
+`enter:{anim:"typewriter"}` + `style:{font:"mono"}` + `background:{kind:"grid",accent:"#<brand>"}`. Calm by design —
 don't add camera movement on top; the typing IS the motion.
 
 **Countdown stinger** ▃ · 40–56f — 3-2-1 punch-in before a reveal.
@@ -115,8 +115,8 @@ and entrance `snapToBeat` on hero layers. This is how a film feels *cut to music
 
 ## 6. Atmosphere
 
-**Ambient orbs field** ▁ — `background:{kind:"orbs"}` + `meta.palette` — soft, colorful, modern.
-**Engineer's grid** ▁ — `background:{kind:"grid"}` — technical, precise. Pairs with mono type.
+**Ambient orbs field** ▁ — `background:{kind:"orbs",accent:"#<brand>"}` + `meta.palette` — soft, colorful, modern. (`accent` is REQUIRED on every background.)
+**Engineer's grid** ▁ — `background:{kind:"grid",accent:"#<brand>"}` — technical, precise. Pairs with mono type.
 **Glow stage** ▁ — `background:{kind:"glow",accent}` — the default premium stage for display type.
 Pick ONE background language per film (art-direction §10.5). `meta.handheld:true` adds the living-
 camera idle over everything — default ON for 9:16 social, OFF for corporate 16:9.
@@ -124,7 +124,7 @@ camera idle over everything — default ON for 9:16 social, OFF for corporate 16
 ## 7. Closers
 
 **Logo resolve** ▁ · 60–90f — `{element:"logo"}` (or brand image) entering on the house spring,
-`background:{kind:"glow"}`, beat `outFade` authored so the film ENDS rather than stops.
+`background:{kind:"glow",accent:"#<brand>"}`, beat `outFade` authored so the film ENDS rather than stops.
 **CTA hold** ▁ · 70–110f — One imperative line + one `hairline`, held: `hold:{startFrame,durationFrames}`
 keeps it perfectly still for the read. The stillness is the shot.
 
