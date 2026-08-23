@@ -33,3 +33,5 @@ mcpb/*.mcpb
 
 # graphify knowledge-graph build output (regenerate with: graphify update .)
 graphify-out/
+build-release*.log
+latest.json
