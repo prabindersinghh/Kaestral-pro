@@ -41,6 +41,15 @@
 ---
 
 <p align="center">
+  <img src="./docs/assets/kaestral-editor.png" alt="The Kaestral editor — media library, composited preview, and a multi-track timeline" width="820">
+</p>
+
+## See it in action
+
+You type the edit; Kaestral builds it on a real timeline — filler cut, captions on the word, hook
+punched in. *(A film Kaestral made from a single prompt.)*
+
+<p align="center">
   <img src="./docs/assets/kaestral-demo.gif" alt="Kaestral editing from a prompt — 'cut the boring parts, caption it, punch in on the hook' becomes a real multi-track timeline" width="760">
 </p>
 
