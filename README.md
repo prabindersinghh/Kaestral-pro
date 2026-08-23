@@ -2,16 +2,22 @@
   <img src="./docs/assets/kaestral-banner.png" alt="Kaestral" width="440">
 </p>
 
-<p align="center"><strong>The AI-operated video editor for Windows. You describe the edit. It makes it. Kaestral watches your footage, hears every word, and cuts.</strong></p>
+<p align="center"><strong>Kaestral — the AI-operated video editor for Windows. Describe the edit in Claude, Cursor, or the app; Kaestral cuts, captions, grades, animates, and exports it — entirely on your PC.</strong></p>
 
-<p align="center"><strong>Windows 10 / 11</strong></p>
+<p align="center"><strong>Kaestral has eyes 👀 and ears 👂</strong></p>
+
+<p align="center">It sees your footage (real frame vision) and hears every word (on-device word-level transcription) — so the AI edits what's actually there, not what it guessed.</p>
+
+<p align="center">A real multi-track editor with a full professional feature set, driven by natural language through <strong>52 validated MCP tools</strong> and <strong>25 AI skills</strong>. Everything runs local — your footage never leaves the machine.</p>
 
 <p align="center">
-  <a href="https://github.com/prabindersinghh/Kaestral-pro/releases/latest"><img src="https://img.shields.io/badge/Download-Windows-16b16a?style=flat-square" alt="Download"></a>
+  <a href="https://github.com/prabindersinghh/Kaestral-pro/releases/latest"><img src="https://img.shields.io/badge/version-1.0.5-16b16a?style=flat-square" alt="v1.0.5"></a>
+  <img src="https://img.shields.io/badge/Windows-10%20%2F%2011-484852?style=flat-square" alt="Windows 10/11">
+  <a href="https://www.npmjs.com/package/kaestral"><img src="https://img.shields.io/npm/v/kaestral?style=flat-square&label=npm&color=cb3837" alt="npm"></a>
   <img src="https://img.shields.io/badge/license-GPLv3-1fce7e?style=flat-square" alt="GPLv3">
+  <img src="https://img.shields.io/badge/tests-310%20passing-16b16a?style=flat-square" alt="310 tests passing">
   <img src="https://img.shields.io/badge/MCP-52%20tools-c9a227?style=flat-square" alt="52 MCP tools">
-  <img src="https://img.shields.io/badge/skills-25%20playbooks-16b16a?style=flat-square" alt="25 editing skills">
-  <img src="https://img.shields.io/badge/local--first-no%20cloud-484852?style=flat-square" alt="Local-first">
+  <img src="https://img.shields.io/badge/skills-25%20playbooks-16b16a?style=flat-square" alt="25 AI skills">
 </p>
 
 <p align="center">
@@ -34,232 +40,117 @@
 
 ---
 
-A kestrel watches with total precision, then strikes. Kaestral watches your footage, hears every
-word, and cuts. Type *"cut the boring parts, add captions, punch in on the hook"* — and watch your
-timeline change.
-
-Works with the **Claude Code** you already have (free), or in-app chat. Built on a real pro timeline —
-so when the AI is done, you can still touch every frame. **Everything runs locally — your video never
-leaves your machine.**
-
-<p align="center">
-  <img src="./docs/assets/kaestral-editor.png" alt="The Kaestral editor — media library, composited preview, and a multi-track timeline" width="820">
-</p>
-
----
-
-## See it in action
-
-You type the edit; Kaestral builds it on a real timeline — filler cut, captions on the word, hook
-punched in. *(A film Kaestral made from a single prompt.)*
-
 <p align="center">
   <img src="./docs/assets/kaestral-demo.gif" alt="Kaestral editing from a prompt — 'cut the boring parts, caption it, punch in on the hook' becomes a real multi-track timeline" width="760">
 </p>
 
 ---
 
-## Quick start
-
-The fastest way in is to point the Claude Code you already have at Kaestral — **one command, zero config:**
-
-```bash
-claude mcp add kaestral -- npx kaestral
-claude
-```
-
-Claude Code spawns `npx kaestral` itself and talks to it over stdio (an MCP server) — no separate
-process, no port to remember. Then just ask:
-
-> *"get_timeline, then cut the silent parts of demo.mp4, add captions, and export it."*
-
-Prefer the full desktop app? **[Download for Windows →](https://github.com/prabindersinghh/Kaestral-pro/releases/latest)** — double-click the installer, the editor and its engine start internally (no terminal, no npm).
-
----
-
-## What it does
-
-### 🎬 AI-operated. You direct, it edits.
-Describe the edit in plain language and watch it happen on your timeline — cut, caption, punch in,
-grade, add a title. Every action runs through the editor's tools, so the result is a real, editable
-project, not a black-box export. Drive it with **Claude Code** (free, terminal) or the **in-app chat**.
-
-### ⚡ Raw footage → publish-ready reel.
-Drop a 20-minute recording; get a tight, captioned, beat-cut short. Kaestral **removes filler words**,
-**finds the hook**, and **captions on the word** — automatically. Speech is transcribed on-device; cuts
-land on silences and beats.
-
-### 📊 Make SaaS & product videos without an editor.
-Animated intros, logo reveals, data-viz, transition stingers — **art-directed from a sentence** and
-rendered onto your timeline. Not templates: a connected LLM composes bespoke motion using the
-`compose_motion` surface + a master motion-designer skill. Launch videos, demos, and ads, without
-hiring an editor.
-
-*…plus the full editor underneath:*
-
-- **Real pro timeline** — multi-track, ruler + playhead, drag-with-snapping, split, ripple-delete,
-  undo/redo, keyframes, 16 blend modes, frame-accurate composited preview.
-- **Perception** — word-level transcription (whisper, on-device), frame **vision** (the AI actually
-  sees your footage), beat/silence detection, **scene-cut detection**, color-palette extraction, and
-  **reference-motion matching** (extract a clip's beat/palette/camera rhythm and film to it).
-- **Motion graphics** — bespoke, art-directed compositions (`compose_motion`) + fast canvas titles.
-- **Color** — grade with wheels, curves, LUTs, temperature.
-- **Import from anywhere** — files, drag-drop, or a URL (`import_from_url`, via your `yt-dlp`).
-- **Export** — H.264 / H.265 / ProRes, plus **Premiere (XMEML)**, **Resolve/FCP (FCPXML)**, and **SubRip captions (SRT)**.
-- **Editing playbooks (25 skills)** — pro workflows the AI reads and follows; the full set is below.
-
-**52 MCP tools.** A full editor the AI operates like a pair of hands. Tool reference:
-[docs/MCP-TOOLS.md](./docs/MCP-TOOLS.md) · every feature in detail: [docs/FEATURES.md](./docs/FEATURES.md).
-
----
-
-## Editing playbooks — 25 skills
-
-Every connected AI is handed this catalog at connect time (`list_skills` / `read_skill`) and reads
-the matching playbook before it works. They teach *craft*, not templates.
-
-**Foundations**
-`build-in-kaestral` — the house rule: build on the timeline · `art-direction` — master motion-designer playbook · `shot-recipes` — a composable motion grammar · `transition-craft` — the right transition, tuned · `text-and-typography` — on-screen type beyond captions · `color-storytelling` — grading with intent · `sound-design` — mix, ducking, silence as craft
-
-**Creator & growth**
-`hook-engineering` — the first 3 seconds · `retention-editing` — pacing for watch-through · `viral-reel` — raw footage to 9:16 short · `talking-head-cleanup` — the standard creator pass · `thumbnail-and-cover` — choosing the cover frame · `caption-styles` — modern short-form caption looks · `beat-sync-cutting` — cuts locked to the music
-
-**Production pipelines**
-`topic-to-short` — idea to editable short · `podcast-to-clips` — long recording to clip set · `broll-planner` — b-roll against the script · `promo-ad` — hooks, benefits, CTA promos · `ad-creative` — direct-response ad spine · `creative-director` — cohesive palette, grade, type
-
-**Agency & delivery**
-`brand-kit` — one brand system everywhere · `multi-language-delivery` — one edit, many languages · `batch-variants` — A/B variants that map back · `client-review-cut` — slates, watermarks, notes workflow · `platform-delivery` — per-platform framing and export
-
----
-
-## How it works (the proof)
-
-On-device **whisper** for word-level transcription · **frame vision** so the model sees the footage ·
-**beat/silence detection** for rhythmic cuts · **palette extraction** for on-brand color · **Remotion**
-motion graphics · an **MCP server** exposing 52 tools over stdio (or HTTP) · a full multi-track
-timeline · **H.264/H.265/ProRes** render + **Premiere/Resolve/SRT** interchange export · **signed
-auto-updates** from v1.0.5 onward.
-**No cloud required for any of it — nothing is uploaded.**
-
----
-
-## Connect an AI
-
-Kaestral is a **local** MCP server (`npx kaestral`, stdio). Any MCP client that runs a local server can
-drive it. The three that work today:
-
-> **Prerequisites (for `npx kaestral`):** Node.js / npm and **FFmpeg + ffprobe** on your PATH. The
-> whisper model (~142 MB) downloads on first transcription. *(The Windows installer bundles all of this,
-> so the desktop app itself needs none of it.)*
-
-### 1. Claude Code — one command
-```bash
-claude mcp add kaestral -- npx kaestral
-claude
-```
-Claude Code spawns `npx kaestral` itself over stdio — no separate process, no port. Then just ask, e.g.
-*"cut the silent parts of demo.mp4, add captions, and export it."*
-
-### 2. Cursor
-Add Kaestral to your MCP config — global at **`~/.cursor/mcp.json`** (or per-project at
-`.cursor/mcp.json`):
-```json
-{
-  "mcpServers": {
-    "kaestral": {
-      "command": "npx",
-      "args": ["kaestral"]
-    }
-  }
-}
-```
-Restart Cursor (or toggle the server in **Settings → MCP**). Kaestral's ~52 tools appear in the tool
-list.
-
-### 3. Claude Desktop
-Open **Settings → Developer → Edit Config** (this opens `claude_desktop_config.json`). On Windows it
-lives at **`%APPDATA%\Claude\claude_desktop_config.json`**. Add:
-```json
-{
-  "mcpServers": {
-    "kaestral": {
-      "command": "npx",
-      "args": ["kaestral"]
-    }
-  }
-}
-```
-Save and **fully restart Claude Desktop**. Kaestral appears under the connectors/tools menu.
-
-> 🖱️ **One-click install:** grab **[`kaestral.mcpb`](https://github.com/prabindersinghh/Kaestral-pro/releases/latest)**
-> from the latest release and double-click it — Claude Desktop installs Kaestral as a connector with no
-> JSON editing. (See [`mcpb/`](./mcpb/) for how it's built.)
-
-### Or: in-app chat (no MCP client needed)
-Open the desktop app → **Connect AI** → paste your **Anthropic API key**. Chat right inside Kaestral;
-edits happen live in the window.
-
-### Prefer the HTTP transport?
-`npx kaestral` defaults to stdio (recommended). To run the engine yourself over HTTP (e.g. to keep it up
-across sessions):
-```bash
-npx kaestral --http     # local editor engine on http://127.0.0.1:19789/mcp
-claude mcp add --transport http kaestral http://127.0.0.1:19789/mcp
-```
-
-> **ChatGPT?** ChatGPT's connectors require a **hosted/remote** MCP server, and Kaestral is local-first
-> by design — so use **Claude Code, Cursor, or Claude Desktop**. Cloud/ChatGPT support is on the
-> roadmap. See the [FAQ](./FAQ.md).
-
----
-
-## Install options
+## Install
 
 | | How |
 |---|---|
-| **MCP (recommended)** | `claude mcp add kaestral -- npx kaestral` |
-| **Windows installer** | [Download the latest release](https://github.com/prabindersinghh/Kaestral-pro/releases/latest) → double-click |
-| **From source** | `git clone https://github.com/prabindersinghh/Kaestral-pro && cd Kaestral-pro && npm install && npm run tauri dev` |
-| **macOS** | On the roadmap — Kaestral is Windows-first by design (that's the wedge). |
+| **Claude Code (one command)** | `claude mcp add kaestral -- npx kaestral` — then just ask for the edit |
+| **Windows installer** | [Download v1.0.5](https://github.com/prabindersinghh/Kaestral-pro/releases/latest) → double-click. **Signed auto-updates from 1.0.5 onward.** |
+| **npm** | `npx kaestral` (needs Node + FFmpeg on PATH; the installer bundles everything) |
+| **Claude Desktop** | one-click [`kaestral.mcpb`](https://github.com/prabindersinghh/Kaestral-pro/releases/latest) from the release |
 
 ---
 
-## What makes it different
+## Everything in one editor
 
-| | **Kaestral** |
-|---|---|
-| Platform | **Windows** (macOS on roadmap) |
-| AI editing over MCP | ✅ drive it from the Claude Code you already have — one command |
-| Perception (transcribe / see / beats) | ✅ on-device |
-| Bespoke motion graphics | ✅ art-directed by the LLM, not templates |
-| Real timeline | ✅ multi-track, keyframes, blend modes — a true editable project |
-| Privacy | ✅ 100% local — nothing uploaded |
-| AI video **generation** | ⏳ Pro (waitlist) |
-| Price | free, GPLv3 |
+Deep reference for every item: **[docs/FEATURES.md](./docs/FEATURES.md)**.
 
-Kaestral's edge is **Windows + real perception + bespoke AI motion + a free, open, Claude-Code-native
-workflow, all running locally.** Generation lands later, in the Pro tier.
+**🎬 Professional timeline** — multi-track · linked A/V · keyframes · 16 blend modes ·
+ripple/split/snap · speed retiming · frame-accurate composited preview.
+→ [details](./docs/FEATURES.md#1-the-desktop-editor-windows-1011)
+
+**🤖 AI-operated — 52 MCP tools** over stdio + HTTP; works with Claude Code, Cursor, Claude
+Desktop (one-click `.mcpb`), or the in-app chat.
+6 read/inspect · 13 timeline editing · 3 text & captions · 3 color & effects · 8 media library ·
+3 project · 4 generation · 1 feedback · 2 skills · 3 motion · 6 analysis & perception.
+→ [details](./docs/FEATURES.md#2-the-mcp-server--52-tools)
+
+**👀👂 Perception (on-device)** — word-level whisper transcription · frame vision (`see_video`) ·
+beat + silence detection · palette extraction · scene-cut detection · reference-motion matching.
+→ [details](./docs/FEATURES.md#3-perception-all-on-device--nothing-is-uploaded)
+
+**✂️ Word-level editing** — animated word-accurate captions (10 animation presets, karaoke
+highlight) · filler-word removal · silence jump-cuts · long-form → ranked shorts (moment mining).
+→ [details](./docs/FEATURES.md#4-word-level-editing)
+
+**✨ Generative motion engine** — 24 elements · 11 entrances · working exits · camera moves ·
+masks · depth parallax · 7 transitions with beat-snapping · Cinematic Reel pack (9:16) · device
+frames. → [details](./docs/FEATURES.md#5-the-generative-motion-engine-compose_motion)
+
+**🎨 Color** — 3-way wheels · RGB + hue curves · LUTs · temperature/tint · highlights/shadows ·
+plus blur / sharpen / chroma key / grain / vignette / glow.
+→ [details](./docs/FEATURES.md#7-color--effects)
+
+**🔲 Layouts** — side-by-side · top/bottom · PiP corners · 2×2 grid · main+sidebar · three-up.
+→ [details](./docs/FEATURES.md#8-layouts)
+
+**📦 Export & interchange** — H.264 / H.265 / ProRes · 720p→4K · Premiere XMEML · Resolve/FCP
+FCPXML · SRT captions · `.kaestral` package.
+→ [details](./docs/FEATURES.md#9-import--export)
 
 ---
 
-## Pro & Max (waitlist)
+## 25 AI skills
 
-- **Pro — coming soon:** AI video & image **generation** (prompt → a real clip on your timeline),
-  translation & **dubbing** (Hindi + regional Indian languages, and beyond), temporally-consistent
-  **upscaling**, advanced generative motion (PixiJS particles & shaders).
-- **Max —** something bigger. Details under wraps.
+Editing playbooks the agent reads on demand (`list_skills` / `read_skill`) — craft, not templates.
+→ [details](./docs/FEATURES.md#6-skills--25-editing-playbooks-the-ai-reads)
 
-Join from the app's **✨ Pro** button, or the [pricing page](https://kaestral.com/pricing.html). Basic
-is free and open source, forever; Pro/Max pricing is announced closer to launch.
+**Foundations (craft depth)** — `build-in-kaestral` build on the timeline, always ·
+`art-direction` the master motion playbook · `shot-recipes` a composable motion grammar ·
+`transition-craft` the right transition, tuned · `text-and-typography` on-screen type that reads ·
+`color-storytelling` grading with intent · `sound-design` mix, ducking, engineered silence
+
+**Creator & growth** — `hook-engineering` the first three seconds · `retention-editing` pacing for
+watch-through · `viral-reel` raw footage to short · `talking-head-cleanup` the standard creator
+pass · `thumbnail-and-cover` choosing the cover frame · `caption-styles` modern caption looks ·
+`beat-sync-cutting` cuts locked to music
+
+**Production pipelines** — `topic-to-short` idea to editable short · `podcast-to-clips` long
+recording to clip set · `broll-planner` b-roll against the script · `promo-ad` hook, benefits,
+CTA · `ad-creative` direct-response ad spine · `creative-director` palette, grade, type together
+
+**Agency & delivery** — `brand-kit` one brand system everywhere · `multi-language-delivery` one
+edit, many languages · `batch-variants` A/B variants that map back · `client-review-cut` slates,
+watermarks, notes workflow · `platform-delivery` per-platform framing and export
 
 ---
 
-## Privacy — local-first
+## Why Kaestral
 
-Your video and project files stay on your device. Kaestral never uploads them. Transcription (whisper),
-frame vision, beat detection, and rendering all run **locally**. The only things that ever leave your
-machine: your **AI prompts** (sent to Anthropic, only if you use in-app chat with your own key), and
-your **email** (only if you join the Pro/Max waitlist). No account required.
+- **Local-first.** Transcription, vision, beats, rendering, export — all on your machine. Nothing
+  uploaded, ever.
+- **AI-native.** The AI drives a real editor through validated tools — it isn't a chatbot bolted
+  onto one. Every edit lands on a timeline you can still touch.
+- **Free and open-source.** GPLv3. No watermarks, no subscriptions.
+
+---
+
+## Pro & Max (waitlist — not yet shipped)
+
+- **Pro:** AI video & image **generation** (prompt → a real clip on your timeline) · translation &
+  **dubbing** in Hindi + regional Indian languages · temporally-consistent **upscaling**.
+- **Max:** something bigger. Details under wraps.
+
+None of this is in the current build. Join the waitlist from the app's **✨ Pro** button or the
+[pricing page](https://kaestral.com/pricing.html). Basic stays free and open source, forever.
+
+---
+
+## Trust
+
+- **310 automated tests** across every pipeline stage — validator, render (pixel-proofed), MCP
+  contract, engine, project round-trip, exports.
+- Release verification is done **in the packaged, installed app** — a full editing session
+  (import → cut → captions → grade → motion → export in three codecs and three aspect ratios)
+  driven against the live engine.
+- **25/25 skills verified** served over a real stdio handshake.
+- **GPLv3**, with upstream **Palmier Pro** attribution retained in [NOTICE.md](./NOTICE.md).
 
 ---
 
@@ -268,42 +159,26 @@ your **email** (only if you join the Pro/Max waitlist). No account required.
 ```bash
 npm test           # full suite: format round-trip, edit engine, MCP contract, perception, render
 npm run typecheck  # strict TS  (tsc --noEmit)
-npm run build      # production frontend
 npm run tauri dev  # run the desktop app
 npm run tauri build  # build the Windows installer (see docs/UPDATER-SETUP.md for signed releases)
 ```
 
 Docs worth reading before you dig in:
-- [docs/MCP-TOOLS.md](./docs/MCP-TOOLS.md) — the 51-tool reference.
+- [docs/FEATURES.md](./docs/FEATURES.md) — every feature, in detail.
+- [docs/MCP-TOOLS.md](./docs/MCP-TOOLS.md) — the 52-tool reference.
 - [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) — how the pieces fit (editor = hands, LLM = brain).
 - [docs/LAUNCH-RUNBOOK.md](./docs/LAUNCH-RUNBOOK.md) — build, publish, and deploy steps.
 - [CONTRIBUTING.md](./CONTRIBUTING.md) — how to build, test, and open a PR.
-- [FUTURE-IDEAS.md](./FUTURE-IDEAS.md) — deferred post-1.0 work.
 
 ---
 
-## FAQ
+## FAQ, community & support
 
-Short answers to the common questions — is it free, what's Pro/Max, which Windows, does my data stay
-local, how do I connect Claude — are in **[FAQ.md](./FAQ.md)**.
-
----
-
-## Community & support
-
-- 💬 **[GitHub Discussions](https://github.com/prabindersinghh/Kaestral-pro/discussions)** — questions,
-  ideas, show-and-tell, and help. (Enable it under **Settings → Features → Discussions** if the link
-  404s.)
+- ❓ **[FAQ.md](./FAQ.md)** — is it free, what's Pro/Max, which Windows, does my data stay local.
+- 💬 **[GitHub Discussions](https://github.com/prabindersinghh/Kaestral-pro/discussions)** — questions, ideas, show-and-tell.
 - 🎮 **[Discord](https://discord.gg/xwDuQTY6Y)** — chat with the community and the team.
 - 🐛 **[Issues](https://github.com/prabindersinghh/Kaestral-pro/issues)** — bugs and feature requests.
-- 🙌 **[Contributing](./CONTRIBUTING.md)** — PRs welcome.
-
----
-
-## Contributing
-
-Kaestral is open source (GPLv3) and contributions are welcome — see **[CONTRIBUTING.md](./CONTRIBUTING.md)**
-for how to set up, run the tests, and open a pull request.
+- 🙌 **[CONTRIBUTING.md](./CONTRIBUTING.md)** — PRs welcome.
 
 ---
 

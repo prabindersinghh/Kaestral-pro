@@ -83,6 +83,8 @@ caption group at once**) · `add_captions`
 run on hosted providers (Fal/Replicate) with the user's own key; honest signed-out responses
 otherwise.
 
+**Feedback (1):** `send_feedback` — the agent reports a limitation or bug it hit.
+
 **Skills (2):** `list_skills` · `read_skill`
 
 **Motion graphics (3):** `generate_title` (local canvas titles — always works) ·
