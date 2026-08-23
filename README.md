@@ -99,16 +99,19 @@ hiring an editor.
 - **Real pro timeline** — multi-track, ruler + playhead, drag-with-snapping, split, ripple-delete,
   undo/redo, keyframes, 16 blend modes, frame-accurate composited preview.
 - **Perception** — word-level transcription (whisper, on-device), frame **vision** (the AI actually
-  sees your footage), beat/silence detection, color-palette extraction.
+  sees your footage), beat/silence detection, **scene-cut detection**, color-palette extraction, and
+  **reference-motion matching** (extract a clip's beat/palette/camera rhythm and film to it).
 - **Motion graphics** — bespoke, art-directed compositions (`compose_motion`) + fast canvas titles.
 - **Color** — grade with wheels, curves, LUTs, temperature.
 - **Import from anywhere** — files, drag-drop, or a URL (`import_from_url`, via your `yt-dlp`).
 - **Export** — H.264 / H.265 / ProRes, plus **Premiere (XMEML)**, **Resolve/FCP (FCPXML)**, and **SubRip captions (SRT)**.
-- **Editing playbooks (skills)** — art-direction, viral-reel, beat-sync, creative-director, captions,
-  b-roll, platform-delivery, promo/ad. The AI reads them and follows pro workflows.
+- **Editing playbooks (skills)** — art-direction, **shot-recipes** (a composable motion grammar),
+  **topic-to-short** (idea → editable short), viral-reel (incl. long-form → ranked shorts),
+  beat-sync, creative-director, captions, b-roll, platform-delivery, promo/ad. The AI reads them
+  and follows pro workflows.
 
-**52 MCP tools.** A full editor the AI operates like a pair of hands. Full reference:
-[docs/MCP-TOOLS.md](./docs/MCP-TOOLS.md).
+**52 MCP tools.** A full editor the AI operates like a pair of hands. Tool reference:
+[docs/MCP-TOOLS.md](./docs/MCP-TOOLS.md) · every feature in detail: [docs/FEATURES.md](./docs/FEATURES.md).
 
 ---
 
@@ -117,7 +120,8 @@ hiring an editor.
 On-device **whisper** for word-level transcription · **frame vision** so the model sees the footage ·
 **beat/silence detection** for rhythmic cuts · **palette extraction** for on-brand color · **Remotion**
 motion graphics · an **MCP server** exposing 52 tools over stdio (or HTTP) · a full multi-track
-timeline · **H.264/H.265/ProRes** render + **Premiere/Resolve** interchange export.
+timeline · **H.264/H.265/ProRes** render + **Premiere/Resolve/SRT** interchange export · **signed
+auto-updates** from v1.0.5 onward.
 **No cloud required for any of it — nothing is uploaded.**
 
 ---
