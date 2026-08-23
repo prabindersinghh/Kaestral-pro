@@ -10,6 +10,7 @@
   <a href="https://github.com/prabindersinghh/Kaestral-pro/releases/latest"><img src="https://img.shields.io/badge/Download-Windows-16b16a?style=flat-square" alt="Download"></a>
   <img src="https://img.shields.io/badge/license-GPLv3-1fce7e?style=flat-square" alt="GPLv3">
   <img src="https://img.shields.io/badge/MCP-52%20tools-c9a227?style=flat-square" alt="52 MCP tools">
+  <img src="https://img.shields.io/badge/skills-25%20playbooks-16b16a?style=flat-square" alt="25 editing skills">
   <img src="https://img.shields.io/badge/local--first-no%20cloud-484852?style=flat-square" alt="Local-first">
 </p>
 
@@ -105,13 +106,29 @@ hiring an editor.
 - **Color** — grade with wheels, curves, LUTs, temperature.
 - **Import from anywhere** — files, drag-drop, or a URL (`import_from_url`, via your `yt-dlp`).
 - **Export** — H.264 / H.265 / ProRes, plus **Premiere (XMEML)**, **Resolve/FCP (FCPXML)**, and **SubRip captions (SRT)**.
-- **Editing playbooks (skills)** — art-direction, **shot-recipes** (a composable motion grammar),
-  **topic-to-short** (idea → editable short), viral-reel (incl. long-form → ranked shorts),
-  beat-sync, creative-director, captions, b-roll, platform-delivery, promo/ad. The AI reads them
-  and follows pro workflows.
+- **Editing playbooks (25 skills)** — pro workflows the AI reads and follows; the full set is below.
 
 **52 MCP tools.** A full editor the AI operates like a pair of hands. Tool reference:
 [docs/MCP-TOOLS.md](./docs/MCP-TOOLS.md) · every feature in detail: [docs/FEATURES.md](./docs/FEATURES.md).
+
+---
+
+## Editing playbooks — 25 skills
+
+Every connected AI is handed this catalog at connect time (`list_skills` / `read_skill`) and reads
+the matching playbook before it works. They teach *craft*, not templates.
+
+**Foundations**
+`build-in-kaestral` — the house rule: build on the timeline · `art-direction` — master motion-designer playbook · `shot-recipes` — a composable motion grammar · `transition-craft` — the right transition, tuned · `text-and-typography` — on-screen type beyond captions · `color-storytelling` — grading with intent · `sound-design` — mix, ducking, silence as craft
+
+**Creator & growth**
+`hook-engineering` — the first 3 seconds · `retention-editing` — pacing for watch-through · `viral-reel` — raw footage to 9:16 short · `talking-head-cleanup` — the standard creator pass · `thumbnail-and-cover` — choosing the cover frame · `caption-styles` — modern short-form caption looks · `beat-sync-cutting` — cuts locked to the music
+
+**Production pipelines**
+`topic-to-short` — idea to editable short · `podcast-to-clips` — long recording to clip set · `broll-planner` — b-roll against the script · `promo-ad` — hooks, benefits, CTA promos · `ad-creative` — direct-response ad spine · `creative-director` — cohesive palette, grade, type
+
+**Agency & delivery**
+`brand-kit` — one brand system everywhere · `multi-language-delivery` — one edit, many languages · `batch-variants` — A/B variants that map back · `client-review-cut` — slates, watermarks, notes workflow · `platform-delivery` — per-platform framing and export
 
 ---
 

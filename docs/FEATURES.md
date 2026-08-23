@@ -173,28 +173,64 @@ every launch.
 
 ---
 
-## 6. Skills — 11 editing playbooks the AI reads
+## 6. Skills — 25 editing playbooks the AI reads
 
-Auto-advertised to every connected agent; loaded on demand with `read_skill`.
+Auto-advertised to every connected agent in the MCP handshake; loaded on demand with `read_skill`.
+Each is a substantive playbook: decision process → method with concrete numbers → worked example →
+failure modes. Verified served end-to-end (25/25 over a live stdio handshake).
 
+**Foundations (craft depth)**
 1. **build-in-kaestral** — the house rule: build on the timeline, visibly; export only through Kaestral.
 2. **art-direction** — the master motion-designer playbook: decision process, optical composition,
-   rhythm, restraint, transition craft, the physics of premium motion, worked examples, failure
-   modes, and reference-matching with `match_motion`.
-3. **shot-recipes** — a ~26-shot compositional grammar (openers, product/UI, data & proof,
-   emphasis, transitions, atmosphere, closers), every card mapped to exact SceneSpec fields, plus
-   film-level composition patterns.
-4. **topic-to-short** — idea/script → approved script → scene beats → honestly-sourced visuals →
-   VO-timed assembly → captions → brand → grade → quality gate → export; always an editable
-   timeline, never a black-box render.
-5. **viral-reel** — raw footage → 9:16 short: hook in 3s, jump cuts, zoom punches, captions —
-   including the long-form moment-mining and ranking method.
-6. **beat-sync-cutting** — cuts and punches locked to detected beats.
-7. **creative-director** — palette → grade → type for a cohesive, on-brand look.
-8. **caption-styles** — caption typography and animation recipes.
-9. **broll-planner** — planning b-roll against the spoken script.
-10. **platform-delivery** — per-platform framing/duration/export choices.
-11. **promo-ad** — hook, benefit beats, CTA structure for promos.
+   rhythm, restraint, the physics of premium motion, worked examples, failure modes, and
+   reference-matching with `match_motion`.
+3. **shot-recipes** — a ~26-shot compositional grammar for `compose_motion`, every card mapped to
+   exact SceneSpec fields, plus film-level composition patterns.
+4. **transition-craft** — when each of the 7 transitions is right and wrong, overlap tuning,
+   beat-snapping, and the restraint law (most cuts should be cuts).
+5. **text-and-typography** — on-screen text beyond captions: hierarchy, per-platform safe areas,
+   readability armor, animation selection, read-time budgets.
+6. **color-storytelling** — correct → match → grade; mood via temperature/curves/wheels,
+   palette-driven grades, hue-curve surgery, LUT discipline.
+7. **sound-design** — the VO/music/SFX hierarchy, keyframed ducking, beat-aware music entry/exit,
+   engineered silence, SFX placement.
+
+**Creator & growth**
+8. **hook-engineering** — the first 1–3 seconds: an 8-device hook taxonomy, finding the hook in
+   real footage, the cold-open restructure, open loops.
+9. **retention-editing** — cut-cadence targets, the change toolkit, what to cut when it drags,
+   loop-friendly endings.
+10. **viral-reel** — raw footage → 9:16 short: hook in 3s, jump cuts, zoom punches, captions —
+    including long-form moment mining and ranking.
+11. **talking-head-cleanup** — the standard creator pass as one ordered pipeline: fillers,
+    silence jump-cuts, breaths, framing, captions, light grade.
+12. **thumbnail-and-cover** — choosing the cover frame with `see_video`, legibility-at-20% rules,
+    overlay discipline, honest export paths.
+13. **caption-styles** — modern short-form caption looks: word-pop, karaoke highlight, boxed,
+    typewriter — sized and placed per platform.
+14. **beat-sync-cutting** — cuts and punches locked to detected beats.
+
+**Production pipelines**
+15. **topic-to-short** — idea/script → approved script → scene beats → honestly-sourced visuals →
+    VO-timed assembly → captions → brand → grade → export.
+16. **podcast-to-clips** — long recording → publishable 9:16 clip set: segmentation, ranking,
+    speaker framing, per-clip build + export, procedurally.
+17. **broll-planner** — planning b-roll against the spoken script.
+18. **promo-ad** — hook, benefit beats, CTA structure for promos.
+19. **ad-creative** — direct-response ads: the hook → problem → proof → offer → CTA spine with
+    time budgets and a no-invented-claims rule.
+20. **creative-director** — palette → grade → type for a cohesive, on-brand look.
+
+**Agency & delivery**
+21. **brand-kit** — one brand system across a project: palette, type scale, logo placement,
+    lower-thirds, a reusable grade preset.
+22. **multi-language-delivery** — one edit → many language variants: translated caption sets,
+    per-language exports + SRT, naming + QA.
+23. **batch-variants** — hook/caption/length/aspect variants for A/B testing, one variable per
+    variant, with a tracking scheme.
+24. **client-review-cut** — slates, watermarks, compressed proxies, and a change-request →
+    timeline-edit workflow.
+25. **platform-delivery** — per-platform framing/duration/export choices.
 
 ---
 

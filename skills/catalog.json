@@ -75,5 +75,103 @@
     "description": "Turn a topic or script into a complete, editable short ON the timeline: write/approve the script, beat it into scenes, source visuals honestly (user media, hosted generation if configured, or composed motion), time to VO/music, caption word-accurately, brand, grade, quality-gate, export. Use for 'make a video about X' / 'turn this script into a short'.",
     "sha": "local",
     "path": "topic-to-short/SKILL.md"
+  },
+  {
+    "id": "multi-language-delivery",
+    "name": "Multi-language delivery",
+    "description": "One edit → many language variants: transcript → translated caption sets (you translate; timings from the source words) → per-language exports + SRT sidecars, with naming conventions and a QA checklist. Use for 'deliver this in Spanish/Hindi/…'.",
+    "sha": "local",
+    "path": "multi-language-delivery/SKILL.md"
+  },
+  {
+    "id": "brand-kit",
+    "name": "Brand kit",
+    "description": "Establish and apply one brand system across a project — palette (extract_palette), type scale, logo bug placement + safe margins, lower-third recipes, and a reusable apply_color grade preset. Use for 'keep everything on-brand' / multi-clip client work.",
+    "sha": "local",
+    "path": "brand-kit/SKILL.md"
+  },
+  {
+    "id": "batch-variants",
+    "name": "Batch variants",
+    "description": "Produce testable variants of one edit — hook variants, caption-style variants, length variants, aspect variants — one variable per variant, master-project workflow, and a filename scheme that maps results back. Use for 'make versions to A/B test'.",
+    "sha": "local",
+    "path": "batch-variants/SKILL.md"
+  },
+  {
+    "id": "client-review-cut",
+    "name": "Client review cut",
+    "description": "Prepare a review deliverable: version slate, low-opacity watermark, compressed 720p proxy export — and turn client notes into precise timeline edits (applied bottom-up so timestamps stay valid). Use for 'send a review cut' / handling feedback rounds.",
+    "sha": "local",
+    "path": "client-review-cut/SKILL.md"
+  },
+  {
+    "id": "podcast-to-clips",
+    "name": "Podcast → clips",
+    "description": "Long recording → publishable 9:16 clip SET: segment by real cuts ∩ sentence boundaries, rank with the viral-reel rubric, then per clip — isolate, speaker framing, tighten, hook, captions, brand, export, reset. Use for 'clip this podcast/stream'.",
+    "sha": "local",
+    "path": "podcast-to-clips/SKILL.md"
+  },
+  {
+    "id": "hook-engineering",
+    "name": "Hook engineering",
+    "description": "The first 1–3 seconds as a craft: an 8-device hook taxonomy, finding the hook in real footage (transcript + see_video), the cold-open restructure, text-hook specs, and open loops that resolve at the end. Use whenever a video must stop the scroll.",
+    "sha": "local",
+    "path": "hook-engineering/SKILL.md"
+  },
+  {
+    "id": "retention-editing",
+    "name": "Retention editing",
+    "description": "Pacing for watch-through: cut-cadence targets by section, the change toolkit (dead-air removal, punches, caption pulse, B-roll relief), what to cut when a section drags, and loop-friendly endings. Use for 'people drop off' / tighten-this asks.",
+    "sha": "local",
+    "path": "retention-editing/SKILL.md"
+  },
+  {
+    "id": "thumbnail-and-cover",
+    "name": "Thumbnail & cover",
+    "description": "Choose and build the cover frame: candidate frames via see_video, composition + legibility-at-20% rules, overlay text discipline, punchier cover grade — with the honest export paths (no single-image export tool exists yet). Use for 'make a thumbnail/cover'.",
+    "sha": "local",
+    "path": "thumbnail-and-cover/SKILL.md"
+  },
+  {
+    "id": "talking-head-cleanup",
+    "name": "Talking-head cleanup",
+    "description": "The standard creator pass as one ordered pipeline: fillers (remove_words) → silence jump-cuts → breaths → framing correction → captions → light grade → verify + export, with sensible defaults. Use for 'clean this up' on face-to-camera footage.",
+    "sha": "local",
+    "path": "talking-head-cleanup/SKILL.md"
+  },
+  {
+    "id": "ad-creative",
+    "name": "Ad creative (direct response)",
+    "description": "Direct-response short-form ads: the hook → problem → proof → offer → CTA spine with per-beat time budgets, proof via compose_motion (counter/split/screenMock), on-screen text discipline, and a strict no-invented-claims rule. Use for paid-traffic ad asks.",
+    "sha": "local",
+    "path": "ad-creative/SKILL.md"
+  },
+  {
+    "id": "sound-design",
+    "name": "Sound design",
+    "description": "Audio as craft: the VO/music/SFX level hierarchy, keyframed ducking with asymmetric ramps, beat-aware music entry/exit (analyze_audio), engineered silence as punctuation, SFX placement — honest about the absence of a loudness meter. Use for any mix pass.",
+    "sha": "local",
+    "path": "sound-design/SKILL.md"
+  },
+  {
+    "id": "transition-craft",
+    "name": "Transition craft",
+    "description": "When each of the 7 transitions is right and wrong, overlap-frame tuning per kind, beat-snapping via beatMarkers, and the restraint law: one statement transition per film, most cuts should be cuts. Use when choosing or tuning any transition.",
+    "sha": "local",
+    "path": "transition-craft/SKILL.md"
+  },
+  {
+    "id": "text-and-typography",
+    "name": "Text & typography",
+    "description": "On-screen text beyond captions: hierarchy sizes, per-platform safe areas, readability armor over busy footage (boxed/outlined/dimmed), animation selection, kinetic-type patterns, and read-time budgets. Use for hooks, lower-thirds, CTAs, type beats.",
+    "sha": "local",
+    "path": "text-and-typography/SKILL.md"
+  },
+  {
+    "id": "color-storytelling",
+    "name": "Color storytelling",
+    "description": "Grading with intent: correct → match → grade order, shot matching to a reference, mood via temperature/curves/wheels, palette-driven grades from extract_palette, hue-curve surgery, LUT discipline at 0.4–0.7 strength, and over-grading failures. Use for any look pass.",
+    "sha": "local",
+    "path": "color-storytelling/SKILL.md"
   }
 ]
