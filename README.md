@@ -41,7 +41,7 @@
 ---
 
 <p align="center">
-  <img src="./docs/assets/kaestral-editor.png" alt="The Kaestral editor — media library, composited preview, and a multi-track timeline" width="820">
+  <img src="./docs/assets/kaestral-editor-demo.gif" alt="The Kaestral editor — media library, composited preview, and a multi-track timeline" width="820">
 </p>
 
 ## See it in action
