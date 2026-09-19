@@ -99,8 +99,11 @@ export const TOOL_DEFS: ToolDef[] = [
   {
     name: "inspect_timeline",
     description:
-      "A structured summary of what's on the timeline RIGHT NOW: project fps/size, total duration, and per track every clip with its media name, in/out (frames + seconds), speed, volume, and text. Read it to verify edits landed. (For a composited pixel preview, render/export.)",
-    inputSchema: obj({}),
+      "SEE your own work: a structured summary of what's on the timeline RIGHT NOW (project fps/size, total duration, and per track every clip with its media name, in/out frames + seconds, speed, volume, text) PLUS one COMPOSITED FRAME as an image — grades, effects, text and keyframed motion baked, rendered exactly as export_project will. Defaults to the playhead; pass frame:<n> to look at a moment (e.g. the hold of a punch_in, a caption, a layout). Use it after every few edits to self-critique before exporting.",
+    inputSchema: obj({
+      frame: int("Optional. Timeline frame to render (default: the playhead; clamped to the timeline)."),
+      maxDim: int("Optional. Longest side of the returned image in px (default 768). Smaller is faster."),
+    }),
   },
   {
     name: "search_media",

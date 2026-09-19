@@ -755,7 +755,7 @@ export class McpExecutor {
       case "get_media": return okJson({ media: this.media.mediaRows() });
       case "inspect_media": return this.inspectMedia(a);
       case "get_transcript": return this.getTranscript(a);
-      case "inspect_timeline": return this.inspectTimeline();
+      case "inspect_timeline": return this.inspectTimeline(a);
       case "search_media": return this.unavailable("search_media", "on-device semantic/transcript search");
       case "inspect_color": return this.unavailable("inspect_color", "compositing/render");
       // Edit
@@ -872,10 +872,12 @@ export class McpExecutor {
   }
 
   // inspect_timeline — a structured, human-readable summary of the CURRENT project timeline straight
-  // from the in-memory engine state (no compositing/render needed): tracks, each clip's placement
-  // (in/out frames + seconds), source media name, speed/volume, and the total duration. Distinct
-  // from get_timeline's compact editing form — this is for "what's on the timeline right now?".
-  private inspectTimeline(): ToolResult {
+  // from the in-memory engine state: tracks, each clip's placement (in/out frames + seconds), source
+  // media name, speed/volume, and the total duration — PLUS one composited frame (default: the
+  // playhead) rendered through the same drawFrame the export uses, so the agent can SEE its own
+  // work: grades, effects, text and keyframed motion all baked. Distinct from get_timeline's
+  // compact editing form — this is "what's on the timeline right now, and what does it look like?".
+  private async inspectTimeline(a: Args): Promise<ToolResult> {
     const total = totalFrames(this.timeline.tracks);
     const tracks = this.timeline.tracks.map((t, ti) => ({
       index: ti,
@@ -903,7 +905,7 @@ export class McpExecutor {
         };
       }),
     }));
-    return okJson({
+    const summary = {
       fps: this.fps,
       width: this.timeline.width,
       height: this.timeline.height,
@@ -911,7 +913,32 @@ export class McpExecutor {
       totalSeconds: Number((total / this.fps).toFixed(2)),
       trackCount: this.timeline.tracks.length,
       tracks,
+    };
+    if (total === 0) return okJson(summary); // nothing to composite
+
+    const frame = clamp(aInt(a, "frame") ?? this.currentFrame, 0, total - 1);
+    const { renderTimelineFrame } = await import("../render/renderFrame");
+    const rendered = await renderTimelineFrame(this.timeline, frame, {
+      maxDim: aInt(a, "maxDim") ?? 768,
+      mediaName: (r) => this.media.asset(r)?.name ?? r,
+      mediaPath: (r) => {
+        const asset = this.media.asset(r);
+        return asset ? resolveRenderMediaPath(asset.source, this.projectDir ?? ".", publicDir()) : null;
+      },
     });
+    const missing = rendered.missingMedia.map((r) => this.media.asset(r)?.name ?? r);
+    return okImages(
+      JSON.stringify({
+        ...summary,
+        preview: {
+          frame: rendered.frame, timeSec: Number((rendered.frame / this.fps).toFixed(2)),
+          width: rendered.width, height: rendered.height,
+          ...(missing.length ? { missingMedia: missing, warning: `${missing.length} clip(s) could not be decoded and show as a placeholder tile: ${missing.join(", ")}` } : {}),
+          note: "The image is the composited frame exactly as export_project will render it (grades, effects, text, motion baked). Pass frame:<n> to look at another moment.",
+        },
+      }),
+      [{ media_type: "image/jpeg", data: rendered.jpegBase64 }],
+    );
   }
 
   // ---- Edit ----
@@ -1321,7 +1348,7 @@ export class McpExecutor {
     await mkdir(dir, { recursive: true });
     const outputPath = join(dir, `freeze-${cryptoId()}.png`);
     try {
-      await extractStill(path, sourceSec, outputPath);
+      await extractStill(path, (sourceFrame - 0.5) / this.fps, outputPath); // half a frame early: lands ON sourceFrame
     } catch (e) {
       throw new ToolFail(`freeze_frame: could not extract frame ${atFrame} from ${this.media.asset(clip.mediaRef)?.name ?? clip.mediaRef}: ${e instanceof Error ? e.message : String(e)}`);
     }

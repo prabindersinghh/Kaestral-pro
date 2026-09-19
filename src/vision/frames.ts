@@ -38,11 +38,16 @@ async function probeDuration(path: string): Promise<number> {
 }
 
 /**
- * Extract ONE full-resolution frame at `timeSec` to `outPath` (PNG — lossless, so a freeze-frame
- * still matches the footage around it exactly). Accurate seek: -ss after -i. Throws on failure.
+ * Extract ONE full-resolution frame to `outPath` (PNG — lossless, so a freeze-frame still matches
+ * the footage around it exactly). `timeSec` should be HALF a frame before the wanted frame's
+ * timestamp: -ss keeps the first frame whose pts >= the seek point, so that lands exactly on the
+ * frame whether its pts rounds up or down (seeking to the exact timestamp can overshoot the file's
+ * last frame and produce nothing). Input-side seek: fast on long recordings, frame-accurate for
+ * decoded output. Throws on failure, including "nothing written".
  */
 export async function extractStill(path: string, timeSec: number, outPath: string, ffmpegPath = ffmpegBin()): Promise<void> {
-  await run(ffmpegPath, ["-y", "-v", "error", "-i", path, "-ss", Math.max(0, timeSec).toFixed(3), "-frames:v", "1", outPath]);
+  await run(ffmpegPath, ["-y", "-v", "error", "-ss", Math.max(0, timeSec).toFixed(3), "-i", path, "-frames:v", "1", outPath]);
+  await readFile(outPath).catch(() => { throw new Error(`no frame at ${timeSec.toFixed(3)}s`); });
 }
 
 /**
