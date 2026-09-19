@@ -9,6 +9,7 @@ import type { AnimPair, Clip, Crop, Keyframe, KeyframeValue, TextAnimation, Time
 import { defaultTrack, defaultClip, defaultTextStyle, rgba } from "../model/defaults";
 import { LAYOUTS, LAYOUT_NAMES, layoutPlacement, type LayoutFit, type LayoutSlot } from "../model/layout";
 import { EditEngine, type InsertSpec, type MoveSpec, type PlaceSpec } from "../engine/editEngine";
+import { computeOverwrite } from "../engine/overwrite";
 import { buildGetTimelineOutput } from "./getTimelineOutput";
 import { totalFrames } from "../model/helpers";
 import { MediaLibrary } from "./mediaLibrary";
@@ -908,8 +909,58 @@ export class McpExecutor {
     return 0;
   }
 
+  /** A fresh, empty track of `type`: visual types go on TOP (index 0, so an overlay layers above
+   *  everything already there); audio goes at the end of the audio zone. Returns its index. */
+  private newTrack(type: ClipType): number {
+    if (type === "audio") {
+      this.timeline.tracks.push(defaultTrack("audio"));
+      return this.timeline.tracks.length - 1;
+    }
+    this.timeline.tracks.unshift(defaultTrack(type));
+    return 0;
+  }
+
   private sourceDurationProjectFrames(assetDuration: number): number {
     return Math.max(1, Math.round(assetDuration * this.fps));
+  }
+
+  // --- Non-destructive placement (field report v1.0.5: an overlay placed without trackIndex erased
+  // all 12 of a user's cut clips; add_texts did the same on the next call). The engine's addClips is
+  // an OVERWRITE primitive by contract, so the guard lives here at the tool surface. -----------------
+
+  /** How many existing clips placing [start,end) on a track would remove/trim/split. Reuses the
+   *  engine's own overlap resolver (computeOverwrite), so "would this overwrite?" and "what does
+   *  overwrite do?" can never disagree. */
+  private overwriteCount(trackIndex: number, start: number, end: number): number {
+    const track = this.timeline.tracks[trackIndex];
+    return track ? computeOverwrite(track.clips, start, end, cryptoId).length : 0;
+  }
+
+  private overwriteRefusal(tool: string, count: number, trackIndex: number): ToolFail {
+    const label = this.engine.trackDisplayLabel(trackIndex);
+    return new ToolFail(
+      `${tool}: would overwrite ${count} existing clip(s) on track ${trackIndex}${label ? ` (${label})` : ""}. ` +
+      "Pass overwrite:true to do it anyway, or a different trackIndex, or omit trackIndex to place on a new track.",
+    );
+  }
+
+  /** Refuse (throw) if any explicit placement would clobber an existing clip and overwrite is off. */
+  private refuseDestructive(tool: string, overwrite: boolean, placements: { trackIndex: number; start: number; end: number }[]): void {
+    if (overwrite) return;
+    for (const p of placements) {
+      const n = this.overwriteCount(p.trackIndex, p.start, p.end);
+      if (n > 0) throw this.overwriteRefusal(tool, n, p.trackIndex);
+    }
+  }
+
+  /**
+   * Auto-routing for entries WITHOUT a trackIndex: the zone's default track (`defaultIndex`) if the
+   * whole batch fits there without touching anything; otherwise a brand-new track of `type` so the
+   * batch layers over the existing edit instead of erasing it. The batch stays together either way.
+   */
+  private routeBatch(type: ClipType, defaultIndex: number, overwrite: boolean, placements: { start: number; end: number }[]): { trackIndex: number; routed: boolean } {
+    const destructive = !overwrite && placements.some((p) => this.overwriteCount(defaultIndex, p.start, p.end) > 0);
+    return destructive ? { trackIndex: this.newTrack(type), routed: true } : { trackIndex: defaultIndex, routed: false };
   }
 
   private addClips(a: Args): ToolResult {
@@ -918,8 +969,11 @@ export class McpExecutor {
     const anySpecify = entries.some((e) => aInt(e as Args, "trackIndex") !== undefined);
     const allSpecify = entries.every((e) => aInt(e as Args, "trackIndex") !== undefined);
     if (anySpecify && !allSpecify) throw new ToolFail("add_clips: set trackIndex on every entry or none.");
+    const overwrite = aBool(a, "overwrite") ?? false;
 
-    const specs: PlaceSpec[] = [];
+    // Phase 1 — parse + validate every entry before touching the timeline.
+    interface Parsed { mediaRef: string; type: ClipType; hasAudio: boolean; startFrame: number; durationFrames: number; trimStart: number; trimEnd: number; explicitTrack?: number }
+    const parsed: Parsed[] = [];
     for (const raw of entries) {
       const e = raw as Args;
       const mediaRef = requireStr(e, "mediaRef");
@@ -933,20 +987,48 @@ export class McpExecutor {
       if (durArg !== undefined && trimEnd !== undefined) throw new ToolFail("add_clips: durationFrames and trimEndFrame are mutually exclusive");
       const srcTotal = this.sourceDurationProjectFrames(asset.duration);
       const durationFrames = durArg ?? Math.max(1, srcTotal - trimStart - (trimEnd ?? 0));
-      const trackIndex = allSpecify ? aInt(e, "trackIndex")! : this.ensureTrack(isVisual(asset.type) ? "video" : "audio");
-      const linkGroupId = asset.type === "video" && asset.hasAudio ? cryptoId() : undefined;
+      parsed.push({ mediaRef, type: asset.type, hasAudio: asset.hasAudio === true, startFrame, durationFrames, trimStart, trimEnd: trimEnd ?? 0, explicitTrack: allSpecify ? aInt(e, "trackIndex")! : undefined });
+    }
+    const span = (p: Parsed) => ({ start: p.startFrame, end: p.startFrame + p.durationFrames });
+
+    // Phase 2 — resolve tracks. Explicit indexes are honored but refused when destructive (unless
+    // overwrite:true). Omitted indexes route per zone; a batch that would clobber the default track
+    // goes to a NEW track instead. The visual zone is resolved first because a new visual track is
+    // unshifted (shifting later indexes), while a new audio track is pushed (shifting nothing).
+    let routedToNewTrack = false;
+    let visualIndex = -1, audioIndex = -1;
+    if (allSpecify) {
+      this.refuseDestructive("add_clips", overwrite, parsed.map((p) => ({ trackIndex: p.explicitTrack!, ...span(p) })));
+    } else {
+      const visuals = parsed.filter((p) => isVisual(p.type));
+      if (visuals.length) {
+        const r = this.routeBatch("video", this.ensureTrack("video"), overwrite, visuals.map(span));
+        visualIndex = r.trackIndex; routedToNewTrack ||= r.routed;
+      }
+    }
+    // Audio: the audio-typed entries without a trackIndex plus every auto linked-audio partner of a
+    // video-with-audio. Both are tool-chosen placements, so both get the non-destructive routing.
+    const audioPlacements = parsed.filter((p) => (p.type === "audio" && p.explicitTrack === undefined) || (p.type === "video" && p.hasAudio)).map(span);
+    if (audioPlacements.length) {
+      const r = this.routeBatch("audio", this.ensureTrack("audio"), overwrite, audioPlacements);
+      audioIndex = r.trackIndex; routedToNewTrack ||= r.routed;
+    }
+
+    const specs: PlaceSpec[] = [];
+    for (const p of parsed) {
+      const trackIndex = p.explicitTrack ?? (isVisual(p.type) ? visualIndex : audioIndex);
+      const linkGroupId = p.type === "video" && p.hasAudio ? cryptoId() : undefined;
       specs.push({
-        mediaRef, trackIndex, startFrame, durationFrames,
-        mediaType: asset.type, sourceClipType: asset.type,
-        trimStartFrame: trimStart, trimEndFrame: trimEnd ?? 0, linkGroupId,
+        mediaRef: p.mediaRef, trackIndex, startFrame: p.startFrame, durationFrames: p.durationFrames,
+        mediaType: p.type, sourceClipType: p.type,
+        trimStartFrame: p.trimStart, trimEndFrame: p.trimEnd, linkGroupId,
       });
       // Auto linked-audio for a video-with-audio placed on a visual track.
       if (linkGroupId) {
-        const audioTrack = this.ensureTrack("audio");
         specs.push({
-          mediaRef, trackIndex: audioTrack, startFrame, durationFrames,
+          mediaRef: p.mediaRef, trackIndex: audioIndex, startFrame: p.startFrame, durationFrames: p.durationFrames,
           mediaType: "audio", sourceClipType: "video",
-          trimStartFrame: trimStart, trimEndFrame: trimEnd ?? 0, linkGroupId,
+          trimStartFrame: p.trimStart, trimEndFrame: p.trimEnd, linkGroupId,
         });
       }
     }
@@ -957,7 +1039,11 @@ export class McpExecutor {
     if (placeable.length === 0) throw new ToolFail("add_clips: no entry's trackIndex is within range.");
     const changed = this.engine.addClips(specs);
     this.track(changed, "Add Clips");
-    return okJson({ added: placeable.length, clips: placeable.map((s) => ({ mediaRef: s.mediaRef, startFrame: s.startFrame, durationFrames: s.durationFrames })) });
+    return okJson({
+      added: placeable.length,
+      clips: placeable.map((s) => ({ mediaRef: s.mediaRef, trackIndex: s.trackIndex, startFrame: s.startFrame, durationFrames: s.durationFrames })),
+      ...(routedToNewTrack ? { routedToNewTrack: true, note: "The default track already had clips in that range, so this batch was placed on a NEW track (nothing was overwritten). Pass overwrite:true to overwrite instead." } : {}),
+    });
   }
 
   private insertClips(a: Args): ToolResult {
@@ -1277,7 +1363,8 @@ export class McpExecutor {
     const entries = aArr(a, "entries");
     if (entries.length === 0) throw new ToolFail("add_texts: entries is required");
     const allSpecify = entries.every((e) => aInt(e as Args, "trackIndex") !== undefined);
-    const specs: PlaceSpec[] = [];
+    const overwrite = aBool(a, "overwrite") ?? false;
+    const parsed: { startFrame: number; durationFrames: number; explicitTrack?: number }[] = [];
     const rows: Args[] = [];
     for (const raw of entries) {
       const e = raw as Args;
@@ -1287,11 +1374,25 @@ export class McpExecutor {
       if (startFrame === undefined || durationFrames === undefined || content === undefined) {
         throw new ToolFail("add_texts: each entry needs startFrame, durationFrames, content");
       }
-      const trackIndex = allSpecify ? aInt(e, "trackIndex")! : this.ensureTextTrack();
-      const id = cryptoId();
-      specs.push({ mediaRef: `text-${id}`, trackIndex, startFrame, durationFrames, mediaType: "text", sourceClipType: "text", id });
+      parsed.push({ startFrame, durationFrames, explicitTrack: allSpecify ? aInt(e, "trackIndex")! : undefined });
       rows.push(e);
     }
+    // Non-destructive placement (same policy as add_clips): explicit trackIndex → refuse a clobber
+    // unless overwrite:true; omitted → the text track, or a NEW text track if the batch would
+    // overwrite captions already there.
+    const spans = parsed.map((p) => ({ start: p.startFrame, end: p.startFrame + p.durationFrames }));
+    let routedToNewTrack = false;
+    let autoIndex = -1;
+    if (allSpecify) {
+      this.refuseDestructive("add_texts", overwrite, parsed.map((p, i) => ({ trackIndex: p.explicitTrack!, ...spans[i] })));
+    } else {
+      const r = this.routeBatch("text", this.ensureTextTrack(), overwrite, spans);
+      autoIndex = r.trackIndex; routedToNewTrack = r.routed;
+    }
+    const specs: PlaceSpec[] = parsed.map((p) => {
+      const id = cryptoId();
+      return { mediaRef: `text-${id}`, trackIndex: p.explicitTrack ?? autoIndex, startFrame: p.startFrame, durationFrames: p.durationFrames, mediaType: "text", sourceClipType: "text", id };
+    });
     if (specs.filter((s) => this.timeline.tracks[s.trackIndex]).length === 0) {
       throw new ToolFail("add_texts: no entry's trackIndex is within range.");
     }
@@ -1306,7 +1407,10 @@ export class McpExecutor {
       this.applyTextEntryStyle(c, rows[i]);
     });
     this.track(changed, "Add Text");
-    return okJson({ added: specs.length, clipIds: specs.map((s) => s.id) });
+    return okJson({
+      added: specs.length, clipIds: specs.map((s) => s.id), trackIndex: specs[0].trackIndex,
+      ...(routedToNewTrack ? { routedToNewTrack: true, note: "The text track already had clips in that range, so this batch was placed on a NEW text track (nothing was overwritten). Pass overwrite:true to overwrite instead." } : {}),
+    });
   }
 
   private updateText(a: Args): ToolResult {

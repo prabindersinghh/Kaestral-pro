@@ -121,9 +121,10 @@ export const TOOL_DEFS: ToolDef[] = [
   {
     name: "add_clips",
     description:
-      "Places one or more media assets on the timeline as a single undoable action. Clips on the same track are sequential; overlaps trim/split/remove existing clips (overwrite). Omit trackIndex on all entries to auto-create tracks.",
+      "Places one or more media assets on the timeline as a single undoable action. NON-DESTRUCTIVE BY DEFAULT: omit trackIndex on all entries and the batch goes to the default track when it fits, or to a NEW track (layered on top) if it would touch an existing clip — nothing is ever erased silently. With an explicit trackIndex, a placement that would trim/split/remove existing clips is REFUSED unless overwrite:true. A video-with-audio also gets a linked audio clip (same routing).",
     inputSchema: obj(
       {
+        overwrite: bool("Optional, default false. true = classic overwrite semantics: overlapping clips on the target track are trimmed/split/removed. false = refuse (explicit trackIndex) or auto-route to a new track (no trackIndex)."),
         entries: arr(
           obj(
             {
@@ -342,9 +343,10 @@ export const TOOL_DEFS: ToolDef[] = [
   {
     name: "add_texts",
     description:
-      "Adds text clips as timeline layers. Omit trackIndex on every entry to create one new top video track. Use add_captions for spoken audio captions. Unknown fields are rejected.",
+      "Adds text clips as timeline layers. NON-DESTRUCTIVE BY DEFAULT: omit trackIndex on every entry and the batch goes to the text track when it fits, or to a NEW text track on top if it would touch existing text/captions. With an explicit trackIndex, a placement that would trim/split/remove existing clips is REFUSED unless overwrite:true. Use add_captions for spoken audio captions. Unknown fields are rejected.",
     inputSchema: obj(
       {
+        overwrite: bool("Optional, default false. true = overwrite overlapping clips on the target track. false = refuse (explicit trackIndex) or auto-route to a new text track (no trackIndex)."),
         entries: arr(
           obj(
             {
