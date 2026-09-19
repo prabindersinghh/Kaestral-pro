@@ -5,11 +5,13 @@
 import type { AnimatableProperty, ClipType } from "../model/enums";
 import { CLIP_TYPES, isVisual, TEXT_ANIMATION_PRESETS } from "../model/enums";
 import type { TextAnimationPreset } from "../model/enums";
-import type { AnimPair, Clip, Crop, Keyframe, KeyframeValue, TextAnimation, Timeline } from "../model/types";
+import type { AnimPair, Clip, Crop, Keyframe, KeyframeTrack, KeyframeValue, TextAnimation, Timeline } from "../model/types";
 import { defaultTrack, defaultClip, defaultTextStyle, rgba } from "../model/defaults";
 import { LAYOUTS, LAYOUT_NAMES, layoutPlacement, type LayoutFit, type LayoutSlot } from "../model/layout";
 import { EditEngine, type InsertSpec, type MoveSpec, type PlaceSpec } from "../engine/editEngine";
 import { computeOverwrite } from "../engine/overwrite";
+import { planPunchIn } from "../engine/punchIn";
+import { sizeAt, topLeftAt } from "../model/clipSampling";
 import { buildGetTimelineOutput } from "./getTimelineOutput";
 import { totalFrames } from "../model/helpers";
 import { MediaLibrary } from "./mediaLibrary";
@@ -751,6 +753,7 @@ export class McpExecutor {
       case "apply_layout": return this.applyLayout(a);
       // Editing primitives (Kaestral extension — field report v1.0.5)
       case "add_track": return this.addTrack(a);
+      case "punch_in": return this.punchIn(a);
       // Text
       case "add_texts": return this.addTexts(a);
       case "update_text": return this.updateText(a);
@@ -1223,6 +1226,51 @@ export class McpExecutor {
     return okJson({ trackIndex, type, label: this.engine.trackDisplayLabel(trackIndex), trackCount: this.timeline.tracks.length });
   }
 
+  // punch_in: zoom a clip about a focus point — ramp in, optional hold, optional ramp back. Frames in
+  // the ARGS are TIMELINE frames (what get_timeline/see_video hand the agent); they're converted to
+  // the clip-relative frames the keyframe tracks store. The base box is sampled from the clip's
+  // current transform/keyframes at atFrame, so a PIP zooms within its own box and a second punch-in
+  // starts from wherever the first left it. Existing position/scale keyframes OUTSIDE the punch
+  // window are kept (so several punch-ins coexist on one clip); those inside it are replaced.
+  private punchIn(a: Args): ToolResult {
+    const clipId = requireStr(a, "clipId");
+    const clip = this.engine.clipRef(clipId);
+    if (!clip) throw new ToolFail(`punch_in: clip not found: ${clipId}`);
+    const atFrame = aInt(a, "atFrame"), toFrame = aInt(a, "toFrame");
+    if (atFrame === undefined || toFrame === undefined) throw new ToolFail("punch_in: atFrame and toFrame (timeline frames) are required.");
+    const clipEnd = clip.startFrame + clip.durationFrames;
+    if (atFrame < clip.startFrame || atFrame >= clipEnd) throw new ToolFail(`punch_in: atFrame ${atFrame} must be within the clip (timeline frames ${clip.startFrame}..${clipEnd}).`);
+    if (toFrame <= atFrame) throw new ToolFail("punch_in: toFrame must be after atFrame.");
+    const zoom = clamp(aNum(a, "zoom") ?? 2, 1, 4);
+    const focusX = clamp(aNum(a, "focusX") ?? 0.5, 0, 1);
+    const focusY = clamp(aNum(a, "focusY") ?? 0.5, 0, 1);
+    const holdFrames = Math.max(0, aInt(a, "holdFrames") ?? 0);
+    const returnFrames = Math.max(0, aInt(a, "returnFrames") ?? 0);
+
+    const tl = topLeftAt(clip, atFrame), sz = sizeAt(clip, atFrame);
+    const plan = planPunchIn({
+      base: { x: tl.x, y: tl.y, w: sz.width, h: sz.height }, zoom, focusX, focusY,
+      fromRel: atFrame - clip.startFrame, toRel: toFrame - clip.startFrame, holdFrames, returnFrames,
+    });
+    const endAbs = clip.startFrame + plan.endRel;
+    if (endAbs > clipEnd) throw new ToolFail(`punch_in: the move ends at frame ${endAbs} but the clip ends at ${clipEnd}. Shorten holdFrames/returnFrames or start earlier.`);
+
+    // Merge: keep existing keyframes outside [fromRel, endRel], replace those inside.
+    const fromRel = plan.position[0].frame;
+    const keepOutside = <V extends KeyframeValue>(track: KeyframeTrack<V> | undefined): Keyframe<V>[] =>
+      (track?.keyframes ?? []).filter((k) => k.frame < fromRel || k.frame > plan.endRel);
+    const position = [...keepOutside(clip.positionTrack), ...plan.position];
+    const scale = [...keepOutside(clip.scaleTrack), ...plan.scale];
+    const changed = this.engine.setKeyframeTracks(clipId, [{ property: "position", keyframes: position }, { property: "scale", keyframes: scale }], "Punch In");
+    this.track(changed, "Punch In");
+    return okJson({
+      clipId, zoom, focusX, focusY,
+      atFrame, toFrame, holdFrames, returnFrames, endsAtFrame: endAbs,
+      keyframes: { position: plan.position.map((k) => k.frame + clip.startFrame), scale: plan.scale.map((k) => k.frame + clip.startFrame) },
+      note: "Keyframes written on position (top-left, normalised) + scale (size fraction) so the focus point stays fixed while zooming. Verify with inspect_timeline(frame) at the hold.",
+    });
+  }
+
   private undo(): ToolResult {
     const expected = this.agentUndo[this.agentUndo.length - 1];
     if (!expected) return err("No assistant edit to undo this session. The user's own edits are theirs to undo.");
@@ -1662,6 +1710,8 @@ export class McpExecutor {
 function cryptoId(): string {
   return crypto.randomUUID();
 }
+
+const clamp = (v: number, lo: number, hi: number): number => Math.max(lo, Math.min(hi, v));
 
 function mimeToType(mime: string): ClipType | undefined {
   if (mime.startsWith("video/")) return "video";

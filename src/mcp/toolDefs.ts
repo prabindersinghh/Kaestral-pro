@@ -844,6 +844,20 @@ export const PRIMITIVE_TOOL_DEFS: ToolDef[] = [
       index: int("Optional. Insert position (0 = top). Default: top for visual types, end for audio."),
     }, ["type"]),
   },
+  {
+    name: "punch_in",
+    description: "Zoom a clip about a focus point (the screen-recording 'punch-in'): ramp from the clip's current framing to `zoom`× between atFrame and toFrame, optionally hold, optionally ramp back. Writes coherent position+scale keyframes so the focus point stays fixed on screen — no hand-derived maths. Frames are TIMELINE frames (as in get_timeline); focusX/focusY are 0–1 fractions of the clip's own frame (for a full-frame clip: of the canvas) — find the click with see_video(fromSec,toSec). Several punch-ins can coexist on one clip. One undo step.",
+    inputSchema: obj({
+      clipId: str("The clip to zoom (from get_timeline)."),
+      atFrame: int("Timeline frame where the zoom starts (clip still at its base framing)."),
+      toFrame: int("Timeline frame where full zoom is reached. Must be > atFrame; ~8–15 frames feels snappy."),
+      zoom: num("Zoom factor, clamped 1.0–4.0 (2 = the focus region fills twice the area)."),
+      focusX: num("0–1 horizontal position of the point to zoom into, within the clip's frame (0 = left edge)."),
+      focusY: num("0–1 vertical position of the point to zoom into (0 = top edge)."),
+      holdFrames: int("Optional. Frames to hold at full zoom before returning (only meaningful with returnFrames)."),
+      returnFrames: int("Optional. Frames for the ramp back to the base framing. Omit to stay zoomed to the end of the clip."),
+    }, ["clipId", "atFrame", "toFrame", "zoom", "focusX", "focusY"]),
+  },
 ];
 
 /** Tools advertised over MCP: the frozen 41 plus the Skills + Motion + Analysis + Primitive extensions. */

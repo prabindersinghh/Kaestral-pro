@@ -66,3 +66,76 @@ describe("B1: add_track", () => {
     expect(ex.timeline.tracks.length).toBe(0);
   });
 });
+
+describe("B2: punch_in", () => {
+  async function placed(ex: McpExecutor, startFrame = 100, durationFrames = 300): Promise<string> {
+    seed(ex);
+    await ex.execute("add_clips", { entries: [{ mediaRef: "vid1", trackIndex: 0, startFrame, durationFrames }] });
+    return ex.timeline.tracks[0].clips[0].id;
+  }
+
+  it("writes CLIP-RELATIVE position (top-left) + scale (size fraction) keyframes for ramp/hold/return, as ONE undo step", async () => {
+    const ex = new McpExecutor();
+    const clipId = await placed(ex); // clip spans timeline frames 100..400
+    const r = await ex.execute("punch_in", { clipId, atFrame: 130, toFrame: 145, zoom: 2, focusX: 0.25, focusY: 0.75, holdFrames: 30, returnFrames: 15 });
+    expect(r.isError, r.content[0].text).toBeFalsy();
+    const c = ex.engine.clipRef(clipId)!;
+    expect(c.positionTrack!.keyframes.map((k) => k.frame)).toEqual([30, 45, 75, 90]); // timeline 130/145/175/190 → clip-relative
+    expect(c.scaleTrack!.keyframes.map((k) => k.frame)).toEqual([30, 45, 75, 90]);
+    expect(c.positionTrack!.keyframes[1].value).toEqual({ a: -0.25, b: -0.75 });
+    expect(c.scaleTrack!.keyframes[1].value).toEqual({ a: 2, b: 2 });
+    expect(c.positionTrack!.keyframes[3].value).toEqual({ a: 0, b: 0 });
+    const out = JSON.parse(r.content[0].text) as { zoom: number; keyframes: { position: number[] } };
+    expect(out.zoom).toBe(2);
+    // One undo step reverts BOTH tracks.
+    const u = await ex.execute("undo", {});
+    expect(u.isError).toBeFalsy();
+    expect(ex.engine.clipRef(clipId)!.positionTrack).toBeUndefined();
+    expect(ex.engine.clipRef(clipId)!.scaleTrack).toBeUndefined();
+  });
+
+  it("uses the clip's own transform as the base (a PIP zooms within its box), and clamps zoom/focus", async () => {
+    const ex = new McpExecutor();
+    const clipId = await placed(ex, 0, 100);
+    await ex.execute("set_clip_properties", { clipIds: [clipId], transform: { centerX: 0.75, centerY: 0.75, width: 0.5, height: 0.5 } });
+    const r = await ex.execute("punch_in", { clipId, atFrame: 0, toFrame: 10, zoom: 99, focusX: 7, focusY: -3 });
+    expect(r.isError, r.content[0].text).toBeFalsy();
+    const out = JSON.parse(r.content[0].text) as { zoom: number; focusX: number; focusY: number };
+    expect(out.zoom).toBe(4);
+    expect(out.focusX).toBe(1);
+    expect(out.focusY).toBe(0);
+    const c = ex.engine.clipRef(clipId)!;
+    expect(c.positionTrack!.keyframes[0].value).toEqual({ a: 0.5, b: 0.5 }); // base top-left of the PIP
+    // 4× about the PIP's top-right corner (1,0): x' = 0.5 − 3·1·0.5 = −1, y' = 0.5; size 2×2.
+    expect(c.positionTrack!.keyframes[1].value).toEqual({ a: -1, b: 0.5 });
+    expect(c.scaleTrack!.keyframes[1].value).toEqual({ a: 2, b: 2 });
+  });
+
+  it("a second punch_in on the same clip keeps the first (keyframes outside the new window are preserved)", async () => {
+    const ex = new McpExecutor();
+    const clipId = await placed(ex, 0, 300);
+    await ex.execute("punch_in", { clipId, atFrame: 10, toFrame: 20, zoom: 2, focusX: 0.5, focusY: 0.5, holdFrames: 10, returnFrames: 10 });
+    const r = await ex.execute("punch_in", { clipId, atFrame: 100, toFrame: 110, zoom: 3, focusX: 0.1, focusY: 0.1, holdFrames: 10, returnFrames: 10 });
+    expect(r.isError, r.content[0].text).toBeFalsy();
+    const c = ex.engine.clipRef(clipId)!;
+    expect(c.positionTrack!.keyframes.map((k) => k.frame)).toEqual([10, 20, 30, 40, 100, 110, 120, 130]);
+    expect(c.scaleTrack!.keyframes[5].value).toEqual({ a: 3, b: 3 });
+  });
+
+  it("rejects frames outside the clip, a non-increasing ramp, and an unknown clip — with the clip's range", async () => {
+    const ex = new McpExecutor();
+    const clipId = await placed(ex, 100, 50); // 100..150
+    const bad = async (args: Record<string, unknown>, re: RegExp) => {
+      const r = await ex.execute("punch_in", { clipId, zoom: 2, focusX: 0.5, focusY: 0.5, ...args });
+      expect(r.isError).toBe(true);
+      expect(r.content[0].text).toMatch(re);
+    };
+    await bad({ atFrame: 90, toFrame: 110 }, /within the clip.*100.*150/);
+    await bad({ atFrame: 120, toFrame: 120 }, /toFrame must be after atFrame/);
+    await bad({ atFrame: 120, toFrame: 140, holdFrames: 5, returnFrames: 20 }, /ends at frame 165.*clip ends at 150/);
+    expect(ex.engine.clipRef(clipId)!.positionTrack).toBeUndefined();
+    const r = await ex.execute("punch_in", { clipId: "ghost", atFrame: 0, toFrame: 1, zoom: 2, focusX: 0.5, focusY: 0.5 });
+    expect(r.isError).toBe(true);
+    expect(r.content[0].text).toMatch(/clip not found/);
+  });
+});

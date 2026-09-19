@@ -701,13 +701,22 @@ export class EditEngine {
    * (0 = clip start). Sorted by frame; last row wins on a duplicate frame. Empty clears.
    */
   setKeyframes(clipId: string, property: AnimatableProperty, keyframes: Keyframe<KeyframeValue>[]): boolean {
-    return this.commit("Set Keyframes", () => {
+    return this.setKeyframeTracks(clipId, [{ property, keyframes }], "Set Keyframes");
+  }
+
+  /** Replace several properties' tracks on one clip in ONE undo step (same semantics as setKeyframes
+   *  per entry). Higher-level moves that must stay coherent — e.g. a punch-in keys position AND
+   *  scale together — use this so undo reverts both at once. */
+  setKeyframeTracks(clipId: string, entries: { property: AnimatableProperty; keyframes: Keyframe<KeyframeValue>[] }[], actionName = "Set Keyframes"): boolean {
+    return this.commit(actionName, () => {
       const clip = this.clipRef(clipId);
       if (!clip) return;
-      const key = PROP_TO_KEY[property];
-      const track: KeyframeTrack<KeyframeValue> = { keyframes: [] };
-      for (const kf of [...keyframes].sort((a, b) => a.frame - b.frame)) upsertKeyframe(track, kf);
-      (clip[key] as KeyframeTrack<KeyframeValue> | undefined) = track.keyframes.length ? track : undefined;
+      for (const e of entries) {
+        const key = PROP_TO_KEY[e.property];
+        const track: KeyframeTrack<KeyframeValue> = { keyframes: [] };
+        for (const kf of [...e.keyframes].sort((a, b) => a.frame - b.frame)) upsertKeyframe(track, kf);
+        (clip[key] as KeyframeTrack<KeyframeValue> | undefined) = track.keyframes.length ? track : undefined;
+      }
     });
   }
 
