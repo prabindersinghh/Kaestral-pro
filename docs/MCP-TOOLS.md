@@ -40,10 +40,11 @@ What Claude can actually do over MCP right now. Categories: **✅ fully wired**
 (real behavior), **🟡 partial**, **⛔ stubbed** (needs infra not in this build), **🔒 signed-out by
 design** (the upstream closed cloud). Verified live over the running MCP server unless noted.
 
-Advertised: **52 tools** = the frozen **41** parity tools + **2** Kaestral Skills extensions
+Advertised: **55 tools** = the frozen **41** parity tools + **2** Kaestral Skills extensions
 (`list_skills`, `read_skill`) + **3** motion-graphics extensions (`generate_title`,
 `generate_motion`, `compose_motion`) + **6** analysis/perception extensions (`analyze_audio`,
-`extract_palette`, `match_motion`, `detect_scenes`, `import_from_url`, `see_video`). Exact count is enforced by a test
+`extract_palette`, `match_motion`, `detect_scenes`, `import_from_url`, `see_video`) + **3** editing
+primitives (`add_track`, `punch_in`, `freeze_frame`). Exact count is enforced by a test
 (`src/mcp/__tests__/server.test.ts`) against `ALL_TOOL_DEFS.length` in `src/mcp/toolDefs.ts`.
 
 ### Tool categories (one-line purpose each)
@@ -60,17 +61,23 @@ Advertised: **52 tools** = the frozen **41** parity tools + **2** Kaestral Skill
 | Feedback | `send_feedback` | Report an agent limitation or bug. |
 | Skills extension | `list_skills`, `read_skill` | Discover and load Kaestral's editing playbooks (skills). |
 | Motion graphics extension | `generate_title`, `generate_motion`, `compose_motion` | Generate titles, template motion graphics, and bespoke generative scenes. |
-| Analysis / perception extension | `analyze_audio`, `extract_palette`, `match_motion`, `detect_scenes`, `import_from_url`, `see_video` | Beat/silence detection, palette extraction, reference-motion extraction (MotionSpec JSON), scene-cut detection, URL import, and frame vision. |
+| Analysis / perception extension | `analyze_audio`, `extract_palette`, `match_motion`, `detect_scenes`, `import_from_url`, `see_video` | Beat/silence detection, palette extraction, reference-motion extraction (MotionSpec JSON), scene-cut detection, URL import, and frame vision (`see_video` also takes `fromSec`/`toSec`/`fps` to sample a window densely, max 24 frames per call). |
+| Editing primitives | `add_track`, `punch_in`, `freeze_frame` | An empty track by type; zoom about a focus point (coherent position+scale keyframes); hold one frame as a still (extract → asset → split + insert + ripple). Each is one call and one undo step. |
 
 Full input schemas (types, required fields, enums) for every tool above live in
 [`src/mcp/toolDefs.ts`](../src/mcp/toolDefs.ts) as `TOOL_DEFS`, `SKILL_TOOL_DEFS`,
-`MOTION_TOOL_DEFS`, and `ANALYSIS_TOOL_DEFS` (combined as `ALL_TOOL_DEFS`).
+`MOTION_TOOL_DEFS`, `ANALYSIS_TOOL_DEFS`, and `PRIMITIVE_TOOL_DEFS` (combined as `ALL_TOOL_DEFS`).
 
-## ✅ Fully wired (27)
+## ✅ Fully wired (32)
 | Tool | Notes / evidence |
 |------|------|
 | get_timeline | full timeline JSON (verified) |
 | get_media | media rows (verified) |
+| inspect_media | ffprobe metadata: width/height/duration/fps/hasAudio (verified) |
+| inspect_timeline | structured per-track summary + ONE composited frame as an image (grades, effects, text, motion baked — the same drawFrame the export uses) |
+| add_track | empty track by type; survives later prune passes until used (verified) |
+| punch_in | zoom about a focus point → coherent clip-relative position+scale keyframes, one undo step (verified, hand-computed cases) |
+| freeze_frame | extract still (ffmpeg) → image asset → split + insert + ripple, one undo step (verified real pixels) |
 | add_clips | places clips + auto linked-audio for video-with-audio (verified real-footage export) |
 | insert_clips | ripple insert |
 | remove_clips | verified |
@@ -97,9 +104,7 @@ Full input schemas (types, required fields, enums) for every tool above live in
 | Tool | State | To finish |
 |------|-------|-----------|
 | list_models | returns signed-out shape `{models:[],loaded:false}` | real once ③ generation backend lands |
-| inspect_timeline | ⛔ stub | could render+sample a frame (compositor exists) — not yet |
 | inspect_color | ⛔ stub | could sample the graded frame — not yet |
-| inspect_media | ⛔ stub | dims/duration are available via ffprobe; transcription is not |
 
 ## ⛔ Stubbed — need on-device ML not in this build (honest)
 | Tool | Blocked on |

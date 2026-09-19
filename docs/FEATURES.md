@@ -1,7 +1,7 @@
 # Kaestral — Complete Feature Reference
 
 Every capability in Kaestral as of v1.0.5, in detail. The one idea behind all of it: **the editor is
-the hands, the AI is the brain.** Kaestral exposes a real editor as 52 validated MCP tools; a
+the hands, the AI is the brain.** Kaestral exposes a real editor as 55 validated MCP tools; a
 connected LLM (Claude Code, Cursor, Claude Desktop, or the in-app chat) perceives your footage and
 operates those tools. Everything the AI emits is validated data — never executed code.
 
@@ -50,7 +50,7 @@ operates those tools. Everything the AI emits is validated data — never execut
 
 ---
 
-## 2. The MCP server — 52 tools
+## 2. The MCP server — 55 tools
 
 Two transports, one engine: **stdio** (`npx kaestral` — what `claude mcp add kaestral -- npx
 kaestral` uses; zero config) and **HTTP** (`127.0.0.1:19789/mcp` — what the desktop app uses
@@ -59,7 +59,9 @@ Desktop connector. Every connecting agent receives the server's working rules an
 catalog in the MCP handshake.
 
 **Read / inspect (6):** `get_timeline` · `get_media` · `inspect_media` · `get_transcript`
-(with start/end-frame windowing) · `inspect_timeline` · `search_media`
+(with start/end-frame windowing) · `inspect_timeline` (the structured summary **plus one composited
+frame as an image** — grades, effects, text, motion baked — so the AI can see its own work) ·
+`search_media`
 
 **Timeline editing (13):** `add_clips` (auto linked-audio, duration derived from source when
 omitted) · `insert_clips` (ripple) · `remove_clips` · `remove_tracks` · `move_clips` ·
@@ -91,7 +93,16 @@ otherwise.
 `generate_motion` (template motion) · `compose_motion` (the generative engine, below)
 
 **Analysis & perception (6):** `analyze_audio` · `extract_palette` · `match_motion` ·
-`detect_scenes` · `import_from_url` · `see_video`
+`detect_scenes` · `import_from_url` · `see_video` (evenly sampled, scene-change, or a **dense time
+window** — `fromSec`/`toSec`/`fps`, up to 24 frames per call — for finding an exact click)
+
+**Editing primitives (3):** `add_track` (an empty track by type) · `punch_in` (zoom about a focus
+point: coherent position+scale keyframes, one undo step) · `freeze_frame` (extract → still asset →
+split + insert + ripple, one undo step)
+
+**Non-destructive by default:** `add_clips` / `add_texts` without a `trackIndex` route a batch that
+would touch existing clips to a NEW track; with an explicit `trackIndex` a destructive placement is
+refused unless `overwrite:true`.
 
 **Reliability guarantees of the tool surface**
 - No phantom successes: a mutation that changed nothing (bad track index, unknown clip id) returns
@@ -100,7 +111,7 @@ otherwise.
   "successful" file of placeholder tiles is never reported as clean.
 - `overwrite:false` protects existing files on export.
 - Every tool answers minimal/invalid arguments with a clean, actionable error (audited live:
-  52/52, no crashes, no hangs, no leaked stack traces).
+  55/55, no crashes, no hangs, no leaked stack traces).
 
 ---
 
