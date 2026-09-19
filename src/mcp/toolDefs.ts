@@ -858,6 +858,15 @@ export const PRIMITIVE_TOOL_DEFS: ToolDef[] = [
       returnFrames: int("Optional. Frames for the ramp back to the base framing. Omit to stay zoomed to the end of the clip."),
     }, ["clipId", "atFrame", "toFrame", "zoom", "focusX", "focusY"]),
   },
+  {
+    name: "freeze_frame",
+    description: "Hold one frame of a clip for durationFrames: extracts that frame (lossless PNG, bundled ffmpeg), registers it as an image asset, splits the clip at atFrame, inserts the still there and ripples everything after it (linked audio + sync-locked tracks included). The still inherits the clip's framing/crop/opacity/effects at that frame, so a PIP freezes as a PIP and a grade carries over. atFrame is a TIMELINE frame. One tool call, one undo step — never run ffmpeg yourself for this.",
+    inputSchema: obj({
+      clipId: str("The video/image clip to freeze (from get_timeline)."),
+      atFrame: int("Timeline frame to hold (must be within the clip)."),
+      durationFrames: int("How long the freeze lasts, in project frames (>= 1)."),
+    }, ["clipId", "atFrame", "durationFrames"]),
+  },
 ];
 
 /** Tools advertised over MCP: the frozen 41 plus the Skills + Motion + Analysis + Primitive extensions. */

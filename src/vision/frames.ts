@@ -34,6 +34,14 @@ async function probeDuration(path: string): Promise<number> {
 }
 
 /**
+ * Extract ONE full-resolution frame at `timeSec` to `outPath` (PNG — lossless, so a freeze-frame
+ * still matches the footage around it exactly). Accurate seek: -ss after -i. Throws on failure.
+ */
+export async function extractStill(path: string, timeSec: number, outPath: string, ffmpegPath = ffmpegBin()): Promise<void> {
+  await run(ffmpegPath, ["-y", "-v", "error", "-i", path, "-ss", Math.max(0, timeSec).toFixed(3), "-frames:v", "1", outPath]);
+}
+
+/**
  * Extract up to `count` frames from a clip/asset for the model to view.
  *  - "interval": evenly spaced across the duration (good default overview).
  *  - "scene":    on scene changes (best for finding distinct moments/shots).

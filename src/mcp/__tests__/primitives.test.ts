@@ -139,3 +139,89 @@ describe("B2: punch_in", () => {
     expect(r.content[0].text).toMatch(/clip not found/);
   });
 });
+
+describe("B3: freeze_frame (real ffmpeg extract → image asset → split + insert, one undo step)", () => {
+  const { execFileSync } = require("node:child_process") as typeof import("node:child_process");
+  const { mkdtempSync, existsSync } = require("node:fs") as typeof import("node:fs");
+  const { tmpdir } = require("node:os") as typeof import("node:os");
+  const { join } = require("node:path") as typeof import("node:path");
+  const dir = mkdtempSync(join(tmpdir(), "kaestral-freeze-"));
+  const src = join(dir, "rg.mp4"); // RED for 1s, GREEN for 1s @30fps, 320x240
+
+  async function importSrc(ex: McpExecutor): Promise<string> {
+    execFileSync("ffmpeg", [
+      "-y", "-f", "lavfi", "-i", "color=c=0xFF0000:s=320x240:r=30:d=1", "-f", "lavfi", "-i", "color=c=0x00FF00:s=320x240:r=30:d=1",
+      "-filter_complex", "[0][1]concat=n=2:v=1:a=0", "-pix_fmt", "yuv420p", "-r", "30", src,
+    ], { stdio: "ignore" });
+    const imp = await ex.execute("import_media", { source: { path: src } });
+    return (JSON.parse(imp.content[0].text) as { assetId: string }).assetId;
+  }
+
+  it("extracts the frame at atFrame as a still, splits the clip there, inserts the still and ripples the rest", async () => {
+    const ex = new McpExecutor({ projectDir: dir });
+    const assetId = await importSrc(ex);
+    await ex.execute("add_clips", { entries: [{ mediaRef: assetId, startFrame: 10, durationFrames: 60 }] }); // timeline 10..70
+    const vt = ex.timeline.tracks.findIndex((t) => t.type === "video");
+    const clipId = ex.timeline.tracks[vt].clips[0].id;
+
+    const r = await ex.execute("freeze_frame", { clipId, atFrame: 55, durationFrames: 30 }); // source frame 45 → GREEN
+    expect(r.isError, r.content[0].text).toBeFalsy();
+    const out = JSON.parse(r.content[0].text) as { stillAssetId: string; stillClipId: string; path: string; sourceSec: number };
+    expect(existsSync(out.path)).toBe(true);
+    expect(out.sourceSec).toBeCloseTo(1.5, 2);
+    const asset = ex.media.asset(out.stillAssetId)!;
+    expect(asset.type).toBe("image");
+
+    // The still is really the GREEN frame (sample its centre pixel).
+    const { loadImage, createCanvas } = await import("@napi-rs/canvas");
+    const img = await loadImage(out.path);
+    const cv = createCanvas(img.width, img.height); const cx = cv.getContext("2d"); cx.drawImage(img, 0, 0);
+    const [pr, pg] = cx.getImageData(160, 120, 1, 1).data;
+    expect(pg).toBeGreaterThan(150); expect(pr).toBeLessThan(90);
+
+    // Timeline: [left 10..55][still 55..85][right 85..100]; the right half keeps source continuity.
+    const clips = ex.timeline.tracks[vt].clips.map((c) => ({ id: c.id, s: c.startFrame, d: c.durationFrames, type: c.mediaType, trim: c.trimStartFrame }));
+    expect(clips.map((c) => [c.s, c.d, c.type])).toEqual([[10, 45, "video"], [55, 30, "image"], [85, 15, "video"]]);
+    expect(clips[2].trim).toBe(45);
+    expect(clips[1].id).toBe(out.stillClipId);
+    expect(clips[0].id).toBe(clipId);
+
+    // ONE undo step restores the original single clip.
+    const u = await ex.execute("undo", {});
+    expect(u.isError).toBeFalsy();
+    expect(ex.timeline.tracks[vt].clips.map((c) => [c.startFrame, c.durationFrames])).toEqual([[10, 60]]);
+  }, 60000);
+
+  it("the still inherits the source clip's framing (a PIP stays a PIP) and its grade", async () => {
+    const ex = new McpExecutor({ projectDir: dir });
+    const assetId = await importSrc(ex);
+    await ex.execute("add_clips", { entries: [{ mediaRef: assetId, startFrame: 0, durationFrames: 60 }] });
+    const vt = ex.timeline.tracks.findIndex((t) => t.type === "video");
+    const clipId = ex.timeline.tracks[vt].clips[0].id;
+    await ex.execute("set_clip_properties", { clipIds: [clipId], opacity: 0.8, transform: { centerX: 0.75, centerY: 0.75, width: 0.5, height: 0.5 } });
+    await ex.execute("apply_color", { clipIds: [clipId], saturation: 0.5 });
+    const r = await ex.execute("freeze_frame", { clipId, atFrame: 20, durationFrames: 10 });
+    expect(r.isError, r.content[0].text).toBeFalsy();
+    const still = ex.timeline.tracks[vt].clips.find((c) => c.mediaType === "image")!;
+    expect(still.transform).toMatchObject({ centerX: 0.75, centerY: 0.75, width: 0.5, height: 0.5 });
+    expect(still.opacity).toBe(0.8);
+    expect(still.effects?.length ?? 0).toBeGreaterThan(0);
+  }, 60000);
+
+  it("rejects atFrame outside the clip and an unresolvable media path", async () => {
+    const ex = new McpExecutor({ projectDir: dir });
+    const assetId = await importSrc(ex);
+    await ex.execute("add_clips", { entries: [{ mediaRef: assetId, startFrame: 0, durationFrames: 60 }] });
+    const vt = ex.timeline.tracks.findIndex((t) => t.type === "video");
+    const clipId = ex.timeline.tracks[vt].clips[0].id;
+    const r = await ex.execute("freeze_frame", { clipId, atFrame: 60, durationFrames: 10 });
+    expect(r.isError).toBe(true);
+    expect(r.content[0].text).toMatch(/within the clip/);
+    seed(ex); // vid1 points at a file that doesn't exist
+    await ex.execute("add_clips", { entries: [{ mediaRef: "vid1", startFrame: 500, durationFrames: 60 }] });
+    const ghost = ex.timeline.tracks.flatMap((t) => t.clips).find((c) => c.mediaRef === "vid1")!.id;
+    const g = await ex.execute("freeze_frame", { clipId: ghost, atFrame: 510, durationFrames: 10 });
+    expect(g.isError).toBe(true);
+    expect(g.content[0].text).toMatch(/could not extract/);
+  }, 60000);
+});

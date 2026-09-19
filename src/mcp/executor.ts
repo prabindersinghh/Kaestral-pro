@@ -11,7 +11,7 @@ import { LAYOUTS, LAYOUT_NAMES, layoutPlacement, type LayoutFit, type LayoutSlot
 import { EditEngine, type InsertSpec, type MoveSpec, type PlaceSpec } from "../engine/editEngine";
 import { computeOverwrite } from "../engine/overwrite";
 import { planPunchIn } from "../engine/punchIn";
-import { sizeAt, topLeftAt } from "../model/clipSampling";
+import { cropAt, rawOpacityAt, sizeAt, topLeftAt, transformAt } from "../model/clipSampling";
 import { buildGetTimelineOutput } from "./getTimelineOutput";
 import { totalFrames } from "../model/helpers";
 import { MediaLibrary } from "./mediaLibrary";
@@ -28,7 +28,7 @@ import { analyzeBeats } from "../audio/beats";
 import { extractPalette } from "../color/palette";
 import { extractMotionSpec } from "../motion/matchMotion";
 import { detectScenes } from "../motion/sceneDetect";
-import { extractFrames, type SampleMode } from "../vision/frames";
+import { extractFrames, extractStill, type SampleMode } from "../vision/frames";
 import { transcribe, whisperAvailable, type TranscriptWord } from "../audio/transcribe";
 import { generate, type GenConfig, type GenKind } from "../gen/hosted";
 import { validateSceneSpec, type SceneSpec } from "../gen/sceneSpec";
@@ -754,6 +754,7 @@ export class McpExecutor {
       // Editing primitives (Kaestral extension — field report v1.0.5)
       case "add_track": return this.addTrack(a);
       case "punch_in": return this.punchIn(a);
+      case "freeze_frame": return this.freezeFrame(a);
       // Text
       case "add_texts": return this.addTexts(a);
       case "update_text": return this.updateText(a);
@@ -1268,6 +1269,63 @@ export class McpExecutor {
       atFrame, toFrame, holdFrames, returnFrames, endsAtFrame: endAbs,
       keyframes: { position: plan.position.map((k) => k.frame + clip.startFrame), scale: plan.scale.map((k) => k.frame + clip.startFrame) },
       note: "Keyframes written on position (top-left, normalised) + scale (size fraction) so the focus point stays fixed while zooming. Verify with inspect_timeline(frame) at the hold.",
+    });
+  }
+
+  // freeze_frame: hold one frame of a clip for durationFrames. Extracts the frame (bundled ffmpeg,
+  // lossless PNG), registers it as an image asset, then — in ONE engine commit — splits the clip at
+  // atFrame, inserts the still there and ripples everything after it (engine.insertClips already does
+  // split-at-point + push on the target/sync-locked/linked tracks + place). The still inherits the
+  // source clip's framing/crop/opacity/effects SAMPLED at atFrame, so a PIP freezes as a PIP and a
+  // graded clip stays graded. Previously four calls plus an out-of-product ffmpeg invocation.
+  private async freezeFrame(a: Args): Promise<ToolResult> {
+    const clipId = requireStr(a, "clipId");
+    const loc = this.engine.findClip(clipId);
+    const clip = this.engine.clipRef(clipId);
+    if (!loc || !clip) throw new ToolFail(`freeze_frame: clip not found: ${clipId}`);
+    if (clip.mediaType !== "video" && clip.mediaType !== "image") throw new ToolFail(`freeze_frame: clip ${clipId} is ${clip.mediaType}; freeze a video or image clip.`);
+    const atFrame = aInt(a, "atFrame");
+    const durationFrames = aInt(a, "durationFrames");
+    if (atFrame === undefined || durationFrames === undefined) throw new ToolFail("freeze_frame: atFrame (timeline frame) and durationFrames are required.");
+    if (durationFrames < 1) throw new ToolFail("freeze_frame: durationFrames must be >= 1.");
+    const clipEnd = clip.startFrame + clip.durationFrames;
+    if (atFrame < clip.startFrame || atFrame >= clipEnd) throw new ToolFail(`freeze_frame: atFrame ${atFrame} must be within the clip (timeline frames ${clip.startFrame}..${clipEnd}).`);
+    const path = this.mediaPathFor({ clipId });
+    if (!path) throw new ToolFail("freeze_frame: could not extract — the clip's media does not resolve to a file on disk.");
+
+    // Source time of that timeline frame (trim + speed), then the still.
+    const sourceFrame = clip.trimStartFrame + Math.round((atFrame - clip.startFrame) * clip.speed);
+    const sourceSec = sourceFrame / this.fps;
+    const dir = join(dataDir(), "generated");
+    await mkdir(dir, { recursive: true });
+    const outputPath = join(dir, `freeze-${cryptoId()}.png`);
+    try {
+      await extractStill(path, sourceSec, outputPath);
+    } catch (e) {
+      throw new ToolFail(`freeze_frame: could not extract frame ${atFrame} from ${this.media.asset(clip.mediaRef)?.name ?? clip.mediaRef}: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    const srcAsset = this.media.asset(clip.mediaRef);
+    const asset = this.media.addAsset({
+      name: `Freeze: ${srcAsset?.name ?? clip.mediaRef} @ ${sourceSec.toFixed(2)}s`, type: "image", duration: durationFrames / this.fps,
+      source: { kind: "external", absolutePath: outputPath },
+      sourceWidth: srcAsset?.sourceWidth, sourceHeight: srcAsset?.sourceHeight, hasAudio: false,
+    });
+
+    const stillId = cryptoId();
+    const style = {
+      transform: transformAt(clip, atFrame), crop: cropAt(clip, atFrame), opacity: rawOpacityAt(clip, atFrame),
+      effects: clip.effects, blendMode: clip.blendMode,
+    };
+    const changed = this.engine.insertClips(
+      [{ mediaRef: asset.id, durationFrames, mediaType: "image", id: stillId, style }],
+      loc.trackIndex, atFrame,
+    );
+    this.track(changed, "Freeze Frame");
+    if (!changed) throw new ToolFail("freeze_frame: nothing changed (the insert was refused).");
+    return okJson({
+      stillAssetId: asset.id, stillClipId: stillId, path: outputPath, sourceSec: Number(sourceSec.toFixed(3)),
+      atFrame, durationFrames, trackIndex: loc.trackIndex,
+      note: `The clip was split at ${atFrame}; the still holds ${durationFrames} frame(s) and everything after it moved right by that much (linked audio + sync-locked tracks included).`,
     });
   }
 

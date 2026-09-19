@@ -3,8 +3,8 @@
 // Ripple,Linking,Keyframes,Tracks}.swift. Undo is modeled as timeline snapshots
 // (matching EditorViewModel.withTimelineSwap / registerTimelineSwap).
 
-import type { AnimatableProperty, ClipType } from "../model/enums";
-import type { Clip, Keyframe, KeyframeTrack, KeyframeValue, Timeline, Track } from "../model/types";
+import type { AnimatableProperty, BlendMode, ClipType } from "../model/enums";
+import type { Clip, Crop, Effect, Keyframe, KeyframeTrack, KeyframeValue, Timeline, Track, Transform } from "../model/types";
 import { defaultClip, defaultTrack, newId } from "../model/defaults";
 import { encodeTimeline } from "../model/codec";
 import { endFrame } from "../model/helpers";
@@ -25,6 +25,17 @@ export interface ClipLocation {
   clipIndex: number;
 }
 
+/** The static look a new clip may inherit from another (e.g. a freeze-frame still from its source):
+ *  framing, crop, opacity, effect stack, blend. Keyframe tracks are NOT part of it — pass the values
+ *  already sampled at the frame of interest. */
+export interface ClipStyle {
+  transform: Transform;
+  crop: Crop;
+  opacity: number;
+  effects?: Effect[];
+  blendMode?: BlendMode;
+}
+
 export interface PlaceSpec {
   mediaRef: string;
   trackIndex: number;
@@ -37,6 +48,7 @@ export interface PlaceSpec {
   id?: string;
   linkGroupId?: string;
   volume?: number;
+  style?: ClipStyle;
 }
 
 export interface InsertSpec {
@@ -47,6 +59,7 @@ export interface InsertSpec {
   mediaType?: ClipType;
   id?: string;
   linkGroupId?: string;
+  style?: ClipStyle;
 }
 
 export interface MoveSpec {
@@ -308,6 +321,13 @@ export class EditEngine {
     if (spec.trimEndFrame !== undefined) c.trimEndFrame = spec.trimEndFrame;
     if (spec.volume !== undefined) c.volume = spec.volume;
     if (spec.linkGroupId !== undefined) c.linkGroupId = spec.linkGroupId;
+    if (spec.style) {
+      c.transform = structuredClone(spec.style.transform);
+      c.crop = structuredClone(spec.style.crop);
+      c.opacity = spec.style.opacity;
+      if (spec.style.effects?.length) c.effects = structuredClone(spec.style.effects);
+      if (spec.style.blendMode && spec.style.blendMode !== "normal") c.blendMode = spec.style.blendMode;
+    }
     return c;
   }
 
