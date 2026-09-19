@@ -46,6 +46,9 @@ export class NodeFrameSource implements FrameSource {
     for (const track of timeline.tracks) {
       if (!isVisual(track.type)) continue;
       for (const clip of track.clips) {
+        // Text is DRAWN by the compositor from clip.textContent/textStyle — its synthetic `text-<id>`
+        // mediaRef never resolves to a file and must not be reported as undecodable media.
+        if (clip.mediaType === "text") continue;
         const path = this.mediaPath(clip.mediaRef);
         if (!path) { this.missing.add(clip.mediaRef); continue; } // unresolved/offline/remote source
         if (clip.mediaType === "image") {
