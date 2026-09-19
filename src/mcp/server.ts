@@ -93,8 +93,20 @@ export class McpServer {
   private async handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const path = (req.url ?? "/").split("?")[0];
 
+    // Loopback gate for EVERY path — MCP and the project bridge alike. The server binds to
+    // 127.0.0.1, but a page in any browser tab can still reach it: the Origin allowlist stops a
+    // cross-site page from reading/replacing the project, and the Host check stops DNS rebinding
+    // (attacker's hostname → 127.0.0.1) from turning that page into a "same-origin" one. A missing
+    // Origin is allowed (CLI MCP clients send none). CORS is granted ONLY to an allowed Origin —
+    // never `*` — so a browser can't read a response it shouldn't have, even on a bug.
+    const hostErr = validateHost(req);
+    if (hostErr) return sendJson(res, 403, path === "/mcp" ? rpcError(null, -32600, hostErr) : { error: hostErr });
+    const originErr = validateOrigin(req);
+    if (originErr) return sendJson(res, 403, path === "/mcp" ? rpcError(null, -32600, originErr) : { error: originErr });
+    const CORS = corsHeaders(header(req, "origin"));
+
     if (path === "/.well-known/oauth-protected-resource") {
-      return sendJson(res, 200, { resource: `http://127.0.0.1:${this.port}` });
+      return sendJson(res, 200, { resource: `http://127.0.0.1:${this.port}` }, CORS);
     }
 
     // --- Project bridge (app ⇄ server shared state; NOT part of the MCP contract) ---
@@ -193,7 +205,7 @@ export class McpServer {
       }
     }
     if (path.startsWith("/media/") && req.method === "GET") {
-      return this.serveMedia(req, res, decodeURIComponent(path.slice("/media/".length)));
+      return this.serveMedia(req, res, decodeURIComponent(path.slice("/media/".length)), CORS);
     }
     if (path.startsWith("/waveform/") && req.method === "GET") {
       const wf = await this.executor.waveformFor(decodeURIComponent(path.slice("/waveform/".length)));
@@ -211,10 +223,9 @@ export class McpServer {
       return;
     }
 
-    // POST: validation pipeline (origin → content-type → protocol version). CORS on every response
-    // so the in-app chat (webview on :1420) can call /mcp directly, same as CLI clients.
-    const originErr = validateOrigin(req);
-    if (originErr) return sendJson(res, 403, rpcError(null, -32600, originErr), CORS);
+    // POST: validation pipeline (origin — already enforced above for every path — → content-type →
+    // protocol version). CORS on every response so the in-app chat (webview) can call /mcp directly,
+    // same as CLI clients.
     const ctErr = validateContentType(req);
     if (ctErr) return sendJson(res, 415, rpcError(null, -32600, ctErr), CORS);
     const pvErr = validateProtocol(req);
@@ -248,7 +259,7 @@ export class McpServer {
   }
 
   /** Stream a media asset's bytes to the webview (preview source). Supports Range for seeking. */
-  private async serveMedia(req: IncomingMessage, res: ServerResponse, assetId: string): Promise<void> {
+  private async serveMedia(req: IncomingMessage, res: ServerResponse, assetId: string, CORS: Record<string, string>): Promise<void> {
     const asset = this.executor.media.asset(assetId);
     const path = asset
       ? resolveRenderMediaPath(asset.source, this.executor.projectDir ?? ".", publicDir())
@@ -345,16 +356,42 @@ export class McpServer {
 
 // --- validators (MCPHTTPServer.swift validation pipeline) ---
 
+/** Hostnames a browser page may carry in Origin/Host to talk to this server: the loopback names
+ *  plus the Tauri webview's own origins (`http://tauri.localhost` on Windows/WebView2,
+ *  `tauri://localhost` on macOS/Linux). An explicit allowlist — never a suffix match. */
+const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1", "[::1]", "tauri.localhost"]);
+
+function isLoopbackOrigin(origin: string): boolean {
+  try {
+    const u = new URL(origin);
+    if (u.protocol === "tauri:") return u.hostname === "localhost" || u.hostname === "";
+    return (u.protocol === "http:" || u.protocol === "https:") && LOOPBACK_HOSTS.has(u.hostname);
+  } catch {
+    return false;
+  }
+}
+
 function validateOrigin(req: IncomingMessage): string | null {
   const origin = header(req, "origin");
   if (!origin) return null; // CLI clients send no Origin — allowed.
-  try {
-    const host = new URL(origin).hostname;
-    if (host === "127.0.0.1" || host === "localhost" || host === "::1") return null;
-  } catch {
-    /* fall through */
-  }
-  return "Origin not allowed (localhost only).";
+  return isLoopbackOrigin(origin) ? null : "Origin not allowed (localhost only).";
+}
+
+/** DNS-rebinding guard: the Host header must name this loopback server, not an attacker's domain
+ *  that merely resolves to 127.0.0.1. Absent Host (HTTP/1.0 tooling) is allowed — a browser
+ *  always sends one, and a non-browser client on this machine is already inside the trust boundary. */
+function validateHost(req: IncomingMessage): string | null {
+  const host = header(req, "host");
+  if (!host) return null;
+  // Strip the port: "127.0.0.1:19789", "localhost:19789", "[::1]:19789".
+  const name = host.startsWith("[") ? host.slice(0, host.indexOf("]") + 1) : host.replace(/:\d+$/, "");
+  return LOOPBACK_HOSTS.has(name.toLowerCase()) ? null : "Host not allowed (localhost only).";
+}
+
+/** CORS headers for a response: the bridge/MCP verbs+headers, plus an exact echo of the (already
+ *  validated) Origin when the request carried one. No Origin → no Allow-Origin at all. Never `*`. */
+function corsHeaders(origin: string | undefined): Record<string, string> {
+  return origin ? { ...CORS_BASE, "Access-Control-Allow-Origin": origin, Vary: "Origin" } : { ...CORS_BASE };
 }
 
 function validateContentType(req: IncomingMessage): string | null {
@@ -402,9 +439,9 @@ function readBodyBuffer(req: IncomingMessage): Promise<Buffer> {
   });
 }
 
-/** CORS for the project-bridge endpoints (the app UI on :1420 talks to this server). */
-const CORS: Record<string, string> = {
-  "Access-Control-Allow-Origin": "*",
+/** CORS verbs/headers for the project-bridge + MCP endpoints (the app's webview talks to this
+ *  server). The Allow-Origin value is added per request by corsHeaders() — only for an allowed Origin. */
+const CORS_BASE: Record<string, string> = {
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, MCP-Protocol-Version",
 };

@@ -125,3 +125,63 @@ describe("Stage-C: MCP HTTP transport (kaestral on 127.0.0.1)", () => {
     expect(["error", "stopped", "starting"]).toContain(s1.status);
   });
 });
+
+// A3 (field report v1.0.5): the bridge endpoints (/state, /gen-config, /gpu/*, /upload, /media/:id,
+// /waveform/:id) were served BEFORE the Origin gate with `Access-Control-Allow-Origin: *`, so any page
+// in any browser tab could read the whole timeline + media manifest (incl. the absolute projectDir),
+// replace the project, write into the media dir, read imported bytes, repoint the generation key, and
+// start/stop the user's GCP VM. Every path is now behind the same loopback Origin allowlist + a Host
+// check (DNS rebinding), and CORS echoes only an allowed Origin. A MISSING Origin stays allowed — CLI
+// MCP clients legitimately send none.
+describe("A3: bridge endpoints share the loopback Origin/Host gate", () => {
+  const B = `http://127.0.0.1:${PORT}`;
+  const BRIDGE_PATHS: [string, string][] = [
+    ["GET", "/state"], ["POST", "/state"], ["GET", "/gen-config"], ["POST", "/gen-config"],
+    ["GET", "/gpu/status"], ["POST", "/gpu/config"], ["POST", "/gpu/start"], ["POST", "/gpu/stop"],
+    ["POST", "/upload?name=x.bin"], ["GET", "/media/anything"], ["GET", "/waveform/anything"],
+    ["GET", "/.well-known/oauth-protected-resource"], ["GET", "/mcp"],
+  ];
+
+  it("rejects a foreign Origin on every bridge path (403) and never grants it CORS", async () => {
+    for (const [method, path] of BRIDGE_PATHS) {
+      const res = await fetch(`${B}${path}`, { method, headers: { Origin: "https://evil.example", "Content-Type": "application/json" }, body: method === "POST" ? "{}" : undefined });
+      expect(res.status, `${method} ${path}`).toBe(403);
+      expect(res.headers.get("access-control-allow-origin"), `${method} ${path}`).toBeNull();
+      await res.body?.cancel();
+    }
+    // The CORS preflight itself is gated too — a foreign page gets no 204 to build on.
+    const pre = await fetch(`${B}/state`, { method: "OPTIONS", headers: { Origin: "https://evil.example" } });
+    expect(pre.status).toBe(403);
+  });
+
+  it("rejects a foreign Host header (DNS rebinding) even with no Origin", async () => {
+    const { request } = await import("node:http");
+    const status = await new Promise<number>((resolve, reject) => {
+      const req = request({ host: "127.0.0.1", port: PORT, path: "/state", method: "GET", headers: { Host: "evil.example" } }, (res) => { res.resume(); resolve(res.statusCode ?? 0); });
+      req.on("error", reject);
+      req.end();
+    });
+    expect(status).toBe(403);
+  });
+
+  it("accepts a MISSING Origin (CLI clients) on bridge paths", async () => {
+    const res = await fetch(`${B}/state`); // Node fetch sends no Origin header
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json).toHaveProperty("timeline");
+    expect(res.headers.get("access-control-allow-origin")).toBeNull(); // no Origin → no CORS grant needed
+  });
+
+  it("accepts loopback Origins and echoes them exactly (never '*'): dev webview, packaged Tauri webview", async () => {
+    for (const origin of ["http://localhost:1420", "http://127.0.0.1:1420", "http://tauri.localhost", "tauri://localhost"]) {
+      const res = await fetch(`${B}/state`, { headers: { Origin: origin } });
+      expect(res.status, origin).toBe(200);
+      expect(res.headers.get("access-control-allow-origin"), origin).toBe(origin);
+      expect(res.headers.get("vary")).toMatch(/Origin/);
+      await res.body?.cancel();
+      const pre = await fetch(`${B}/state`, { method: "OPTIONS", headers: { Origin: origin } });
+      expect(pre.status, origin).toBe(204);
+      expect(pre.headers.get("access-control-allow-origin")).toBe(origin);
+    }
+  });
+});
