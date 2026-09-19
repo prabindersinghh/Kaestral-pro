@@ -3,12 +3,15 @@
 // return the faithful signed-out / "unavailable in this build" shapes (SPEC §10, §11).
 
 import type { AnimatableProperty, ClipType } from "../model/enums";
-import { isVisual, TEXT_ANIMATION_PRESETS } from "../model/enums";
+import { CLIP_TYPES, isVisual, TEXT_ANIMATION_PRESETS } from "../model/enums";
 import type { TextAnimationPreset } from "../model/enums";
-import type { AnimPair, Clip, Crop, Keyframe, KeyframeValue, TextAnimation, Timeline } from "../model/types";
+import type { AnimPair, Clip, Crop, Keyframe, KeyframeTrack, KeyframeValue, TextAnimation, Timeline } from "../model/types";
 import { defaultTrack, defaultClip, defaultTextStyle, rgba } from "../model/defaults";
 import { LAYOUTS, LAYOUT_NAMES, layoutPlacement, type LayoutFit, type LayoutSlot } from "../model/layout";
 import { EditEngine, type InsertSpec, type MoveSpec, type PlaceSpec } from "../engine/editEngine";
+import { computeOverwrite } from "../engine/overwrite";
+import { planPunchIn } from "../engine/punchIn";
+import { cropAt, rawOpacityAt, sizeAt, topLeftAt, transformAt } from "../model/clipSampling";
 import { buildGetTimelineOutput } from "./getTimelineOutput";
 import { totalFrames } from "../model/helpers";
 import { MediaLibrary } from "./mediaLibrary";
@@ -25,7 +28,7 @@ import { analyzeBeats } from "../audio/beats";
 import { extractPalette } from "../color/palette";
 import { extractMotionSpec } from "../motion/matchMotion";
 import { detectScenes } from "../motion/sceneDetect";
-import { extractFrames, type SampleMode } from "../vision/frames";
+import { extractFrames, extractStill, MAX_FRAMES_PER_CALL, type SampleMode } from "../vision/frames";
 import { transcribe, whisperAvailable, type TranscriptWord } from "../audio/transcribe";
 import { generate, type GenConfig, type GenKind } from "../gen/hosted";
 import { validateSceneSpec, type SceneSpec } from "../gen/sceneSpec";
@@ -174,18 +177,39 @@ export class McpExecutor {
   private async seeVideo(a: Args): Promise<ToolResult> {
     const path = this.mediaPathFor(a);
     if (!path) throw new ToolFail("see_video: provide a resolvable mediaRef or clipId (call get_media/get_timeline first).");
-    const count = Math.max(1, Math.min(12, aInt(a, "count") ?? 6));
+    const count = Math.max(1, Math.min(MAX_FRAMES_PER_CALL, aInt(a, "count") ?? 6));
     const mode = (aStr(a, "mode") === "scene" ? "scene" : "interval") as SampleMode;
     const clip = aStr(a, "clipId") ? this.engine.clipRef(aStr(a, "clipId")!) : null;
-    const startSec = clip ? (clip.trimStartFrame / this.fps) : undefined;
-    const endSec = clip ? (clip.trimStartFrame + Math.round(clip.durationFrames * clip.speed)) / this.fps : undefined;
+    // The clip's visible SOURCE range (trim + speed), in source seconds.
+    const clipSrc0 = clip ? clip.trimStartFrame / this.fps : 0;
+    const clipSrc1 = clip ? (clip.trimStartFrame + Math.round(clip.durationFrames * clip.speed)) / this.fps : undefined;
 
-    const frames = await extractFrames(path, { count, mode, maxDim: aInt(a, "maxDim") ?? 512, startSec, endSec });
+    // Optional dense window (B4). fromSec/toSec are CLIP-relative seconds when a clipId is given
+    // (0 = the clip's first frame on the timeline; mapped through trim + speed), SOURCE seconds for a
+    // bare mediaRef. `fps` samples the window densely (capped, see MAX_FRAMES_PER_CALL).
+    const fromSec = aNum(a, "fromSec"), toSec = aNum(a, "toSec"), fps = aNum(a, "fps");
+    let startSec = clip ? clipSrc0 : undefined, endSec = clipSrc1;
+    if (fromSec !== undefined || toSec !== undefined) {
+      const f0 = Math.max(0, fromSec ?? 0);
+      const toSource = (s: number) => (clip ? clipSrc0 + s * clip.speed : s);
+      const f1 = toSec ?? (clip ? clip.durationFrames / this.fps : undefined);
+      if (f1 !== undefined && f1 <= f0) throw new ToolFail("see_video: toSec must be greater than fromSec.");
+      startSec = toSource(f0);
+      endSec = f1 !== undefined ? toSource(f1) : undefined;
+      if (clip && endSec !== undefined && clipSrc1 !== undefined) endSec = Math.min(endSec, clipSrc1);
+    }
+
+    const frames = await extractFrames(path, { count, mode, maxDim: aInt(a, "maxDim") ?? 512, startSec, endSec, fps });
     if (frames.length === 0) return err("see_video: could not extract any frames from this media.");
-    const label = frames.map((f, i) => `frame ${i + 1}: ${f.timeSec.toFixed(2)}s`).join(", ");
+    // Each frame is labelled with its SOURCE time and, for a clip, the TIMELINE frame it sits at — the
+    // number punch_in / split_clips / freeze_frame take.
+    const tlFrame = (src: number) => (clip ? Math.round(clip.startFrame + (src * this.fps - clip.trimStartFrame) / Math.max(clip.speed, 0.0001)) : undefined);
+    const label = frames.map((f, i) => `frame ${i + 1}: ${f.timeSec.toFixed(2)}s${clip ? ` (timeline frame ${tlFrame(f.timeSec)})` : ""}`).join(", ");
+    const how = fps !== undefined ? `dense window at ${fps} fps` : mode === "scene" ? "scene changes" : "evenly sampled";
     return okImages(
-      `${frames.length} frame(s) from this ${mode === "scene" ? "clip (scene changes)" : "clip (evenly sampled)"} — ${label}. ` +
-      `Use what you SEE (subject, framing, action, best moments) to drive the edit.`,
+      `${frames.length} frame(s) from this ${clip ? "clip" : "media"} (${how}) — ${label}. ` +
+      `Use what you SEE (subject, framing, action, best moments) to drive the edit. ` +
+      `To find an exact moment, narrow with fromSec/toSec and raise fps (max ${MAX_FRAMES_PER_CALL} frames per call).`,
       frames.map((f) => ({ media_type: f.media_type, data: f.data })),
     );
   }
@@ -731,7 +755,7 @@ export class McpExecutor {
       case "get_media": return okJson({ media: this.media.mediaRows() });
       case "inspect_media": return this.inspectMedia(a);
       case "get_transcript": return this.getTranscript(a);
-      case "inspect_timeline": return this.inspectTimeline();
+      case "inspect_timeline": return this.inspectTimeline(a);
       case "search_media": return this.unavailable("search_media", "on-device semantic/transcript search");
       case "inspect_color": return this.unavailable("inspect_color", "compositing/render");
       // Edit
@@ -748,6 +772,10 @@ export class McpExecutor {
       case "sync_audio": return this.unavailable("sync_audio", "audio cross-correlation");
       case "undo": return this.undo();
       case "apply_layout": return this.applyLayout(a);
+      // Editing primitives (Kaestral extension — field report v1.0.5)
+      case "add_track": return this.addTrack(a);
+      case "punch_in": return this.punchIn(a);
+      case "freeze_frame": return this.freezeFrame(a);
       // Text
       case "add_texts": return this.addTexts(a);
       case "update_text": return this.updateText(a);
@@ -844,10 +872,12 @@ export class McpExecutor {
   }
 
   // inspect_timeline — a structured, human-readable summary of the CURRENT project timeline straight
-  // from the in-memory engine state (no compositing/render needed): tracks, each clip's placement
-  // (in/out frames + seconds), source media name, speed/volume, and the total duration. Distinct
-  // from get_timeline's compact editing form — this is for "what's on the timeline right now?".
-  private inspectTimeline(): ToolResult {
+  // from the in-memory engine state: tracks, each clip's placement (in/out frames + seconds), source
+  // media name, speed/volume, and the total duration — PLUS one composited frame (default: the
+  // playhead) rendered through the same drawFrame the export uses, so the agent can SEE its own
+  // work: grades, effects, text and keyframed motion all baked. Distinct from get_timeline's
+  // compact editing form — this is "what's on the timeline right now, and what does it look like?".
+  private async inspectTimeline(a: Args): Promise<ToolResult> {
     const total = totalFrames(this.timeline.tracks);
     const tracks = this.timeline.tracks.map((t, ti) => ({
       index: ti,
@@ -875,7 +905,7 @@ export class McpExecutor {
         };
       }),
     }));
-    return okJson({
+    const summary = {
       fps: this.fps,
       width: this.timeline.width,
       height: this.timeline.height,
@@ -883,7 +913,32 @@ export class McpExecutor {
       totalSeconds: Number((total / this.fps).toFixed(2)),
       trackCount: this.timeline.tracks.length,
       tracks,
+    };
+    if (total === 0) return okJson(summary); // nothing to composite
+
+    const frame = clamp(aInt(a, "frame") ?? this.currentFrame, 0, total - 1);
+    const { renderTimelineFrame } = await import("../render/renderFrame");
+    const rendered = await renderTimelineFrame(this.timeline, frame, {
+      maxDim: aInt(a, "maxDim") ?? 768,
+      mediaName: (r) => this.media.asset(r)?.name ?? r,
+      mediaPath: (r) => {
+        const asset = this.media.asset(r);
+        return asset ? resolveRenderMediaPath(asset.source, this.projectDir ?? ".", publicDir()) : null;
+      },
     });
+    const missing = rendered.missingMedia.map((r) => this.media.asset(r)?.name ?? r);
+    return okImages(
+      JSON.stringify({
+        ...summary,
+        preview: {
+          frame: rendered.frame, timeSec: Number((rendered.frame / this.fps).toFixed(2)),
+          width: rendered.width, height: rendered.height,
+          ...(missing.length ? { missingMedia: missing, warning: `${missing.length} clip(s) could not be decoded and show as a placeholder tile: ${missing.join(", ")}` } : {}),
+          note: "The image is the composited frame exactly as export_project will render it (grades, effects, text, motion baked). Pass frame:<n> to look at another moment.",
+        },
+      }),
+      [{ media_type: "image/jpeg", data: rendered.jpegBase64 }],
+    );
   }
 
   // ---- Edit ----
@@ -908,8 +963,58 @@ export class McpExecutor {
     return 0;
   }
 
+  /** A fresh, empty track of `type`: visual types go on TOP (index 0, so an overlay layers above
+   *  everything already there); audio goes at the end of the audio zone. Returns its index. */
+  private newTrack(type: ClipType): number {
+    if (type === "audio") {
+      this.timeline.tracks.push(defaultTrack("audio"));
+      return this.timeline.tracks.length - 1;
+    }
+    this.timeline.tracks.unshift(defaultTrack(type));
+    return 0;
+  }
+
   private sourceDurationProjectFrames(assetDuration: number): number {
     return Math.max(1, Math.round(assetDuration * this.fps));
+  }
+
+  // --- Non-destructive placement (field report v1.0.5: an overlay placed without trackIndex erased
+  // all 12 of a user's cut clips; add_texts did the same on the next call). The engine's addClips is
+  // an OVERWRITE primitive by contract, so the guard lives here at the tool surface. -----------------
+
+  /** How many existing clips placing [start,end) on a track would remove/trim/split. Reuses the
+   *  engine's own overlap resolver (computeOverwrite), so "would this overwrite?" and "what does
+   *  overwrite do?" can never disagree. */
+  private overwriteCount(trackIndex: number, start: number, end: number): number {
+    const track = this.timeline.tracks[trackIndex];
+    return track ? computeOverwrite(track.clips, start, end, cryptoId).length : 0;
+  }
+
+  private overwriteRefusal(tool: string, count: number, trackIndex: number): ToolFail {
+    const label = this.engine.trackDisplayLabel(trackIndex);
+    return new ToolFail(
+      `${tool}: would overwrite ${count} existing clip(s) on track ${trackIndex}${label ? ` (${label})` : ""}. ` +
+      "Pass overwrite:true to do it anyway, or a different trackIndex, or omit trackIndex to place on a new track.",
+    );
+  }
+
+  /** Refuse (throw) if any explicit placement would clobber an existing clip and overwrite is off. */
+  private refuseDestructive(tool: string, overwrite: boolean, placements: { trackIndex: number; start: number; end: number }[]): void {
+    if (overwrite) return;
+    for (const p of placements) {
+      const n = this.overwriteCount(p.trackIndex, p.start, p.end);
+      if (n > 0) throw this.overwriteRefusal(tool, n, p.trackIndex);
+    }
+  }
+
+  /**
+   * Auto-routing for entries WITHOUT a trackIndex: the zone's default track (`defaultIndex`) if the
+   * whole batch fits there without touching anything; otherwise a brand-new track of `type` so the
+   * batch layers over the existing edit instead of erasing it. The batch stays together either way.
+   */
+  private routeBatch(type: ClipType, defaultIndex: number, overwrite: boolean, placements: { start: number; end: number }[]): { trackIndex: number; routed: boolean } {
+    const destructive = !overwrite && placements.some((p) => this.overwriteCount(defaultIndex, p.start, p.end) > 0);
+    return destructive ? { trackIndex: this.newTrack(type), routed: true } : { trackIndex: defaultIndex, routed: false };
   }
 
   private addClips(a: Args): ToolResult {
@@ -918,8 +1023,11 @@ export class McpExecutor {
     const anySpecify = entries.some((e) => aInt(e as Args, "trackIndex") !== undefined);
     const allSpecify = entries.every((e) => aInt(e as Args, "trackIndex") !== undefined);
     if (anySpecify && !allSpecify) throw new ToolFail("add_clips: set trackIndex on every entry or none.");
+    const overwrite = aBool(a, "overwrite") ?? false;
 
-    const specs: PlaceSpec[] = [];
+    // Phase 1 — parse + validate every entry before touching the timeline.
+    interface Parsed { mediaRef: string; type: ClipType; hasAudio: boolean; startFrame: number; durationFrames: number; trimStart: number; trimEnd: number; explicitTrack?: number }
+    const parsed: Parsed[] = [];
     for (const raw of entries) {
       const e = raw as Args;
       const mediaRef = requireStr(e, "mediaRef");
@@ -933,20 +1041,48 @@ export class McpExecutor {
       if (durArg !== undefined && trimEnd !== undefined) throw new ToolFail("add_clips: durationFrames and trimEndFrame are mutually exclusive");
       const srcTotal = this.sourceDurationProjectFrames(asset.duration);
       const durationFrames = durArg ?? Math.max(1, srcTotal - trimStart - (trimEnd ?? 0));
-      const trackIndex = allSpecify ? aInt(e, "trackIndex")! : this.ensureTrack(isVisual(asset.type) ? "video" : "audio");
-      const linkGroupId = asset.type === "video" && asset.hasAudio ? cryptoId() : undefined;
+      parsed.push({ mediaRef, type: asset.type, hasAudio: asset.hasAudio === true, startFrame, durationFrames, trimStart, trimEnd: trimEnd ?? 0, explicitTrack: allSpecify ? aInt(e, "trackIndex")! : undefined });
+    }
+    const span = (p: Parsed) => ({ start: p.startFrame, end: p.startFrame + p.durationFrames });
+
+    // Phase 2 — resolve tracks. Explicit indexes are honored but refused when destructive (unless
+    // overwrite:true). Omitted indexes route per zone; a batch that would clobber the default track
+    // goes to a NEW track instead. The visual zone is resolved first because a new visual track is
+    // unshifted (shifting later indexes), while a new audio track is pushed (shifting nothing).
+    let routedToNewTrack = false;
+    let visualIndex = -1, audioIndex = -1;
+    if (allSpecify) {
+      this.refuseDestructive("add_clips", overwrite, parsed.map((p) => ({ trackIndex: p.explicitTrack!, ...span(p) })));
+    } else {
+      const visuals = parsed.filter((p) => isVisual(p.type));
+      if (visuals.length) {
+        const r = this.routeBatch("video", this.ensureTrack("video"), overwrite, visuals.map(span));
+        visualIndex = r.trackIndex; routedToNewTrack ||= r.routed;
+      }
+    }
+    // Audio: the audio-typed entries without a trackIndex plus every auto linked-audio partner of a
+    // video-with-audio. Both are tool-chosen placements, so both get the non-destructive routing.
+    const audioPlacements = parsed.filter((p) => (p.type === "audio" && p.explicitTrack === undefined) || (p.type === "video" && p.hasAudio)).map(span);
+    if (audioPlacements.length) {
+      const r = this.routeBatch("audio", this.ensureTrack("audio"), overwrite, audioPlacements);
+      audioIndex = r.trackIndex; routedToNewTrack ||= r.routed;
+    }
+
+    const specs: PlaceSpec[] = [];
+    for (const p of parsed) {
+      const trackIndex = p.explicitTrack ?? (isVisual(p.type) ? visualIndex : audioIndex);
+      const linkGroupId = p.type === "video" && p.hasAudio ? cryptoId() : undefined;
       specs.push({
-        mediaRef, trackIndex, startFrame, durationFrames,
-        mediaType: asset.type, sourceClipType: asset.type,
-        trimStartFrame: trimStart, trimEndFrame: trimEnd ?? 0, linkGroupId,
+        mediaRef: p.mediaRef, trackIndex, startFrame: p.startFrame, durationFrames: p.durationFrames,
+        mediaType: p.type, sourceClipType: p.type,
+        trimStartFrame: p.trimStart, trimEndFrame: p.trimEnd, linkGroupId,
       });
       // Auto linked-audio for a video-with-audio placed on a visual track.
       if (linkGroupId) {
-        const audioTrack = this.ensureTrack("audio");
         specs.push({
-          mediaRef, trackIndex: audioTrack, startFrame, durationFrames,
+          mediaRef: p.mediaRef, trackIndex: audioIndex, startFrame: p.startFrame, durationFrames: p.durationFrames,
           mediaType: "audio", sourceClipType: "video",
-          trimStartFrame: trimStart, trimEndFrame: trimEnd ?? 0, linkGroupId,
+          trimStartFrame: p.trimStart, trimEndFrame: p.trimEnd, linkGroupId,
         });
       }
     }
@@ -957,7 +1093,11 @@ export class McpExecutor {
     if (placeable.length === 0) throw new ToolFail("add_clips: no entry's trackIndex is within range.");
     const changed = this.engine.addClips(specs);
     this.track(changed, "Add Clips");
-    return okJson({ added: placeable.length, clips: placeable.map((s) => ({ mediaRef: s.mediaRef, startFrame: s.startFrame, durationFrames: s.durationFrames })) });
+    return okJson({
+      added: placeable.length,
+      clips: placeable.map((s) => ({ mediaRef: s.mediaRef, trackIndex: s.trackIndex, startFrame: s.startFrame, durationFrames: s.durationFrames })),
+      ...(routedToNewTrack ? { routedToNewTrack: true, note: "The default track already had clips in that range, so this batch was placed on a NEW track (nothing was overwritten). Pass overwrite:true to overwrite instead." } : {}),
+    });
   }
 
   private insertClips(a: Args): ToolResult {
@@ -1121,6 +1261,122 @@ export class McpExecutor {
     throw new ToolFail("ripple_delete_ranges: pass exactly one of trackIndex or clipId");
   }
 
+  // ---- Editing primitives (field report v1.0.5) ----
+
+  // add_track: an EMPTY track the agent can then target by index. Before this, the only way to get a
+  // dedicated layer was apply_layout with dummy opacity-0 clips. The engine keeps a freshly created
+  // empty track through later prune passes (EditEngine.pruneEmptyTracks only drops tracks that
+  // became empty during that same operation).
+  private addTrack(a: Args): ToolResult {
+    const type = requireStr(a, "type");
+    if (!(CLIP_TYPES as readonly string[]).includes(type)) throw new ToolFail(`add_track: type must be one of ${CLIP_TYPES.join(", ")}.`);
+    const trackIndex = this.engine.addTrack(type as ClipType, aInt(a, "index"));
+    this.track(true, "Add Track");
+    return okJson({ trackIndex, type, label: this.engine.trackDisplayLabel(trackIndex), trackCount: this.timeline.tracks.length });
+  }
+
+  // punch_in: zoom a clip about a focus point — ramp in, optional hold, optional ramp back. Frames in
+  // the ARGS are TIMELINE frames (what get_timeline/see_video hand the agent); they're converted to
+  // the clip-relative frames the keyframe tracks store. The base box is sampled from the clip's
+  // current transform/keyframes at atFrame, so a PIP zooms within its own box and a second punch-in
+  // starts from wherever the first left it. Existing position/scale keyframes OUTSIDE the punch
+  // window are kept (so several punch-ins coexist on one clip); those inside it are replaced.
+  private punchIn(a: Args): ToolResult {
+    const clipId = requireStr(a, "clipId");
+    const clip = this.engine.clipRef(clipId);
+    if (!clip) throw new ToolFail(`punch_in: clip not found: ${clipId}`);
+    const atFrame = aInt(a, "atFrame"), toFrame = aInt(a, "toFrame");
+    if (atFrame === undefined || toFrame === undefined) throw new ToolFail("punch_in: atFrame and toFrame (timeline frames) are required.");
+    const clipEnd = clip.startFrame + clip.durationFrames;
+    if (atFrame < clip.startFrame || atFrame >= clipEnd) throw new ToolFail(`punch_in: atFrame ${atFrame} must be within the clip (timeline frames ${clip.startFrame}..${clipEnd}).`);
+    if (toFrame <= atFrame) throw new ToolFail("punch_in: toFrame must be after atFrame.");
+    const zoom = clamp(aNum(a, "zoom") ?? 2, 1, 4);
+    const focusX = clamp(aNum(a, "focusX") ?? 0.5, 0, 1);
+    const focusY = clamp(aNum(a, "focusY") ?? 0.5, 0, 1);
+    const holdFrames = Math.max(0, aInt(a, "holdFrames") ?? 0);
+    const returnFrames = Math.max(0, aInt(a, "returnFrames") ?? 0);
+
+    const tl = topLeftAt(clip, atFrame), sz = sizeAt(clip, atFrame);
+    const plan = planPunchIn({
+      base: { x: tl.x, y: tl.y, w: sz.width, h: sz.height }, zoom, focusX, focusY,
+      fromRel: atFrame - clip.startFrame, toRel: toFrame - clip.startFrame, holdFrames, returnFrames,
+    });
+    const endAbs = clip.startFrame + plan.endRel;
+    if (endAbs > clipEnd) throw new ToolFail(`punch_in: the move ends at frame ${endAbs} but the clip ends at ${clipEnd}. Shorten holdFrames/returnFrames or start earlier.`);
+
+    // Merge: keep existing keyframes outside [fromRel, endRel], replace those inside.
+    const fromRel = plan.position[0].frame;
+    const keepOutside = <V extends KeyframeValue>(track: KeyframeTrack<V> | undefined): Keyframe<V>[] =>
+      (track?.keyframes ?? []).filter((k) => k.frame < fromRel || k.frame > plan.endRel);
+    const position = [...keepOutside(clip.positionTrack), ...plan.position];
+    const scale = [...keepOutside(clip.scaleTrack), ...plan.scale];
+    const changed = this.engine.setKeyframeTracks(clipId, [{ property: "position", keyframes: position }, { property: "scale", keyframes: scale }], "Punch In");
+    this.track(changed, "Punch In");
+    return okJson({
+      clipId, zoom, focusX, focusY,
+      atFrame, toFrame, holdFrames, returnFrames, endsAtFrame: endAbs,
+      keyframes: { position: plan.position.map((k) => k.frame + clip.startFrame), scale: plan.scale.map((k) => k.frame + clip.startFrame) },
+      note: "Keyframes written on position (top-left, normalised) + scale (size fraction) so the focus point stays fixed while zooming. Verify with inspect_timeline(frame) at the hold.",
+    });
+  }
+
+  // freeze_frame: hold one frame of a clip for durationFrames. Extracts the frame (bundled ffmpeg,
+  // lossless PNG), registers it as an image asset, then — in ONE engine commit — splits the clip at
+  // atFrame, inserts the still there and ripples everything after it (engine.insertClips already does
+  // split-at-point + push on the target/sync-locked/linked tracks + place). The still inherits the
+  // source clip's framing/crop/opacity/effects SAMPLED at atFrame, so a PIP freezes as a PIP and a
+  // graded clip stays graded. Previously four calls plus an out-of-product ffmpeg invocation.
+  private async freezeFrame(a: Args): Promise<ToolResult> {
+    const clipId = requireStr(a, "clipId");
+    const loc = this.engine.findClip(clipId);
+    const clip = this.engine.clipRef(clipId);
+    if (!loc || !clip) throw new ToolFail(`freeze_frame: clip not found: ${clipId}`);
+    if (clip.mediaType !== "video" && clip.mediaType !== "image") throw new ToolFail(`freeze_frame: clip ${clipId} is ${clip.mediaType}; freeze a video or image clip.`);
+    const atFrame = aInt(a, "atFrame");
+    const durationFrames = aInt(a, "durationFrames");
+    if (atFrame === undefined || durationFrames === undefined) throw new ToolFail("freeze_frame: atFrame (timeline frame) and durationFrames are required.");
+    if (durationFrames < 1) throw new ToolFail("freeze_frame: durationFrames must be >= 1.");
+    const clipEnd = clip.startFrame + clip.durationFrames;
+    if (atFrame < clip.startFrame || atFrame >= clipEnd) throw new ToolFail(`freeze_frame: atFrame ${atFrame} must be within the clip (timeline frames ${clip.startFrame}..${clipEnd}).`);
+    const path = this.mediaPathFor({ clipId });
+    if (!path) throw new ToolFail("freeze_frame: could not extract — the clip's media does not resolve to a file on disk.");
+
+    // Source time of that timeline frame (trim + speed), then the still.
+    const sourceFrame = clip.trimStartFrame + Math.round((atFrame - clip.startFrame) * clip.speed);
+    const sourceSec = sourceFrame / this.fps;
+    const dir = join(dataDir(), "generated");
+    await mkdir(dir, { recursive: true });
+    const outputPath = join(dir, `freeze-${cryptoId()}.png`);
+    try {
+      await extractStill(path, (sourceFrame - 0.5) / this.fps, outputPath); // half a frame early: lands ON sourceFrame
+    } catch (e) {
+      throw new ToolFail(`freeze_frame: could not extract frame ${atFrame} from ${this.media.asset(clip.mediaRef)?.name ?? clip.mediaRef}: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    const srcAsset = this.media.asset(clip.mediaRef);
+    const asset = this.media.addAsset({
+      name: `Freeze: ${srcAsset?.name ?? clip.mediaRef} @ ${sourceSec.toFixed(2)}s`, type: "image", duration: durationFrames / this.fps,
+      source: { kind: "external", absolutePath: outputPath },
+      sourceWidth: srcAsset?.sourceWidth, sourceHeight: srcAsset?.sourceHeight, hasAudio: false,
+    });
+
+    const stillId = cryptoId();
+    const style = {
+      transform: transformAt(clip, atFrame), crop: cropAt(clip, atFrame), opacity: rawOpacityAt(clip, atFrame),
+      effects: clip.effects, blendMode: clip.blendMode,
+    };
+    const changed = this.engine.insertClips(
+      [{ mediaRef: asset.id, durationFrames, mediaType: "image", id: stillId, style }],
+      loc.trackIndex, atFrame,
+    );
+    this.track(changed, "Freeze Frame");
+    if (!changed) throw new ToolFail("freeze_frame: nothing changed (the insert was refused).");
+    return okJson({
+      stillAssetId: asset.id, stillClipId: stillId, path: outputPath, sourceSec: Number(sourceSec.toFixed(3)),
+      atFrame, durationFrames, trackIndex: loc.trackIndex,
+      note: `The clip was split at ${atFrame}; the still holds ${durationFrames} frame(s) and everything after it moved right by that much (linked audio + sync-locked tracks included).`,
+    });
+  }
+
   private undo(): ToolResult {
     const expected = this.agentUndo[this.agentUndo.length - 1];
     if (!expected) return err("No assistant edit to undo this session. The user's own edits are theirs to undo.");
@@ -1277,7 +1533,8 @@ export class McpExecutor {
     const entries = aArr(a, "entries");
     if (entries.length === 0) throw new ToolFail("add_texts: entries is required");
     const allSpecify = entries.every((e) => aInt(e as Args, "trackIndex") !== undefined);
-    const specs: PlaceSpec[] = [];
+    const overwrite = aBool(a, "overwrite") ?? false;
+    const parsed: { startFrame: number; durationFrames: number; explicitTrack?: number }[] = [];
     const rows: Args[] = [];
     for (const raw of entries) {
       const e = raw as Args;
@@ -1287,11 +1544,25 @@ export class McpExecutor {
       if (startFrame === undefined || durationFrames === undefined || content === undefined) {
         throw new ToolFail("add_texts: each entry needs startFrame, durationFrames, content");
       }
-      const trackIndex = allSpecify ? aInt(e, "trackIndex")! : this.ensureTextTrack();
-      const id = cryptoId();
-      specs.push({ mediaRef: `text-${id}`, trackIndex, startFrame, durationFrames, mediaType: "text", sourceClipType: "text", id });
+      parsed.push({ startFrame, durationFrames, explicitTrack: allSpecify ? aInt(e, "trackIndex")! : undefined });
       rows.push(e);
     }
+    // Non-destructive placement (same policy as add_clips): explicit trackIndex → refuse a clobber
+    // unless overwrite:true; omitted → the text track, or a NEW text track if the batch would
+    // overwrite captions already there.
+    const spans = parsed.map((p) => ({ start: p.startFrame, end: p.startFrame + p.durationFrames }));
+    let routedToNewTrack = false;
+    let autoIndex = -1;
+    if (allSpecify) {
+      this.refuseDestructive("add_texts", overwrite, parsed.map((p, i) => ({ trackIndex: p.explicitTrack!, ...spans[i] })));
+    } else {
+      const r = this.routeBatch("text", this.ensureTextTrack(), overwrite, spans);
+      autoIndex = r.trackIndex; routedToNewTrack = r.routed;
+    }
+    const specs: PlaceSpec[] = parsed.map((p) => {
+      const id = cryptoId();
+      return { mediaRef: `text-${id}`, trackIndex: p.explicitTrack ?? autoIndex, startFrame: p.startFrame, durationFrames: p.durationFrames, mediaType: "text", sourceClipType: "text", id };
+    });
     if (specs.filter((s) => this.timeline.tracks[s.trackIndex]).length === 0) {
       throw new ToolFail("add_texts: no entry's trackIndex is within range.");
     }
@@ -1306,7 +1577,10 @@ export class McpExecutor {
       this.applyTextEntryStyle(c, rows[i]);
     });
     this.track(changed, "Add Text");
-    return okJson({ added: specs.length, clipIds: specs.map((s) => s.id) });
+    return okJson({
+      added: specs.length, clipIds: specs.map((s) => s.id), trackIndex: specs[0].trackIndex,
+      ...(routedToNewTrack ? { routedToNewTrack: true, note: "The text track already had clips in that range, so this batch was placed on a NEW text track (nothing was overwritten). Pass overwrite:true to overwrite instead." } : {}),
+    });
   }
 
   private updateText(a: Args): ToolResult {
@@ -1542,6 +1816,8 @@ export class McpExecutor {
 function cryptoId(): string {
   return crypto.randomUUID();
 }
+
+const clamp = (v: number, lo: number, hi: number): number => Math.max(lo, Math.min(hi, v));
 
 function mimeToType(mime: string): ClipType | undefined {
   if (mime.startsWith("video/")) return "video";

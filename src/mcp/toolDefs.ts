@@ -6,7 +6,7 @@
 // full-length descriptions live in ToolDefinitions.swift; syncing them verbatim is a
 // tracked release checklist item (see PROGRESS.md). Names + schemas are exact now.
 
-import { BLEND_MODES, VIDEO_LAYOUTS, TEXT_ANIMATION_PRESETS } from "../model/enums";
+import { BLEND_MODES, CLIP_TYPES, VIDEO_LAYOUTS, TEXT_ANIMATION_PRESETS } from "../model/enums";
 
 export type JsonSchema = Record<string, unknown>;
 
@@ -99,8 +99,11 @@ export const TOOL_DEFS: ToolDef[] = [
   {
     name: "inspect_timeline",
     description:
-      "A structured summary of what's on the timeline RIGHT NOW: project fps/size, total duration, and per track every clip with its media name, in/out (frames + seconds), speed, volume, and text. Read it to verify edits landed. (For a composited pixel preview, render/export.)",
-    inputSchema: obj({}),
+      "SEE your own work: a structured summary of what's on the timeline RIGHT NOW (project fps/size, total duration, and per track every clip with its media name, in/out frames + seconds, speed, volume, text) PLUS one COMPOSITED FRAME as an image — grades, effects, text and keyframed motion baked, rendered exactly as export_project will. Defaults to the playhead; pass frame:<n> to look at a moment (e.g. the hold of a punch_in, a caption, a layout). Use it after every few edits to self-critique before exporting.",
+    inputSchema: obj({
+      frame: int("Optional. Timeline frame to render (default: the playhead; clamped to the timeline)."),
+      maxDim: int("Optional. Longest side of the returned image in px (default 768). Smaller is faster."),
+    }),
   },
   {
     name: "search_media",
@@ -121,9 +124,10 @@ export const TOOL_DEFS: ToolDef[] = [
   {
     name: "add_clips",
     description:
-      "Places one or more media assets on the timeline as a single undoable action. Clips on the same track are sequential; overlaps trim/split/remove existing clips (overwrite). Omit trackIndex on all entries to auto-create tracks.",
+      "Places one or more media assets on the timeline as a single undoable action. NON-DESTRUCTIVE BY DEFAULT: omit trackIndex on all entries and the batch goes to the default track when it fits, or to a NEW track (layered on top) if it would touch an existing clip — nothing is ever erased silently. With an explicit trackIndex, a placement that would trim/split/remove existing clips is REFUSED unless overwrite:true. A video-with-audio also gets a linked audio clip (same routing).",
     inputSchema: obj(
       {
+        overwrite: bool("Optional, default false. true = classic overwrite semantics: overlapping clips on the target track are trimmed/split/removed. false = refuse (explicit trackIndex) or auto-route to a new track (no trackIndex)."),
         entries: arr(
           obj(
             {
@@ -342,9 +346,10 @@ export const TOOL_DEFS: ToolDef[] = [
   {
     name: "add_texts",
     description:
-      "Adds text clips as timeline layers. Omit trackIndex on every entry to create one new top video track. Use add_captions for spoken audio captions. Unknown fields are rejected.",
+      "Adds text clips as timeline layers. NON-DESTRUCTIVE BY DEFAULT: omit trackIndex on every entry and the batch goes to the text track when it fits, or to a NEW text track on top if it would touch existing text/captions. With an explicit trackIndex, a placement that would trim/split/remove existing clips is REFUSED unless overwrite:true. Use add_captions for spoken audio captions. Unknown fields are rejected.",
     inputSchema: obj(
       {
+        overwrite: bool("Optional, default false. true = overwrite overlapping clips on the target track. false = refuse (explicit trackIndex) or auto-route to a new text track (no trackIndex)."),
         entries: arr(
           obj(
             {
@@ -819,18 +824,58 @@ export const ANALYSIS_TOOL_DEFS: ToolDef[] = [
   },
   {
     name: "see_video",
-    description: "WATCH a clip: returns actual frames as images you can SEE, so you can identify the best moments, the subject and its position/framing, action, and what's on screen — then edit on content (not just rhythm/color). mode 'interval' samples evenly across the clip (overview); 'scene' returns distinct shots/scene-changes (finding moments). Each frame is labelled with its timestamp. Give a mediaRef or a clipId.",
+    description: "WATCH a clip: returns actual frames as images you can SEE, so you can identify the best moments, the subject and its position/framing, action, and what's on screen — then edit on content (not just rhythm/color). mode 'interval' samples evenly across the clip (overview); 'scene' returns distinct shots/scene-changes (finding moments). TO FIND AN EXACT MOMENT (a click, a cursor, a slide change) zoom in: pass fromSec/toSec to address a window and fps to sample it densely (e.g. fromSec:80, toSec:100, fps:1) — max 24 frames per call, so narrow the window rather than raising fps. Each frame is labelled with its source timestamp and, for a clipId, the TIMELINE frame (the number punch_in / split_clips / freeze_frame take). Give a mediaRef or a clipId.",
     inputSchema: obj({
       mediaRef: str("Media asset id (from get_media)."),
       clipId: str("Timeline clip id (from get_timeline) — samples within that clip's trimmed range."),
-      count: int("How many frames to return (1–12, default 6)."),
+      count: int("How many frames to return in interval/scene mode (1–24, default 6). Ignored when fps is set."),
       mode: enumStr(["interval", "scene"], "'interval' = evenly spaced (default); 'scene' = on scene changes."),
       maxDim: int("Max frame dimension in px (default 512). Keep small to stay fast."),
+      fromSec: num("Optional window start. CLIP-relative seconds with clipId (0 = the clip's first frame); source seconds with mediaRef."),
+      toSec: num("Optional window end (same units as fromSec). Must be > fromSec."),
+      fps: num("Optional dense sampling rate for the window, e.g. 1 or 2. Frames are thinned to the 24-per-call cap if the window is too long — narrow it instead."),
     }),
   },
 ];
 
-/** Tools advertised over MCP: the frozen 41 plus the Skills + Motion + Analysis extensions. */
-export const ALL_TOOL_DEFS: ToolDef[] = [...TOOL_DEFS, ...SKILL_TOOL_DEFS, ...MOTION_TOOL_DEFS, ...ANALYSIS_TOOL_DEFS];
+// Editing primitives (field report v1.0.5) — the building blocks an operator kept re-deriving by hand
+// or faking with other tools. Each is one tool call and ONE undo step over the shared EditEngine.
+// NOT part of the frozen 41 (that guard above stays exact); additive only.
+export const PRIMITIVE_TOOL_DEFS: ToolDef[] = [
+  {
+    name: "add_track",
+    description: "Create an EMPTY track of a given type and return its trackIndex. Use it to prepare a dedicated layer (an overlay track, a second caption track, a music bed) before placing clips on it with add_clips/add_texts(trackIndex). Visual types (video/image/text/lottie) go on TOP by default (index 0); audio goes after the last track; pass `index` to insert elsewhere (clamped). The empty track is kept until you put something on it and later empty it again.",
+    inputSchema: obj({
+      type: enumStr(CLIP_TYPES, "Track type: video | audio | image | text | lottie."),
+      index: int("Optional. Insert position (0 = top). Default: top for visual types, end for audio."),
+    }, ["type"]),
+  },
+  {
+    name: "punch_in",
+    description: "Zoom a clip about a focus point (the screen-recording 'punch-in'): ramp from the clip's current framing to `zoom`× between atFrame and toFrame, optionally hold, optionally ramp back. Writes coherent position+scale keyframes so the focus point stays fixed on screen — no hand-derived maths. Frames are TIMELINE frames (as in get_timeline); focusX/focusY are 0–1 fractions of the clip's own frame (for a full-frame clip: of the canvas) — find the click with see_video(fromSec,toSec). Several punch-ins can coexist on one clip. One undo step.",
+    inputSchema: obj({
+      clipId: str("The clip to zoom (from get_timeline)."),
+      atFrame: int("Timeline frame where the zoom starts (clip still at its base framing)."),
+      toFrame: int("Timeline frame where full zoom is reached. Must be > atFrame; ~8–15 frames feels snappy."),
+      zoom: num("Zoom factor, clamped 1.0–4.0 (2 = the focus region fills twice the area)."),
+      focusX: num("0–1 horizontal position of the point to zoom into, within the clip's frame (0 = left edge)."),
+      focusY: num("0–1 vertical position of the point to zoom into (0 = top edge)."),
+      holdFrames: int("Optional. Frames to hold at full zoom before returning (only meaningful with returnFrames)."),
+      returnFrames: int("Optional. Frames for the ramp back to the base framing. Omit to stay zoomed to the end of the clip."),
+    }, ["clipId", "atFrame", "toFrame", "zoom", "focusX", "focusY"]),
+  },
+  {
+    name: "freeze_frame",
+    description: "Hold one frame of a clip for durationFrames: extracts that frame (lossless PNG, bundled ffmpeg), registers it as an image asset, splits the clip at atFrame, inserts the still there and ripples everything after it (linked audio + sync-locked tracks included). The still inherits the clip's framing/crop/opacity/effects at that frame, so a PIP freezes as a PIP and a grade carries over. atFrame is a TIMELINE frame. One tool call, one undo step — never run ffmpeg yourself for this.",
+    inputSchema: obj({
+      clipId: str("The video/image clip to freeze (from get_timeline)."),
+      atFrame: int("Timeline frame to hold (must be within the clip)."),
+      durationFrames: int("How long the freeze lasts, in project frames (>= 1)."),
+    }, ["clipId", "atFrame", "durationFrames"]),
+  },
+];
+
+/** Tools advertised over MCP: the frozen 41 plus the Skills + Motion + Analysis + Primitive extensions. */
+export const ALL_TOOL_DEFS: ToolDef[] = [...TOOL_DEFS, ...SKILL_TOOL_DEFS, ...MOTION_TOOL_DEFS, ...ANALYSIS_TOOL_DEFS, ...PRIMITIVE_TOOL_DEFS];
 
 export const TOOL_NAMES = TOOL_DEFS.map((t) => t.name);

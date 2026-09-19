@@ -63,3 +63,44 @@ describe("renderVideo → real playable file (FFmpeg finish line)", () => {
     expect(existsSync(out)).toBe(true); // a file is still produced (tiles), but the caller now knows it's incomplete
   }, 60000);
 });
+
+// Field report (v1.0.5): text clips carry a synthetic `text-<id>` mediaRef that never resolves to a
+// path, so NodeFrameSource.prepare() filed every caption under `missing` and export_project reported
+// status:"rendered_with_missing_media" listing 17–19 perfectly-rendered captions as undecodable.
+describe("A2: text clips are never 'missing media' (they are drawn, not decoded)", () => {
+  it("a timeline of text clips exports with status 'rendered' and no missingMedia", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "kaestral-textonly-"));
+    const out = join(dir, "out.mp4");
+    const caption = (id: string, startFrame: number): Clip => {
+      const c = defaultClip({ mediaRef: `text-${id}`, startFrame, durationFrames: 6, id, mediaType: "text" });
+      c.textContent = `caption ${id}`;
+      c.textStyle = defaultTextStyle();
+      return c;
+    };
+    const tl: Timeline = {
+      ...defaultTimeline(), fps: 30, width: 320, height: 180,
+      tracks: [{ ...defaultTrack("text", "t"), clips: [caption("a", 0), caption("b", 6), caption("c", 12)] }],
+    };
+    // A real path resolver that (correctly) knows nothing about text refs — exactly the executor's.
+    const res = await renderVideo(tl, { outputPath: out, codec: "H.264", mediaName: (r) => r, mediaPath: () => null });
+    expect(res.missingMedia).toEqual([]);
+    expect(res.frames).toBe(18);
+    expect(existsSync(out)).toBe(true);
+  }, 60000);
+
+  it("export_project reports status 'rendered' for a captions-only timeline", async () => {
+    const { McpExecutor } = await import("../../mcp/executor");
+    const dir = mkdtempSync(join(tmpdir(), "kaestral-textexp-"));
+    const ex = new McpExecutor({ projectDir: dir });
+    const add = await ex.execute("add_texts", { entries: [
+      { startFrame: 0, durationFrames: 6, content: "one" },
+      { startFrame: 6, durationFrames: 6, content: "two" },
+    ] });
+    expect(add.isError).toBeFalsy();
+    const r = await ex.execute("export_project", { mode: "video", outputPath: join(dir, "captions.mp4") });
+    expect(r.isError, r.content[0].text).toBeFalsy();
+    const out = JSON.parse(r.content[0].text) as { status: string; missingMedia?: string[] };
+    expect(out.status).toBe("rendered");
+    expect(out.missingMedia).toBeUndefined();
+  }, 60000);
+});

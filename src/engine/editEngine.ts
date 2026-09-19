@@ -3,9 +3,9 @@
 // Ripple,Linking,Keyframes,Tracks}.swift. Undo is modeled as timeline snapshots
 // (matching EditorViewModel.withTimelineSwap / registerTimelineSwap).
 
-import type { AnimatableProperty, ClipType } from "../model/enums";
-import type { Clip, Keyframe, KeyframeTrack, KeyframeValue, Timeline, Track } from "../model/types";
-import { defaultClip, newId } from "../model/defaults";
+import type { AnimatableProperty, BlendMode, ClipType } from "../model/enums";
+import type { Clip, Crop, Effect, Keyframe, KeyframeTrack, KeyframeValue, Timeline, Track, Transform } from "../model/types";
+import { defaultClip, defaultTrack, newId } from "../model/defaults";
 import { encodeTimeline } from "../model/codec";
 import { endFrame } from "../model/helpers";
 import { isCompatible } from "../model/enums";
@@ -25,6 +25,17 @@ export interface ClipLocation {
   clipIndex: number;
 }
 
+/** The static look a new clip may inherit from another (e.g. a freeze-frame still from its source):
+ *  framing, crop, opacity, effect stack, blend. Keyframe tracks are NOT part of it — pass the values
+ *  already sampled at the frame of interest. */
+export interface ClipStyle {
+  transform: Transform;
+  crop: Crop;
+  opacity: number;
+  effects?: Effect[];
+  blendMode?: BlendMode;
+}
+
 export interface PlaceSpec {
   mediaRef: string;
   trackIndex: number;
@@ -37,6 +48,7 @@ export interface PlaceSpec {
   id?: string;
   linkGroupId?: string;
   volume?: number;
+  style?: ClipStyle;
 }
 
 export interface InsertSpec {
@@ -47,6 +59,7 @@ export interface InsertSpec {
   mediaType?: ClipType;
   id?: string;
   linkGroupId?: string;
+  style?: ClipStyle;
 }
 
 export interface MoveSpec {
@@ -94,9 +107,15 @@ export class EditEngine {
     return JSON.stringify(encodeTimeline(a)) === JSON.stringify(encodeTimeline(b));
   }
 
+  /** Track ids that held clips when the current commit began — the only ones pruneEmptyTracks may
+   *  drop. A track that was ALREADY empty at the start (e.g. just created by addTrack) is
+   *  intentional and survives; a track drained by this operation collapses as before. */
+  private nonEmptyAtCommitStart = new Set<string>();
+
   /** Run one atomic mutation; snapshot-swap undo. Returns whether anything changed. */
   private commit(name: string, work: () => void): boolean {
     const before = structuredClone(this.timeline);
+    this.nonEmptyAtCommitStart = new Set(before.tracks.filter((t) => t.clips.length > 0).map((t) => t.id));
     work();
     if (this.snapshotEquals(before, this.timeline)) return false;
     this.undoStack.push({ name, timeline: before });
@@ -245,8 +264,9 @@ export class EditEngine {
     this.timeline.tracks[ti]?.clips.sort((a, b) => a.startFrame - b.startFrame);
   }
 
+  /** Drop tracks that BECAME empty during this operation (see nonEmptyAtCommitStart). */
   private pruneEmptyTracks(): void {
-    this.timeline.tracks = this.timeline.tracks.filter((t) => t.clips.length > 0);
+    this.timeline.tracks = this.timeline.tracks.filter((t) => t.clips.length > 0 || !this.nonEmptyAtCommitStart.has(t.id));
   }
 
   /** "V1" / "A1" label (EditorViewModel+Tracks.swift:19). */
@@ -301,6 +321,13 @@ export class EditEngine {
     if (spec.trimEndFrame !== undefined) c.trimEndFrame = spec.trimEndFrame;
     if (spec.volume !== undefined) c.volume = spec.volume;
     if (spec.linkGroupId !== undefined) c.linkGroupId = spec.linkGroupId;
+    if (spec.style) {
+      c.transform = structuredClone(spec.style.transform);
+      c.crop = structuredClone(spec.style.crop);
+      c.opacity = spec.style.opacity;
+      if (spec.style.effects?.length) c.effects = structuredClone(spec.style.effects);
+      if (spec.style.blendMode && spec.style.blendMode !== "normal") c.blendMode = spec.style.blendMode;
+    }
     return c;
   }
 
@@ -486,6 +513,24 @@ export class EditEngine {
       for (const t of this.timeline.tracks) t.clips = t.clips.filter((c) => !set.has(c.id));
       if (prune) this.pruneEmptyTracks();
     });
+  }
+
+  /**
+   * add_track: insert an EMPTY track of `type` and return its index (one undo step). Default
+   * placement follows the zones the model assumes: visual types go on top (index 0, so a new layer
+   * sits above the existing picture), audio goes after the last track. An explicit `index` is
+   * clamped to [0, tracks.length]. The track survives later prune passes until something lands on it
+   * and is then removed again (see pruneEmptyTracks).
+   */
+  addTrack(type: ClipType, index?: number): number {
+    const t = defaultTrack(type);
+    const at = index === undefined
+      ? (type === "audio" ? this.timeline.tracks.length : 0)
+      : Math.max(0, Math.min(this.timeline.tracks.length, Math.trunc(index)));
+    this.commit("Add Track", () => {
+      this.timeline.tracks.splice(at, 0, t);
+    });
+    return at;
   }
 
   /** remove_tracks: remove whole tracks by index; linked partners on other tracks stay. */
@@ -676,13 +721,22 @@ export class EditEngine {
    * (0 = clip start). Sorted by frame; last row wins on a duplicate frame. Empty clears.
    */
   setKeyframes(clipId: string, property: AnimatableProperty, keyframes: Keyframe<KeyframeValue>[]): boolean {
-    return this.commit("Set Keyframes", () => {
+    return this.setKeyframeTracks(clipId, [{ property, keyframes }], "Set Keyframes");
+  }
+
+  /** Replace several properties' tracks on one clip in ONE undo step (same semantics as setKeyframes
+   *  per entry). Higher-level moves that must stay coherent — e.g. a punch-in keys position AND
+   *  scale together — use this so undo reverts both at once. */
+  setKeyframeTracks(clipId: string, entries: { property: AnimatableProperty; keyframes: Keyframe<KeyframeValue>[] }[], actionName = "Set Keyframes"): boolean {
+    return this.commit(actionName, () => {
       const clip = this.clipRef(clipId);
       if (!clip) return;
-      const key = PROP_TO_KEY[property];
-      const track: KeyframeTrack<KeyframeValue> = { keyframes: [] };
-      for (const kf of [...keyframes].sort((a, b) => a.frame - b.frame)) upsertKeyframe(track, kf);
-      (clip[key] as KeyframeTrack<KeyframeValue> | undefined) = track.keyframes.length ? track : undefined;
+      for (const e of entries) {
+        const key = PROP_TO_KEY[e.property];
+        const track: KeyframeTrack<KeyframeValue> = { keyframes: [] };
+        for (const kf of [...e.keyframes].sort((a, b) => a.frame - b.frame)) upsertKeyframe(track, kf);
+        (clip[key] as KeyframeTrack<KeyframeValue> | undefined) = track.keyframes.length ? track : undefined;
+      }
     });
   }
 

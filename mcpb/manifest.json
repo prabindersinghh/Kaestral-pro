@@ -4,7 +4,7 @@
   "display_name": "Kaestral",
   "version": "1.0.5",
   "description": "The AI-operated video editor for Windows. Drive a real, local, multi-track editor by prompt — cut, caption, art-direct motion, grade, and export.",
-  "long_description": "Kaestral is a local, MCP-native video editor. It exposes 52 tools an LLM can drive: on-device perception (frame vision, word-level transcription, beat/silence detection, palette extraction), a real multi-track timeline, word-level editing, bespoke art-directed motion graphics, color grading, and export to H.264/H.265/ProRes plus Premiere (XMEML), Resolve/FCP (FCPXML), and SubRip captions (SRT). Everything runs locally — your video never leaves your machine.",
+  "long_description": "Kaestral is a local, MCP-native video editor. It exposes 55 tools an LLM can drive: on-device perception (frame vision, word-level transcription, beat/silence detection, palette extraction), a real multi-track timeline, word-level editing, bespoke art-directed motion graphics, color grading, and export to H.264/H.265/ProRes plus Premiere (XMEML), Resolve/FCP (FCPXML), and SubRip captions (SRT). Everything runs locally — your video never leaves your machine.",
   "author": {
     "name": "Prabinder Singh",
     "url": "https://github.com/prabindersinghh/Kaestral-pro"

@@ -8,7 +8,7 @@
 
 <p align="center">It sees your footage (real frame vision) and hears every word (on-device word-level transcription) — so the AI edits what's actually there, not what it guessed.</p>
 
-<p align="center">A real multi-track editor with a full professional feature set, driven by natural language through <strong>52 validated MCP tools</strong> and <strong>25 AI skills</strong>. Everything runs local — your footage never leaves the machine.</p>
+<p align="center">A real multi-track editor with a full professional feature set, driven by natural language through <strong>55 validated MCP tools</strong> and <strong>25 AI skills</strong>. Everything runs local — your footage never leaves the machine.</p>
 
 <p align="center">
   <a href="https://github.com/prabindersinghh/Kaestral-pro/releases/latest"><img src="https://img.shields.io/badge/version-1.0.5-16b16a?style=flat-square" alt="v1.0.5"></a>
@@ -16,7 +16,7 @@
   <a href="https://www.npmjs.com/package/kaestral"><img src="https://img.shields.io/npm/v/kaestral?style=flat-square&label=npm&color=cb3837" alt="npm"></a>
   <img src="https://img.shields.io/badge/license-GPLv3-1fce7e?style=flat-square" alt="GPLv3">
   <img src="https://img.shields.io/badge/tests-310%20passing-16b16a?style=flat-square" alt="310 tests passing">
-  <img src="https://img.shields.io/badge/MCP-52%20tools-c9a227?style=flat-square" alt="52 MCP tools">
+  <img src="https://img.shields.io/badge/MCP-55%20tools-c9a227?style=flat-square" alt="55 MCP tools">
   <img src="https://img.shields.io/badge/skills-25%20playbooks-16b16a?style=flat-square" alt="25 AI skills">
 </p>
 
@@ -74,11 +74,12 @@ Deep reference for every item: **[docs/FEATURES.md](./docs/FEATURES.md)**.
 ripple/split/snap · speed retiming · frame-accurate composited preview.
 → [details](./docs/FEATURES.md#1-the-desktop-editor-windows-1011)
 
-**🤖 AI-operated — 52 MCP tools** over stdio + HTTP; works with Claude Code, Cursor, Claude
+**🤖 AI-operated — 55 MCP tools** over stdio + HTTP; works with Claude Code, Cursor, Claude
 Desktop (one-click `.mcpb`), or the in-app chat.
 6 read/inspect · 13 timeline editing · 3 text & captions · 3 color & effects · 8 media library ·
-3 project · 4 generation · 1 feedback · 2 skills · 3 motion · 6 analysis & perception.
-→ [details](./docs/FEATURES.md#2-the-mcp-server--52-tools)
+3 project · 4 generation · 1 feedback · 2 skills · 3 motion · 6 analysis & perception ·
+3 editing primitives (`add_track` · `punch_in` · `freeze_frame`).
+→ [details](./docs/FEATURES.md#2-the-mcp-server--55-tools)
 
 **👀👂 Perception (on-device)** — word-level whisper transcription · frame vision (`see_video`) ·
 beat + silence detection · palette extraction · scene-cut detection · reference-motion matching.
@@ -174,7 +175,7 @@ npm run tauri build  # build the Windows installer (see docs/UPDATER-SETUP.md fo
 
 Docs worth reading before you dig in:
 - [docs/FEATURES.md](./docs/FEATURES.md) — every feature, in detail.
-- [docs/MCP-TOOLS.md](./docs/MCP-TOOLS.md) — the 52-tool reference.
+- [docs/MCP-TOOLS.md](./docs/MCP-TOOLS.md) — the 55-tool reference.
 - [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) — how the pieces fit (editor = hands, LLM = brain).
 - [docs/LAUNCH-RUNBOOK.md](./docs/LAUNCH-RUNBOOK.md) — build, publish, and deploy steps.
 - [CONTRIBUTING.md](./CONTRIBUTING.md) — how to build, test, and open a PR.

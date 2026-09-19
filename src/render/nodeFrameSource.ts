@@ -40,12 +40,24 @@ export class NodeFrameSource implements FrameSource {
     private readonly ffmpegPath = ffmpegBin(),
   ) {}
 
-  /** Load still images and extract each video clip's frames. Call once before rendering. */
-  async prepare(timeline: Timeline): Promise<void> {
+  /**
+   * Load still images and extract each video clip's frames. Call once before rendering.
+   * `onlyFrame`: prepare just what ONE output frame needs — clips not showing at that frame (or on
+   * hidden tracks) are skipped, and each video clip gets exactly one source frame extracted with an
+   * input-side seek. This is what a single-frame preview (inspect_timeline) uses; a full export must
+   * not pay for it, and a preview must not pay for extracting every frame of a 25-minute timeline.
+   */
+  async prepare(timeline: Timeline, opts: { onlyFrame?: number } = {}): Promise<void> {
     this.root = await mkdtemp(join(tmpdir(), "kaestral-frames-"));
+    const only = opts.onlyFrame;
     for (const track of timeline.tracks) {
       if (!isVisual(track.type)) continue;
+      if (only !== undefined && track.hidden) continue;
       for (const clip of track.clips) {
+        if (only !== undefined && !(only >= clip.startFrame && only < endFrame(clip))) continue;
+        // Text is DRAWN by the compositor from clip.textContent/textStyle — its synthetic `text-<id>`
+        // mediaRef never resolves to a file and must not be reported as undecodable media.
+        if (clip.mediaType === "text") continue;
         const path = this.mediaPath(clip.mediaRef);
         if (!path) { this.missing.add(clip.mediaRef); continue; } // unresolved/offline/remote source
         if (clip.mediaType === "image") {
@@ -56,7 +68,8 @@ export class NodeFrameSource implements FrameSource {
             } catch { this.missing.add(clip.mediaRef); /* leave as tile fallback */ }
           }
         } else if (clip.mediaType === "video") {
-          await this.extractVideo(clip, path);
+          if (only !== undefined) await this.extractOneFrame(clip, path, only);
+          else await this.extractVideo(clip, path);
         }
       }
     }
@@ -82,6 +95,27 @@ export class NodeFrameSource implements FrameSource {
       .sort();
     if (files.length > 0) this.videos.set(clip.id, { dir: this.root, files });
     else { this.missing.add(clip.mediaRef); console.error(`[NodeFrameSource] no frames extracted for ${clip.id} from ${path}`); }
+  }
+
+  /** Extract the single source frame a clip shows at output `frame` (input-side seek — decoding
+   *  starts at the nearest keyframe, not at the file's head). Registered as a one-file "video" so
+   *  ensure()/imageFor() serve it at any index (they clamp into the file list). */
+  private async extractOneFrame(clip: Clip, path: string, frame: number): Promise<void> {
+    // Seek HALF a source frame early: -ss keeps the first frame whose pts >= the seek point, so
+    // this lands exactly on the wanted frame whether its pts rounds up or down — seeking to the
+    // frame's own timestamp can overshoot the file's last frame and yield nothing (exit 0).
+    const t = (clip.trimStartFrame + sourceConsumedIndex(clip, frame) - 0.5) / this.fps;
+    const file = `${clip.id}_00000.png`;
+    const out = join(this.root, file);
+    try {
+      await run(this.ffmpegPath, ["-y", "-ss", Math.max(0, t).toFixed(3), "-i", path, "-frames:v", "1", out]);
+      // ffmpeg exits 0 even when the seek lands past the last frame and nothing is written.
+      if (!(await readdir(this.root).catch(() => [] as string[])).includes(file)) throw new Error("no frame at that time");
+      this.videos.set(clip.id, { dir: this.root, files: [file] });
+    } catch (e) {
+      this.missing.add(clip.mediaRef);
+      console.error(`[NodeFrameSource] single-frame extract failed for ${clip.mediaRef} (${path}): ${e instanceof Error ? e.message : e}`);
+    }
   }
 
   /** Preload the decoded frames this output frame needs (imageFor is sync). */

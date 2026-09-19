@@ -280,3 +280,90 @@ describe("Stage-D: per-tool argument-rejection guards (untested reject paths)", 
     await expectFail(ex, "ripple_delete_ranges", { trackIndex: 0, units: "seconds", ranges: [[0, 10]] }, /requires units 'frames'/);
   });
 });
+
+// Field report (v1.0.5): add_clips without trackIndex went to the first visual track and OVERWROTE
+// it — one full-length band overlay erased all 12 of a user's cut clips; add_texts did the same on
+// the very next call. Placement must be non-destructive by default.
+describe("A1: non-destructive placement (add_clips / add_texts)", () => {
+  /** Three butted 100-frame cuts on V1 (the "12 cut clips" of the field report, in miniature). */
+  async function seedCuts(ex: McpExecutor): Promise<string[]> {
+    seed(ex);
+    const entries = [0, 100, 200].map((startFrame) => ({ mediaRef: "vid1", trackIndex: 0, startFrame, durationFrames: 100 }));
+    await ex.execute("add_clips", { entries });
+    return ex.timeline.tracks[0].clips.map((c) => c.id);
+  }
+
+  it("add_clips without trackIndex auto-routes a destructive overlay to a NEW track, keeping every cut", async () => {
+    const ex = new McpExecutor();
+    const cutIds = await seedCuts(ex);
+    expect(cutIds.length).toBe(3);
+    const r = await ex.execute("add_clips", { entries: [{ mediaRef: "vid1", startFrame: 0, durationFrames: 300 }] });
+    expect(r.isError, r.content[0].text).toBeFalsy();
+    const out = JSON.parse(r.content[0].text) as { added: number; routedToNewTrack?: boolean; clips: { trackIndex: number }[] };
+    expect(out.routedToNewTrack).toBe(true);
+    // Every original cut survives, untouched, on its own track.
+    const survivors = ex.timeline.tracks.flatMap((t) => t.clips).filter((c) => cutIds.includes(c.id));
+    expect(survivors.map((c) => [c.startFrame, c.durationFrames])).toEqual([[0, 100], [100, 100], [200, 100]]);
+    // The overlay landed on a different (new) visual track.
+    const overlayTrack = ex.timeline.tracks[out.clips[0].trackIndex];
+    expect(overlayTrack.clips.some((c) => cutIds.includes(c.id))).toBe(false);
+    expect(overlayTrack.clips[0].durationFrames).toBe(300);
+    expect(ex.timeline.tracks.filter((t) => t.type === "video").length).toBe(2);
+  });
+
+  it("add_clips without trackIndex still uses the existing track when nothing overlaps", async () => {
+    const ex = new McpExecutor();
+    await seedCuts(ex);
+    const r = await ex.execute("add_clips", { entries: [{ mediaRef: "vid1", startFrame: 300, durationFrames: 50 }] });
+    expect(r.isError).toBeFalsy();
+    const out = JSON.parse(r.content[0].text) as { routedToNewTrack?: boolean };
+    expect(out.routedToNewTrack).toBeFalsy();
+    expect(ex.timeline.tracks.filter((t) => t.type === "video").length).toBe(1);
+    expect(ex.timeline.tracks[0].clips.length).toBe(4);
+  });
+
+  it("add_clips with an explicit trackIndex refuses a destructive placement unless overwrite:true", async () => {
+    const ex = new McpExecutor();
+    const cutIds = await seedCuts(ex);
+    const r = await ex.execute("add_clips", { entries: [{ mediaRef: "vid1", trackIndex: 0, startFrame: 50, durationFrames: 100 }] });
+    expect(r.isError).toBe(true);
+    expect(r.content[0].text).toMatch(/add_clips: would overwrite 2 existing clip\(s\) on track 0/);
+    expect(r.content[0].text).toMatch(/overwrite:true/);
+    // Nothing changed.
+    expect(ex.timeline.tracks[0].clips.map((c) => c.id)).toEqual(cutIds);
+
+    const ok = await ex.execute("add_clips", { entries: [{ mediaRef: "vid1", trackIndex: 0, startFrame: 50, durationFrames: 100 }], overwrite: true });
+    expect(ok.isError, ok.content[0].text).toBeFalsy();
+    // Overwrite semantics as before: clip A trimmed to 50, clip B trim-started to 150.
+    const clips = ex.timeline.tracks[0].clips.map((c) => [c.startFrame, c.durationFrames]);
+    expect(clips).toEqual([[0, 50], [50, 100], [150, 50], [200, 100]]);
+  });
+
+  it("add_texts without trackIndex auto-routes onto a NEW text track instead of overwriting captions", async () => {
+    const ex = new McpExecutor();
+    const first = await ex.execute("add_texts", { entries: [
+      { startFrame: 0, durationFrames: 30, content: "one" },
+      { startFrame: 30, durationFrames: 30, content: "two" },
+    ] });
+    const capIds = JSON.parse(first.content[0].text).clipIds as string[];
+    const r = await ex.execute("add_texts", { entries: [{ startFrame: 0, durationFrames: 60, content: "BAND" }] });
+    expect(r.isError, r.content[0].text).toBeFalsy();
+    const out = JSON.parse(r.content[0].text) as { routedToNewTrack?: boolean; clipIds: string[] };
+    expect(out.routedToNewTrack).toBe(true);
+    for (const id of capIds) expect(ex.engine.clipRef(id)?.durationFrames).toBe(30);
+    expect(ex.timeline.tracks.filter((t) => t.type === "text").length).toBe(2);
+  });
+
+  it("add_texts with an explicit trackIndex refuses a destructive placement unless overwrite:true", async () => {
+    const ex = new McpExecutor();
+    const first = await ex.execute("add_texts", { entries: [{ startFrame: 0, durationFrames: 30, content: "one" }] });
+    const capId = (JSON.parse(first.content[0].text).clipIds as string[])[0];
+    const r = await ex.execute("add_texts", { entries: [{ trackIndex: 0, startFrame: 10, durationFrames: 10, content: "x" }] });
+    expect(r.isError).toBe(true);
+    expect(r.content[0].text).toMatch(/add_texts: would overwrite 1 existing clip\(s\) on track 0/);
+    expect(ex.engine.clipRef(capId)?.durationFrames).toBe(30);
+    const ok = await ex.execute("add_texts", { entries: [{ trackIndex: 0, startFrame: 10, durationFrames: 10, content: "x" }], overwrite: true });
+    expect(ok.isError).toBeFalsy();
+    expect(ex.timeline.tracks[0].clips.length).toBe(3); // split into left + x + right
+  });
+});

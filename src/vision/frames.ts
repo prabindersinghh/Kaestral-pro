@@ -14,6 +14,10 @@ import { ffmpegBin, ffprobeBin } from "../mcp/env";
 export interface VisionFrame { timeSec: number; media_type: string; data: string } // data = base64 JPEG
 export type SampleMode = "interval" | "scene";
 
+/** Hard cap on frames returned by one call — a tool_result payload guard (≈40 KB per 512px JPEG). A
+ *  denser request is thinned to fit, never truncated, so the whole window is still covered. */
+export const MAX_FRAMES_PER_CALL = 24;
+
 function run(bin: string, args: string[]): Promise<string> {
   return new Promise((resolve, reject) => {
     const p = spawn(bin, args, { stdio: ["ignore", "pipe", "pipe"] });
@@ -34,17 +38,32 @@ async function probeDuration(path: string): Promise<number> {
 }
 
 /**
- * Extract up to `count` frames from a clip/asset for the model to view.
- *  - "interval": evenly spaced across the duration (good default overview).
+ * Extract ONE full-resolution frame to `outPath` (PNG — lossless, so a freeze-frame still matches
+ * the footage around it exactly). `timeSec` should be HALF a frame before the wanted frame's
+ * timestamp: -ss keeps the first frame whose pts >= the seek point, so that lands exactly on the
+ * frame whether its pts rounds up or down (seeking to the exact timestamp can overshoot the file's
+ * last frame and produce nothing). Input-side seek: fast on long recordings, frame-accurate for
+ * decoded output. Throws on failure, including "nothing written".
+ */
+export async function extractStill(path: string, timeSec: number, outPath: string, ffmpegPath = ffmpegBin()): Promise<void> {
+  await run(ffmpegPath, ["-y", "-v", "error", "-ss", Math.max(0, timeSec).toFixed(3), "-i", path, "-frames:v", "1", outPath]);
+  await readFile(outPath).catch(() => { throw new Error(`no frame at ${timeSec.toFixed(3)}s`); });
+}
+
+/**
+ * Extract frames from a clip/asset for the model to view.
+ *  - "interval": `count` frames evenly spaced across [startSec, endSec] (good default overview).
  *  - "scene":    on scene changes (best for finding distinct moments/shots).
+ *  - `fps`:      DENSE sampling of the window at that rate, inclusive of both ends (finding a click
+ *                in a screen recording). Thinned to MAX_FRAMES_PER_CALL if the window is too long.
  * Frames are downscaled to `maxDim` and JPEG-encoded to keep the payload small.
  */
 export async function extractFrames(
   path: string,
-  opts: { count?: number; maxDim?: number; mode?: SampleMode; startSec?: number; endSec?: number } = {},
+  opts: { count?: number; maxDim?: number; mode?: SampleMode; startSec?: number; endSec?: number; fps?: number } = {},
   ffmpegPath = ffmpegBin(),
 ): Promise<VisionFrame[]> {
-  const count = Math.max(1, Math.min(12, opts.count ?? 6));
+  const count = Math.max(1, Math.min(MAX_FRAMES_PER_CALL, opts.count ?? 6));
   const maxDim = Math.max(128, Math.min(1024, opts.maxDim ?? 512));
   const mode = opts.mode ?? "interval";
   const scale = `scale='min(${maxDim},iw)':-2`;
@@ -58,7 +77,7 @@ export async function extractFrames(
       const log = await run(ffmpegPath, [
         "-v", "info", "-i", path,
         "-vf", `select='gt(scene\\,0.3)+eq(n\\,0)',${scale},showinfo`,
-        "-vsync", "vfr", "-frames:v", String(count), "-q:v", "4", join(dir, "f_%03d.jpg"),
+        "-fps_mode", "vfr", "-frames:v", String(count), "-q:v", "4", join(dir, "f_%03d.jpg"),
       ]);
       const times = [...log.matchAll(/pts_time:([0-9.]+)/g)].map((m) => parseFloat(m[1]));
       for (let i = 0; i < times.length; i++) {
@@ -72,6 +91,31 @@ export async function extractFrames(
     const dur = (opts.endSec ?? await probeDuration(path)) - (opts.startSec ?? 0);
     const base = opts.startSec ?? 0;
     const span = dur > 0 ? dur : 0;
+
+    if (opts.fps !== undefined && opts.fps > 0 && span > 0) {
+      // Dense window in ONE ffmpeg pass (a process spawn per frame is ~1 s on Windows). Sample every
+      // 1/fps from the start through the end, both inclusive; if that exceeds the cap, thin the rate
+      // so the same window is still covered end to end. Two EOF details: a window that reaches the
+      // media's end is pulled back to its last decodable instant (there is no frame AT the end
+      // timestamp), and eof_action=pass makes the fps filter emit the final grid sample when it
+      // coincides with the last input frame (without it that sample is silently dropped).
+      const mediaDur = opts.endSec !== undefined ? await probeDuration(path) : base + span;
+      const winSpan = mediaDur > 0 ? Math.max(0, Math.min(base + span, mediaDur - 0.04) - base) : span;
+      const n = Math.min(MAX_FRAMES_PER_CALL, Math.floor(winSpan * opts.fps + 1e-6) + 1);
+      const rate = n > 1 ? (n - 1) / winSpan : 1;
+      // -t is an INPUT option: it bounds decoding to the window (a 25-minute recording is not read
+      // to EOF) and, unlike an output -t, never drops a frame whose duration overhangs the limit.
+      await run(ffmpegPath, [
+        "-y", "-v", "error", "-ss", base.toFixed(3), "-t", (winSpan + 1 / rate).toFixed(3), "-i", path,
+        "-vf", `fps=${rate}:eof_action=pass,${scale}`, "-frames:v", String(n), "-q:v", "4", join(dir, "d_%03d.jpg"),
+      ]);
+      for (let i = 0; i < n; i++) {
+        const data = await readFile(join(dir, `d_${String(i + 1).padStart(3, "0")}.jpg`)).catch(() => null);
+        if (data) frames.push({ timeSec: Number((base + i / rate).toFixed(2)), media_type: "image/jpeg", data: data.toString("base64") });
+      }
+      return frames;
+    }
+
     for (let i = 0; i < count; i++) {
       // spread across the clip; single-frame clips still get frame 0
       const t = span > 0 ? base + (span * (i + 0.5)) / count : base;
