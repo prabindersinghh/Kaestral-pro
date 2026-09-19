@@ -28,7 +28,7 @@ import { analyzeBeats } from "../audio/beats";
 import { extractPalette } from "../color/palette";
 import { extractMotionSpec } from "../motion/matchMotion";
 import { detectScenes } from "../motion/sceneDetect";
-import { extractFrames, extractStill, type SampleMode } from "../vision/frames";
+import { extractFrames, extractStill, MAX_FRAMES_PER_CALL, type SampleMode } from "../vision/frames";
 import { transcribe, whisperAvailable, type TranscriptWord } from "../audio/transcribe";
 import { generate, type GenConfig, type GenKind } from "../gen/hosted";
 import { validateSceneSpec, type SceneSpec } from "../gen/sceneSpec";
@@ -177,18 +177,39 @@ export class McpExecutor {
   private async seeVideo(a: Args): Promise<ToolResult> {
     const path = this.mediaPathFor(a);
     if (!path) throw new ToolFail("see_video: provide a resolvable mediaRef or clipId (call get_media/get_timeline first).");
-    const count = Math.max(1, Math.min(12, aInt(a, "count") ?? 6));
+    const count = Math.max(1, Math.min(MAX_FRAMES_PER_CALL, aInt(a, "count") ?? 6));
     const mode = (aStr(a, "mode") === "scene" ? "scene" : "interval") as SampleMode;
     const clip = aStr(a, "clipId") ? this.engine.clipRef(aStr(a, "clipId")!) : null;
-    const startSec = clip ? (clip.trimStartFrame / this.fps) : undefined;
-    const endSec = clip ? (clip.trimStartFrame + Math.round(clip.durationFrames * clip.speed)) / this.fps : undefined;
+    // The clip's visible SOURCE range (trim + speed), in source seconds.
+    const clipSrc0 = clip ? clip.trimStartFrame / this.fps : 0;
+    const clipSrc1 = clip ? (clip.trimStartFrame + Math.round(clip.durationFrames * clip.speed)) / this.fps : undefined;
 
-    const frames = await extractFrames(path, { count, mode, maxDim: aInt(a, "maxDim") ?? 512, startSec, endSec });
+    // Optional dense window (B4). fromSec/toSec are CLIP-relative seconds when a clipId is given
+    // (0 = the clip's first frame on the timeline; mapped through trim + speed), SOURCE seconds for a
+    // bare mediaRef. `fps` samples the window densely (capped, see MAX_FRAMES_PER_CALL).
+    const fromSec = aNum(a, "fromSec"), toSec = aNum(a, "toSec"), fps = aNum(a, "fps");
+    let startSec = clip ? clipSrc0 : undefined, endSec = clipSrc1;
+    if (fromSec !== undefined || toSec !== undefined) {
+      const f0 = Math.max(0, fromSec ?? 0);
+      const toSource = (s: number) => (clip ? clipSrc0 + s * clip.speed : s);
+      const f1 = toSec ?? (clip ? clip.durationFrames / this.fps : undefined);
+      if (f1 !== undefined && f1 <= f0) throw new ToolFail("see_video: toSec must be greater than fromSec.");
+      startSec = toSource(f0);
+      endSec = f1 !== undefined ? toSource(f1) : undefined;
+      if (clip && endSec !== undefined && clipSrc1 !== undefined) endSec = Math.min(endSec, clipSrc1);
+    }
+
+    const frames = await extractFrames(path, { count, mode, maxDim: aInt(a, "maxDim") ?? 512, startSec, endSec, fps });
     if (frames.length === 0) return err("see_video: could not extract any frames from this media.");
-    const label = frames.map((f, i) => `frame ${i + 1}: ${f.timeSec.toFixed(2)}s`).join(", ");
+    // Each frame is labelled with its SOURCE time and, for a clip, the TIMELINE frame it sits at — the
+    // number punch_in / split_clips / freeze_frame take.
+    const tlFrame = (src: number) => (clip ? Math.round(clip.startFrame + (src * this.fps - clip.trimStartFrame) / Math.max(clip.speed, 0.0001)) : undefined);
+    const label = frames.map((f, i) => `frame ${i + 1}: ${f.timeSec.toFixed(2)}s${clip ? ` (timeline frame ${tlFrame(f.timeSec)})` : ""}`).join(", ");
+    const how = fps !== undefined ? `dense window at ${fps} fps` : mode === "scene" ? "scene changes" : "evenly sampled";
     return okImages(
-      `${frames.length} frame(s) from this ${mode === "scene" ? "clip (scene changes)" : "clip (evenly sampled)"} — ${label}. ` +
-      `Use what you SEE (subject, framing, action, best moments) to drive the edit.`,
+      `${frames.length} frame(s) from this ${clip ? "clip" : "media"} (${how}) — ${label}. ` +
+      `Use what you SEE (subject, framing, action, best moments) to drive the edit. ` +
+      `To find an exact moment, narrow with fromSec/toSec and raise fps (max ${MAX_FRAMES_PER_CALL} frames per call).`,
       frames.map((f) => ({ media_type: f.media_type, data: f.data })),
     );
   }

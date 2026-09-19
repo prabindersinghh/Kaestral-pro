@@ -821,13 +821,16 @@ export const ANALYSIS_TOOL_DEFS: ToolDef[] = [
   },
   {
     name: "see_video",
-    description: "WATCH a clip: returns actual frames as images you can SEE, so you can identify the best moments, the subject and its position/framing, action, and what's on screen — then edit on content (not just rhythm/color). mode 'interval' samples evenly across the clip (overview); 'scene' returns distinct shots/scene-changes (finding moments). Each frame is labelled with its timestamp. Give a mediaRef or a clipId.",
+    description: "WATCH a clip: returns actual frames as images you can SEE, so you can identify the best moments, the subject and its position/framing, action, and what's on screen — then edit on content (not just rhythm/color). mode 'interval' samples evenly across the clip (overview); 'scene' returns distinct shots/scene-changes (finding moments). TO FIND AN EXACT MOMENT (a click, a cursor, a slide change) zoom in: pass fromSec/toSec to address a window and fps to sample it densely (e.g. fromSec:80, toSec:100, fps:1) — max 24 frames per call, so narrow the window rather than raising fps. Each frame is labelled with its source timestamp and, for a clipId, the TIMELINE frame (the number punch_in / split_clips / freeze_frame take). Give a mediaRef or a clipId.",
     inputSchema: obj({
       mediaRef: str("Media asset id (from get_media)."),
       clipId: str("Timeline clip id (from get_timeline) — samples within that clip's trimmed range."),
-      count: int("How many frames to return (1–12, default 6)."),
+      count: int("How many frames to return in interval/scene mode (1–24, default 6). Ignored when fps is set."),
       mode: enumStr(["interval", "scene"], "'interval' = evenly spaced (default); 'scene' = on scene changes."),
       maxDim: int("Max frame dimension in px (default 512). Keep small to stay fast."),
+      fromSec: num("Optional window start. CLIP-relative seconds with clipId (0 = the clip's first frame); source seconds with mediaRef."),
+      toSec: num("Optional window end (same units as fromSec). Must be > fromSec."),
+      fps: num("Optional dense sampling rate for the window, e.g. 1 or 2. Frames are thinned to the 24-per-call cap if the window is too long — narrow it instead."),
     }),
   },
 ];

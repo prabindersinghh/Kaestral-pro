@@ -55,3 +55,54 @@ describe("see_video MCP tool returns viewable image blocks", () => {
     expect(Buffer.from(img0.data, "base64").length).toBeGreaterThan(200);
   }, 60000);
 });
+
+// B4 (field report v1.0.5): 12 frames per call over a 2:22 recording is one frame every 12 s —
+// useless for finding a click, so the operator built 1-fps contact sheets in ffmpeg. A time window
+// (fromSec/toSec) can now be sampled densely (fps), under a hard cap on frames per call.
+describe("see_video dense time window (fromSec / toSec / fps)", () => {
+  it("extractFrames samples a window at the requested fps, timestamps ascending from fromSec", async () => {
+    const frames = await extractFrames(clip, { startSec: 1.0, endSec: 2.0, fps: 4, maxDim: 128 });
+    expect(frames.map((f) => f.timeSec)).toEqual([1, 1.25, 1.5, 1.75, 2]);
+  }, 60000);
+
+  it("extractFrames hard-caps a too-dense window at MAX_FRAMES_PER_CALL (payload guard)", async () => {
+    const { MAX_FRAMES_PER_CALL } = await import("../frames");
+    const frames = await extractFrames(clip, { startSec: 0, endSec: 3, fps: 30, maxDim: 128 });
+    expect(frames.length).toBe(MAX_FRAMES_PER_CALL);
+    // …and the window is still covered end to end (cap thins the sampling, it doesn't truncate it).
+    expect(frames[0].timeSec).toBe(0);
+    expect(frames[frames.length - 1].timeSec).toBeCloseTo(3, 1);
+  }, 60000);
+
+  it("see_video(mediaRef, fromSec, toSec, fps) returns one image per sample with source timestamps", async () => {
+    const ex = new McpExecutor();
+    const imp = JSON.parse((await ex.execute("import_media", { source: { path: clip } })).content[0].text) as { assetId: string };
+    const r = await ex.execute("see_video", { mediaRef: imp.assetId, fromSec: 1, toSec: 2, fps: 2, maxDim: 128 });
+    expect(r.isError, r.content[0].text).toBeFalsy();
+    expect(r.content.filter((c) => c.type === "image").length).toBe(3); // 1.0, 1.5, 2.0
+    expect(r.content[0].text).toMatch(/1\.00s/);
+    expect(r.content[0].text).toMatch(/2\.00s/);
+  }, 60000);
+
+  it("see_video(clipId, fromSec, toSec) takes CLIP-relative seconds and labels each frame with its timeline frame", async () => {
+    const ex = new McpExecutor();
+    const imp = JSON.parse((await ex.execute("import_media", { source: { path: clip } })).content[0].text) as { assetId: string };
+    // Place the clip at timeline frame 300 with 1 s trimmed off its head (fps 30).
+    await ex.execute("add_clips", { entries: [{ mediaRef: imp.assetId, startFrame: 300, trimStartFrame: 30, durationFrames: 60 }] });
+    const clipId = ex.timeline.tracks.flatMap((t) => t.clips).find((c) => c.mediaType === "video")!.id;
+    const r = await ex.execute("see_video", { clipId, fromSec: 0, toSec: 1, fps: 1, maxDim: 128 });
+    expect(r.isError, r.content[0].text).toBeFalsy();
+    expect(r.content.filter((c) => c.type === "image").length).toBe(2);
+    // clip-second 0 = source 1.00s = timeline frame 300; clip-second 1 = source 2.00s = frame 330
+    expect(r.content[0].text).toMatch(/1\.00s \(timeline frame 300\)/);
+    expect(r.content[0].text).toMatch(/2\.00s \(timeline frame 330\)/);
+  }, 60000);
+
+  it("see_video rejects a window outside the clip and a backwards window", async () => {
+    const ex = new McpExecutor();
+    const imp = JSON.parse((await ex.execute("import_media", { source: { path: clip } })).content[0].text) as { assetId: string };
+    const r = await ex.execute("see_video", { mediaRef: imp.assetId, fromSec: 2, toSec: 1 });
+    expect(r.isError).toBe(true);
+    expect(r.content[0].text).toMatch(/toSec must be greater than fromSec/);
+  }, 60000);
+});
