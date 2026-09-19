@@ -6,7 +6,7 @@
 // full-length descriptions live in ToolDefinitions.swift; syncing them verbatim is a
 // tracked release checklist item (see PROGRESS.md). Names + schemas are exact now.
 
-import { BLEND_MODES, VIDEO_LAYOUTS, TEXT_ANIMATION_PRESETS } from "../model/enums";
+import { BLEND_MODES, CLIP_TYPES, VIDEO_LAYOUTS, TEXT_ANIMATION_PRESETS } from "../model/enums";
 
 export type JsonSchema = Record<string, unknown>;
 
@@ -832,7 +832,21 @@ export const ANALYSIS_TOOL_DEFS: ToolDef[] = [
   },
 ];
 
-/** Tools advertised over MCP: the frozen 41 plus the Skills + Motion + Analysis extensions. */
-export const ALL_TOOL_DEFS: ToolDef[] = [...TOOL_DEFS, ...SKILL_TOOL_DEFS, ...MOTION_TOOL_DEFS, ...ANALYSIS_TOOL_DEFS];
+// Editing primitives (field report v1.0.5) — the building blocks an operator kept re-deriving by hand
+// or faking with other tools. Each is one tool call and ONE undo step over the shared EditEngine.
+// NOT part of the frozen 41 (that guard above stays exact); additive only.
+export const PRIMITIVE_TOOL_DEFS: ToolDef[] = [
+  {
+    name: "add_track",
+    description: "Create an EMPTY track of a given type and return its trackIndex. Use it to prepare a dedicated layer (an overlay track, a second caption track, a music bed) before placing clips on it with add_clips/add_texts(trackIndex). Visual types (video/image/text/lottie) go on TOP by default (index 0); audio goes after the last track; pass `index` to insert elsewhere (clamped). The empty track is kept until you put something on it and later empty it again.",
+    inputSchema: obj({
+      type: enumStr(CLIP_TYPES, "Track type: video | audio | image | text | lottie."),
+      index: int("Optional. Insert position (0 = top). Default: top for visual types, end for audio."),
+    }, ["type"]),
+  },
+];
+
+/** Tools advertised over MCP: the frozen 41 plus the Skills + Motion + Analysis + Primitive extensions. */
+export const ALL_TOOL_DEFS: ToolDef[] = [...TOOL_DEFS, ...SKILL_TOOL_DEFS, ...MOTION_TOOL_DEFS, ...ANALYSIS_TOOL_DEFS, ...PRIMITIVE_TOOL_DEFS];
 
 export const TOOL_NAMES = TOOL_DEFS.map((t) => t.name);

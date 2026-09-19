@@ -242,3 +242,49 @@ describe("Stage-B core: add/insert/speed/undo", () => {
     expect(JSON.stringify(encodeTimeline(eng.timeline))).toBe(before);
   });
 });
+
+// B1 (field report v1.0.5): there was no way to create an empty track — the operator faked one with
+// apply_layout("grid_2x2") + four opacity-0 black clips. pruneEmptyTracks() runs on add/remove/move
+// and used to delete a fresh empty track before anything landed on it. Decision: prune only tracks
+// that were NON-EMPTY when the operation began (captured in commit()), so an intentionally empty
+// track survives until it's used, while a track drained by remove/move still collapses as before.
+describe("B1: addTrack + pruneEmptyTracks only prunes tracks that became empty in that operation", () => {
+  it("addTrack inserts an empty track of the type at the zone default (visual on top, audio at end)", () => {
+    const eng = new EditEngine(timeline([track("video", "v", [clip("A", 0, 10)]), track("audio", "a", [clip("M", 0, 10, { mediaType: "audio" })])]));
+    expect(eng.addTrack("text")).toBe(0);
+    expect(eng.timeline.tracks.map((t) => t.type)).toEqual(["text", "video", "audio"]);
+    expect(eng.addTrack("audio")).toBe(3);
+    expect(eng.timeline.tracks.map((t) => t.type)).toEqual(["text", "video", "audio", "audio"]);
+    expect(eng.addTrack("video", 1)).toBe(1);
+    expect(eng.timeline.tracks.map((t) => t.type)).toEqual(["text", "video", "video", "audio", "audio"]);
+    expect(eng.addTrack("video", 99)).toBe(5); // clamped to the end
+    expect(eng.canUndo).toBe(true);
+    expect(eng.undo()).toBe("Add Track");
+    expect(eng.timeline.tracks.length).toBe(5);
+  });
+
+  it("a fresh empty track survives add/remove/move operations that touch other tracks", () => {
+    const eng = new EditEngine(timeline([track("video", "v", [clip("A", 0, 10), clip("B", 10, 10)])]));
+    const idx = eng.addTrack("video");
+    const id = eng.timeline.tracks[idx].id;
+    eng.addClips([{ mediaRef: "m", trackIndex: 1, startFrame: 20, durationFrames: 10, id: "C" }]);
+    expect(eng.timeline.tracks.find((t) => t.id === id)?.clips.length).toBe(0);
+    eng.removeClips(["C"]);
+    expect(eng.timeline.tracks.find((t) => t.id === id)).toBeDefined();
+    eng.moveClips([{ clipId: "B", toFrame: 30 }]);
+    expect(eng.timeline.tracks.find((t) => t.id === id)).toBeDefined();
+    // …and it accepts clips like any other track.
+    eng.addClips([{ mediaRef: "m", trackIndex: 0, startFrame: 0, durationFrames: 5, id: "D" }]);
+    expect(eng.timeline.tracks[0].clips.map((c) => c.id)).toEqual(["D"]);
+  });
+
+  it("a track that BECOMES empty during an operation is still pruned (existing behaviour)", () => {
+    const eng = new EditEngine(timeline([track("video", "v1", [clip("A", 0, 10)]), track("video", "v2", [clip("B", 0, 10)])]));
+    eng.removeClips(["B"]);
+    expect(eng.timeline.tracks.map((t) => t.id)).toEqual(["v1"]);
+    eng.addTrack("video");
+    eng.moveClips([{ clipId: "A", toTrack: 0 }]); // v1 drained → pruned; the new track now holds A
+    expect(eng.timeline.tracks.length).toBe(1);
+    expect(eng.timeline.tracks[0].clips.map((c) => c.id)).toEqual(["A"]);
+  });
+});

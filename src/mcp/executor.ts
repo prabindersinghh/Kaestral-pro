@@ -3,7 +3,7 @@
 // return the faithful signed-out / "unavailable in this build" shapes (SPEC §10, §11).
 
 import type { AnimatableProperty, ClipType } from "../model/enums";
-import { isVisual, TEXT_ANIMATION_PRESETS } from "../model/enums";
+import { CLIP_TYPES, isVisual, TEXT_ANIMATION_PRESETS } from "../model/enums";
 import type { TextAnimationPreset } from "../model/enums";
 import type { AnimPair, Clip, Crop, Keyframe, KeyframeValue, TextAnimation, Timeline } from "../model/types";
 import { defaultTrack, defaultClip, defaultTextStyle, rgba } from "../model/defaults";
@@ -749,6 +749,8 @@ export class McpExecutor {
       case "sync_audio": return this.unavailable("sync_audio", "audio cross-correlation");
       case "undo": return this.undo();
       case "apply_layout": return this.applyLayout(a);
+      // Editing primitives (Kaestral extension — field report v1.0.5)
+      case "add_track": return this.addTrack(a);
       // Text
       case "add_texts": return this.addTexts(a);
       case "update_text": return this.updateText(a);
@@ -1205,6 +1207,20 @@ export class McpExecutor {
       return okJson(out.report);
     }
     throw new ToolFail("ripple_delete_ranges: pass exactly one of trackIndex or clipId");
+  }
+
+  // ---- Editing primitives (field report v1.0.5) ----
+
+  // add_track: an EMPTY track the agent can then target by index. Before this, the only way to get a
+  // dedicated layer was apply_layout with dummy opacity-0 clips. The engine keeps a freshly created
+  // empty track through later prune passes (EditEngine.pruneEmptyTracks only drops tracks that
+  // became empty during that same operation).
+  private addTrack(a: Args): ToolResult {
+    const type = requireStr(a, "type");
+    if (!(CLIP_TYPES as readonly string[]).includes(type)) throw new ToolFail(`add_track: type must be one of ${CLIP_TYPES.join(", ")}.`);
+    const trackIndex = this.engine.addTrack(type as ClipType, aInt(a, "index"));
+    this.track(true, "Add Track");
+    return okJson({ trackIndex, type, label: this.engine.trackDisplayLabel(trackIndex), trackCount: this.timeline.tracks.length });
   }
 
   private undo(): ToolResult {

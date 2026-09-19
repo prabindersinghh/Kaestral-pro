@@ -5,7 +5,7 @@
 
 import type { AnimatableProperty, ClipType } from "../model/enums";
 import type { Clip, Keyframe, KeyframeTrack, KeyframeValue, Timeline, Track } from "../model/types";
-import { defaultClip, newId } from "../model/defaults";
+import { defaultClip, defaultTrack, newId } from "../model/defaults";
 import { encodeTimeline } from "../model/codec";
 import { endFrame } from "../model/helpers";
 import { isCompatible } from "../model/enums";
@@ -94,9 +94,15 @@ export class EditEngine {
     return JSON.stringify(encodeTimeline(a)) === JSON.stringify(encodeTimeline(b));
   }
 
+  /** Track ids that held clips when the current commit began — the only ones pruneEmptyTracks may
+   *  drop. A track that was ALREADY empty at the start (e.g. just created by addTrack) is
+   *  intentional and survives; a track drained by this operation collapses as before. */
+  private nonEmptyAtCommitStart = new Set<string>();
+
   /** Run one atomic mutation; snapshot-swap undo. Returns whether anything changed. */
   private commit(name: string, work: () => void): boolean {
     const before = structuredClone(this.timeline);
+    this.nonEmptyAtCommitStart = new Set(before.tracks.filter((t) => t.clips.length > 0).map((t) => t.id));
     work();
     if (this.snapshotEquals(before, this.timeline)) return false;
     this.undoStack.push({ name, timeline: before });
@@ -245,8 +251,9 @@ export class EditEngine {
     this.timeline.tracks[ti]?.clips.sort((a, b) => a.startFrame - b.startFrame);
   }
 
+  /** Drop tracks that BECAME empty during this operation (see nonEmptyAtCommitStart). */
   private pruneEmptyTracks(): void {
-    this.timeline.tracks = this.timeline.tracks.filter((t) => t.clips.length > 0);
+    this.timeline.tracks = this.timeline.tracks.filter((t) => t.clips.length > 0 || !this.nonEmptyAtCommitStart.has(t.id));
   }
 
   /** "V1" / "A1" label (EditorViewModel+Tracks.swift:19). */
@@ -486,6 +493,24 @@ export class EditEngine {
       for (const t of this.timeline.tracks) t.clips = t.clips.filter((c) => !set.has(c.id));
       if (prune) this.pruneEmptyTracks();
     });
+  }
+
+  /**
+   * add_track: insert an EMPTY track of `type` and return its index (one undo step). Default
+   * placement follows the zones the model assumes: visual types go on top (index 0, so a new layer
+   * sits above the existing picture), audio goes after the last track. An explicit `index` is
+   * clamped to [0, tracks.length]. The track survives later prune passes until something lands on it
+   * and is then removed again (see pruneEmptyTracks).
+   */
+  addTrack(type: ClipType, index?: number): number {
+    const t = defaultTrack(type);
+    const at = index === undefined
+      ? (type === "audio" ? this.timeline.tracks.length : 0)
+      : Math.max(0, Math.min(this.timeline.tracks.length, Math.trunc(index)));
+    this.commit("Add Track", () => {
+      this.timeline.tracks.splice(at, 0, t);
+    });
+    return at;
   }
 
   /** remove_tracks: remove whole tracks by index; linked partners on other tracks stay. */

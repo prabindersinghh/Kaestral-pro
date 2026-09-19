@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { McpServer, MCP_PORT, MCP_HOST } from "../server";
 import { McpExecutor } from "../executor";
-import { TOOL_NAMES } from "../toolDefs";
+import { PRIMITIVE_TOOL_DEFS, TOOL_NAMES } from "../toolDefs";
 import { version as PKG_VERSION } from "../../../package.json";
 
 const PORT = 34567; // distinct from the contract port to avoid collisions during tests
@@ -56,7 +56,7 @@ describe("Stage-C: MCP HTTP transport (kaestral on 127.0.0.1)", () => {
     expect(names).toContain("extract_palette");
     expect(names).toContain("see_video");
     expect(names).toContain("import_from_url");
-    expect(json.result.tools.length).toBe(52); // 41 frozen + skills(2) + motion(3) + analysis(6: analyze_audio, extract_palette, match_motion, detect_scenes, import_from_url, see_video)
+    expect(json.result.tools.length).toBe(41 + 2 + 3 + 6 + PRIMITIVE_TOOL_DEFS.length); // frozen + skills + motion + analysis(analyze_audio, extract_palette, match_motion, detect_scenes, import_from_url, see_video) + editing primitives
   });
 
   it("tools/call get_timeline returns canGenerate:false", async () => {
